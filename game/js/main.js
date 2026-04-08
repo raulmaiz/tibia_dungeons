@@ -1,37 +1,20 @@
-import { getCreatureProgressionByExperience } from './dataService.js';
+import { getCreatureTypeProgressionGroups, getItemByArticleId, getCreatureDropTable } from './dataService.js';
 
 let game;
 let selectedSex = 'male';
 let playerConfig = null;
-let progressionTiers = [];
+let typeProgressionGroups = [];
+let creatureDropTable = new Map();
 
-const DUNGEON_LEVELS = 8;
-const CREATURES_PER_LEVEL = 3;
+const MAP_W = 20;
+const MAP_H = 15;
+const UI_BOTTOM_SPACE = 88;
+const UI_OVERLAP_ROWS = 1.5;
 const CREATURE_POOL_PER_LEVEL = 12;
-const CREATURE_SPAWNS = [
-  { gx: 5, gy: 5 },
-  { gx: 8, gy: 9 },
-  { gx: 14, gy: 11 },
-];
-const STAIRS_TILE = { gx: 18, gy: 13 };
-
-const MAP = [
-  '####################',
-  '#..............#...#',
-  '#..######......#...#',
-  '#..#....#..........#',
-  '#..#....#######....#',
-  '#..............#...#',
-  '#..######..##..#...#',
-  '#..#.......##......#',
-  '#..#..##########...#',
-  '#..............#...#',
-  '#######........#...#',
-  '#..................#',
-  '#..######..######..#',
-  '#..................#',
-  '####################',
-];
+const MIN_CREATURES_PER_LEVEL = 3;
+const MAX_CREATURES_PER_LEVEL = 10;
+const START_TILE = { gx: 1, gy: 1 };
+const START_BAG_ARTICLE_ID = 1589;
 
 function frameTextureName(sex, frame) {
   return `player_${sex}_${frame}`;
@@ -59,6 +42,22 @@ function pickRandomCreatures(pool, count) {
   return out;
 }
 
+function pickRandomTileFrom(list) {
+  if (!list || list.length === 0) return null;
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+function rollCreatureDrops(creatureId) {
+  const drops = creatureDropTable.get(Number(creatureId)) || [];
+  if (drops.length === 0) return [];
+  const won = [];
+  for (const drop of drops) {
+    const p = Math.max(0, Math.min(100, Number(drop.chance || 0)));
+    if (Math.random() * 100 < p) won.push(drop);
+  }
+  return won;
+}
+
 function setupSelectorUI() {
   const choiceMale = document.getElementById('choiceMale');
   const choiceFemale = document.getElementById('choiceFemale');
@@ -74,12 +73,174 @@ function setupSelectorUI() {
 
   choiceMale.addEventListener('click', () => setChoice('male'));
   choiceFemale.addEventListener('click', () => setChoice('female'));
+  let currentBagCapacity = 0;
+  let currentBagItem = null;
+  let bagLootItems = [];
+
+  function renderLootSlots(slotCount) {
+    const lootGrid = document.getElementById('lootGrid');
+    const lootFoot = document.getElementById('lootFoot');
+    if (!lootGrid || !lootFoot) return;
+    lootGrid.innerHTML = '';
+    const count = Math.max(0, Math.floor(Number(slotCount) || 0));
+    for (let i = 1; i <= count; i += 1) {
+      const cell = document.createElement('div');
+      cell.className = 'loot-slot';
+      const lootItem = bagLootItems[i - 1] || null;
+      if (lootItem) {
+        cell.title = lootItem.title || 'Loot';
+        if (lootItem.image) {
+          const img = document.createElement('img');
+          img.src = `./data/images/${lootItem.image}`;
+          img.alt = lootItem.title || 'Loot item';
+          cell.appendChild(img);
+        } else {
+          cell.textContent = '●';
+        }
+        if ((lootItem.count || 1) > 1) {
+          const countTag = document.createElement('div');
+          countTag.textContent = `x${lootItem.count}`;
+          countTag.style.position = 'absolute';
+          countTag.style.right = '3px';
+          countTag.style.bottom = '2px';
+          countTag.style.fontSize = '10px';
+          countTag.style.color = '#e2e8f0';
+          countTag.style.textShadow = '0 1px 1px rgba(0,0,0,0.8)';
+          cell.appendChild(countTag);
+        }
+      } else {
+        cell.textContent = String(i);
+      }
+      cell.style.position = 'relative';
+      lootGrid.appendChild(cell);
+    }
+    lootFoot.textContent = `Capacity: ${bagLootItems.length}/${count} slots`;
+  }
+
+  function addLootItemToBag(itemData) {
+    const incoming = {
+      id: itemData && itemData.id != null ? Number(itemData.id) : null,
+      title: itemData && itemData.title ? itemData.title : 'Loot',
+      image: itemData && itemData.image ? itemData.image : null,
+      isStackable: Boolean(itemData && itemData.isStackable),
+      count: Math.max(1, Number((itemData && itemData.count) || 1)),
+    };
+    if (incoming.isStackable) {
+      const stackIdx = bagLootItems.findIndex((it) => (
+        Boolean(it && it.isStackable)
+        && (
+          (incoming.id != null && it.id === incoming.id)
+          || ((incoming.id == null || it.id == null) && it.title === incoming.title)
+        )
+      ));
+      if (stackIdx >= 0) {
+        bagLootItems[stackIdx].count = Math.max(1, Number(bagLootItems[stackIdx].count || 1)) + incoming.count;
+        renderLootSlots(currentBagCapacity);
+        return true;
+      }
+    }
+    if (bagLootItems.length >= currentBagCapacity) return false;
+    bagLootItems.push(incoming);
+    renderLootSlots(currentBagCapacity);
+    return true;
+  }
+
+  async function equipBagByArticleId(articleId) {
+    const bagImg = document.getElementById('slotBagImg');
+    const bagIcon = document.getElementById('slotBagIcon');
+    const bagLabel = document.getElementById('slotBagLabel');
+    const equipmentFoot = document.getElementById('equipmentFoot');
+    if (!bagImg || !bagIcon || !bagLabel || !equipmentFoot) return;
+    try {
+      const bag = await getItemByArticleId(articleId);
+      if (!bag) {
+        bagImg.style.display = 'none';
+        bagIcon.textContent = 'BAG';
+        bagLabel.textContent = 'Empty';
+        equipmentFoot.textContent = 'No item equipped';
+        currentBagCapacity = 0;
+        currentBagItem = null;
+        bagLootItems = [];
+        renderLootSlots(0);
+        return;
+      }
+      if ((bag.item_type || '').toLowerCase() !== 'containers') {
+        bagImg.style.display = 'none';
+        bagIcon.textContent = 'BAG';
+        bagLabel.textContent = 'Invalid';
+        equipmentFoot.textContent = 'BAG slot only supports Containers';
+        currentBagCapacity = 0;
+        currentBagItem = null;
+        bagLootItems = [];
+        renderLootSlots(0);
+        return;
+      }
+      if (bag.image) {
+        bagImg.src = `./data/images/${bag.image}`;
+        bagImg.style.display = 'block';
+        bagIcon.textContent = '';
+      } else {
+        bagImg.style.display = 'none';
+        bagIcon.textContent = 'BAG';
+      }
+      const nextCapacity = Math.max(0, Math.floor(Number(bag.weight) || 0));
+      const droppedCount = Math.max(0, bagLootItems.length - nextCapacity);
+      if (droppedCount > 0) bagLootItems = bagLootItems.slice(0, nextCapacity);
+      currentBagCapacity = nextCapacity;
+      currentBagItem = bag;
+      bagLabel.textContent = bag.title;
+      equipmentFoot.textContent = droppedCount > 0
+        ? `Equipped: ${bag.title} | Dropped: ${droppedCount}`
+        : `Equipped: ${bag.title}`;
+      renderLootSlots(currentBagCapacity);
+    } catch (_err) {
+      bagImg.style.display = 'none';
+      bagIcon.textContent = 'BAG';
+      bagLabel.textContent = 'Empty';
+      equipmentFoot.textContent = 'No item equipped';
+      currentBagCapacity = 0;
+      currentBagItem = null;
+      bagLootItems = [];
+      renderLootSlots(0);
+    }
+  }
+
+  // Debug helpers for runtime bag swaps while loot mechanics evolve.
+  window.debugInventory = {
+    async equipBag(articleId) {
+      await equipBagByArticleId(articleId);
+    },
+    addLoot(item = 'Loot') {
+      if (typeof item === 'string') {
+        return addLootItemToBag({ title: item, image: null });
+      }
+      return addLootItemToBag({
+        id: (item && item.id != null) ? Number(item.id) : null,
+        title: (item && item.title) ? item.title : 'Loot',
+        image: (item && item.image) ? item.image : null,
+        isStackable: Boolean(item && item.isStackable),
+        count: Math.max(1, Number((item && item.count) || 1)),
+      });
+    },
+    state() {
+      return {
+        bag: currentBagItem,
+        capacity: currentBagCapacity,
+        used: bagLootItems.length,
+        items: [...bagLootItems],
+      };
+    },
+  };
 
   startBtn.addEventListener('click', async () => {
     startBtn.disabled = true;
     const playerName = (playerNameInput.value || '').trim() || 'Adventurer';
     playerConfig = { name: playerName, sex: selectedSex };
-    await loadProgressionDatabase();
+    await Promise.all([
+      loadProgressionDatabase(),
+      equipBagByArticleId(START_BAG_ARTICLE_ID),
+      (async () => { creatureDropTable = await getCreatureDropTable(); })(),
+    ]);
     document.getElementById('startOverlay').style.display = 'none';
     startGame(playerConfig);
   });
@@ -93,18 +254,18 @@ function setupSelectorUI() {
 }
 
 function isWalkableTile(gx, gy) {
-  if (gy < 0 || gy >= MAP.length || gx < 0 || gx >= MAP[gy].length) return false;
-  return MAP[gy][gx] !== '#';
+  return gx >= 0 && gx < MAP_W && gy >= 0 && gy < MAP_H;
 }
 
 function startGame(configPlayer) {
   if (game) return;
 
   const tileSize = 40;
-  const mapWidth = MAP[0].length * tileSize;
-  const mapHeight = MAP.length * tileSize;
+  const mapWidth = MAP_W * tileSize;
+  const mapHeight = MAP_H * tileSize;
   const width = Math.min(window.innerWidth, mapWidth);
-  const height = Math.min(window.innerHeight, mapHeight);
+  const desiredHeight = mapHeight + UI_BOTTOM_SPACE;
+  const height = Math.min(window.innerHeight, desiredHeight);
 
   game = new Phaser.Game({
     type: Phaser.AUTO,
@@ -122,7 +283,7 @@ function startGame(configPlayer) {
         this.load.image(deathTextureName('male'), './data/images/other/you_are_death_male.jpg');
         this.load.image(deathTextureName('female'), './data/images/other/you_are_death_female.jpg');
         const unique = new Map();
-        for (const tier of progressionTiers) {
+        for (const tier of typeProgressionGroups) {
           for (const c of tier.creatures) {
             if (!unique.has(c.id)) unique.set(c.id, c);
           }
@@ -132,17 +293,18 @@ function startGame(configPlayer) {
         }
       },
       create() {
-        for (let y = 0; y < MAP.length; y += 1) {
-          for (let x = 0; x < MAP[y].length; x += 1) {
-            const isWall = MAP[y][x] === '#';
-            const color = isWall ? 0x2f3a4a : 0x1a2534;
-            this.add.rectangle(
+        const mapTiles = [];
+        for (let y = 0; y < MAP_H; y += 1) {
+          mapTiles[y] = [];
+          for (let x = 0; x < MAP_W; x += 1) {
+            const rect = this.add.rectangle(
               x * tileSize + tileSize / 2,
               y * tileSize + tileSize / 2,
               tileSize - 1,
               tileSize - 1,
-              color
+              0x1a2534
             );
+            mapTiles[y][x] = rect;
           }
         }
 
@@ -196,50 +358,97 @@ function startGame(configPlayer) {
           bar.fill.width = Math.max(0, bar.width * clamped);
         };
         const playerBar = makeHealthBar(0x22c55e);
+        const playerManaBar = makeHealthBar(0x3b82f6);
         const playerNameTag = makeNameLabel(configPlayer.name, '#e5e7eb');
 
-        const nameLabel = this.add.text(12, 10, `${configPlayer.name} (${configPlayer.sex})`, {
+        const nameLabel = this.add.text(12, 10, `${configPlayer.name} | Player Lv 1`, {
           color: '#e5e7eb',
           fontSize: '16px',
         });
         nameLabel.setScrollFactor(0);
 
-        const help = this.add.text(12, 30, 'WASD/Flechas | Sur=0 Este=1 Norte=2 Oeste=3', {
-          color: '#a5b4fc',
-          fontSize: '13px',
-        });
-        help.setScrollFactor(0);
-        const combatHud = this.add.text(12, 50, '', {
+        const combatHud = this.add.text(this.scale.width - 12, 10, '', {
           color: '#fca5a5',
           fontSize: '13px',
         });
+        combatHud.setOrigin(1, 0);
         combatHud.setScrollFactor(0);
-        const combatLog = this.add.text(12, 70, 'Combate listo.', {
-          color: '#fde68a',
-          fontSize: '13px',
-          wordWrap: { width: 520 },
-        });
-        combatLog.setScrollFactor(0);
-        const levelHud = this.add.text(12, 90, '', {
+        const levelHud = this.add.text(this.scale.width / 2, 10, '', {
           color: '#93c5fd',
           fontSize: '13px',
         });
+        levelHud.setOrigin(0.5, 0);
         levelHud.setScrollFactor(0);
 
+        const uiBaseY = mapHeight - (tileSize * UI_OVERLAP_ROWS);
+        const logPanel = this.add.rectangle(
+          this.scale.width / 2,
+          uiBaseY + 52,
+          this.scale.width - 16,
+          58,
+          0x0b1220,
+          0.78
+        );
+        logPanel.setStrokeStyle(1, 0x2b3444, 0.8);
+        logPanel.setScrollFactor(0);
+        const levelProgressBg = this.add.rectangle(
+          this.scale.width / 2,
+          uiBaseY + 21,
+          this.scale.width - 16,
+          10,
+          0x0f172a,
+          0.95
+        );
+        levelProgressBg.setStrokeStyle(1, 0x334155, 1);
+        levelProgressBg.setScrollFactor(0);
+        const levelProgressFill = this.add.rectangle(
+          8,
+          uiBaseY + 21,
+          this.scale.width - 18,
+          8,
+          0xeab308,
+          1
+        );
+        levelProgressFill.setOrigin(0, 0.5);
+        levelProgressFill.setScrollFactor(0);
+        const levelProgressText = this.add.text(this.scale.width / 2, uiBaseY + 21, '', {
+          color: '#f8fafc',
+          fontSize: '11px',
+          fontStyle: 'bold',
+        });
+        levelProgressText.setOrigin(0.5, 0.5);
+        levelProgressText.setStroke('#0b1220', 2);
+        levelProgressText.setScrollFactor(0);
+        const combatLog = this.add.text(14, uiBaseY + 32, '', {
+          color: '#ffffff',
+          fontSize: '12px',
+          wordWrap: { width: this.scale.width - 28 },
+        });
+        combatLog.setScrollFactor(0);
+        const combatLogLines = [];
+        const addCombatLog = (msg) => {
+          combatLogLines.push(msg);
+          if (combatLogLines.length > 3) combatLogLines.shift();
+          combatLog.setText(combatLogLines.join('\n'));
+        };
+        addCombatLog('Combat ready.');
+
         const stairRect = this.add.rectangle(
-          tileSize * STAIRS_TILE.gx + tileSize / 2,
-          tileSize * STAIRS_TILE.gy + tileSize / 2,
+          0,
+          0,
           tileSize - 6,
           tileSize - 6,
           0x7c5c16
         );
         stairRect.setStrokeStyle(2, 0xfacc15, 1);
-        const stairText = this.add.text(stairRect.x - 6, stairRect.y - 10, '>', {
+        const stairText = this.add.text(0, 0, '>', {
           color: '#fde68a',
           fontSize: '18px',
           fontStyle: 'bold',
         });
         stairText.setOrigin(0.5, 0.5);
+        stairRect.setVisible(false);
+        stairText.setVisible(false);
 
         this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
         this.cameras.main.startFollow(player, true, 0.15, 0.15);
@@ -247,22 +456,84 @@ function startGame(configPlayer) {
         const cursors = this.input.keyboard.createCursorKeys();
         const keys = this.input.keyboard.addKeys('W,A,S,D');
         const ctrlKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.CTRL);
-        let gridX = 1;
-        let gridY = 1;
+        let gridX = START_TILE.gx;
+        let gridY = START_TILE.gy;
         let moving = false;
-        const stepDurationMs = 120;
+        let playerMoveDurationMs = 190;
+        let playerActionDelayMs = 320;
+        let nextPlayerActionAt = 0;
         let playerHp = 100;
         const playerMaxHp = 100;
+        let playerMana = 60;
+        const playerMaxMana = 60;
         const playerDamage = 12;
+        let playerLevel = 1;
+        let playerXp = 0;
         let gameOver = false;
         let playerDead = false;
         let currentLevel = 1;
+        let currentLevelGroup = null;
+        const recentGroupIndices = [];
+        const runStartBias = Phaser.Math.Between(0, 8);
+        const runSpreadBias = Phaser.Math.Between(0, 4);
+        let currentMap = [];
+        let currentFloors = [];
+        let currentStairsTile = { gx: MAP_W - 2, gy: MAP_H - 2 };
+        let creaturesTargetCount = 0;
         const centerX = (gx) => gx * tileSize + tileSize / 2;
         const centerY = (gy) => gy * tileSize + tileSize / 2;
+        const xpToNextLevel = (level) => 50 + (level - 1) * 40;
+        const updatePlayerTimingsByLevel = () => {
+          // Progresion gradual por nivel del personaje (arranque mas lento).
+          playerMoveDurationMs = Phaser.Math.Clamp(190 - (playerLevel - 1) * 2, 130, 190);
+          playerActionDelayMs = Phaser.Math.Clamp(320 - (playerLevel - 1) * 5, 220, 320);
+        };
+        const showLevelUpText = () => {
+          const txt = this.add.text(this.scale.width / 2, this.scale.height / 2, 'LEVEL UP!', {
+            color: '#facc15',
+            fontSize: '56px',
+            fontStyle: 'bold',
+            fontFamily: 'Arial Black, Arial, sans-serif',
+          });
+          txt.setOrigin(0.5, 0.5);
+          txt.setStroke('#111827', 8);
+          txt.setScrollFactor(0);
+          this.tweens.add({
+            targets: txt,
+            y: txt.y - 24,
+            alpha: 0,
+            scaleX: 1.15,
+            scaleY: 1.15,
+            duration: 900,
+            ease: 'Sine.easeOut',
+            onComplete: () => txt.destroy(),
+          });
+        };
+        const grantPlayerXp = (amount) => {
+          playerXp += Math.max(0, Number(amount || 0));
+          let leveled = false;
+          while (playerXp >= xpToNextLevel(playerLevel)) {
+            playerXp -= xpToNextLevel(playerLevel);
+            playerLevel += 1;
+            leveled = true;
+          }
+          if (leveled) {
+            playerHp = playerMaxHp;
+            playerMana = playerMaxMana;
+            updatePlayerTimingsByLevel();
+            addCombatLog(`You reached level ${playerLevel}.`);
+            showLevelUpText();
+            updatePlayerBar();
+          }
+        };
 
         const creatures = [];
 
-        const isWalkable = (gx, gy) => isWalkableTile(gx, gy);
+        const isWallTile = (gx, gy) => {
+          if (!isWalkableTile(gx, gy)) return true;
+          return currentMap[gy][gx] === '#';
+        };
+        const isWalkable = (gx, gy) => !isWallTile(gx, gy);
         const isAdjacent = (ax, ay, bx, by) => Math.abs(ax - bx) + Math.abs(ay - by) === 1;
         const aliveCreatures = () => creatures.filter((c) => c.alive);
         const creatureAt = (gx, gy) => aliveCreatures().find((c) => c.gx === gx && c.gy === gy) || null;
@@ -297,17 +568,27 @@ function startGame(configPlayer) {
         };
         const inAggroRange = (creature) => Math.abs(gridX - creature.gx) <= 4 && Math.abs(gridY - creature.gy) <= 4;
         const hasAggro = (creature) => creature.aggroLocked || inAggroRange(creature);
+        const actionDelayFromSpeed = (speed) => {
+          const s = Math.max(1, Number(speed || 100));
+          // mas speed -> menos delay entre acciones
+          return Phaser.Math.Clamp(950 - s * 2, 120, 900);
+        };
         const updatePlayerBar = () => {
           placeHealthBar(playerBar, player.x, player.y - tileSize * 0.62);
+          placeHealthBar(playerManaBar, player.x, player.y - tileSize * 0.48);
           playerNameTag.setPosition(player.x, player.y - tileSize * 0.8);
           const ratio = playerHp / playerMaxHp;
+          const manaRatio = playerMana / playerMaxMana;
           setHealthBarRatio(playerBar, ratio);
+          setHealthBarRatio(playerManaBar, manaRatio);
           if (playerHp <= 0) {
             playerNameTag.setColor('#000000');
             playerBar.fill.setFillStyle(0x000000, 1);
+            playerManaBar.fill.setFillStyle(0x000000, 1);
           } else {
             playerNameTag.setColor(nameColorByHpRatio(ratio));
             playerBar.fill.setFillStyle(barColorByHpRatio(ratio), 1);
+            playerManaBar.fill.setFillStyle(0x3b82f6, 1);
           }
         };
         const updateCreatureBar = (creature) => {
@@ -328,8 +609,92 @@ function startGame(configPlayer) {
           updatePlayerBar();
           for (const c of creatures) updateCreatureBar(c);
         };
-        const getCurrentTier = () => progressionTiers[Math.min(currentLevel - 1, progressionTiers.length - 1)];
-        const hasStairsAtPlayer = () => gridX === STAIRS_TILE.gx && gridY === STAIRS_TILE.gy;
+        const pickGroupForLevel = (level) => {
+          if (!typeProgressionGroups.length) return null;
+          // Objetivo de dificultad creciente, pero con rango amplio y ruido.
+          const n = typeProgressionGroups.length;
+          // Curva inicial mucho mas suave para niveles tempranos.
+          const earlyFactor = level <= 8 ? 0.45 : 1.7;
+          const baseTarget = Math.floor((level - 1) * earlyFactor);
+          const startBias = level <= 8 ? Math.min(1, runStartBias) : runStartBias;
+          const target = Math.min(n - 1, baseTarget + startBias);
+          const radius = Math.max(level <= 8 ? 2 : 5 + runSpreadBias, Math.floor(n * (level <= 8 ? 0.08 : 0.2)));
+          const minIdx = Math.max(0, target - radius);
+          const maxCap = level <= 8
+            ? Math.min(n - 1, 6 + level)
+            : n - 1;
+          const maxIdx = Math.min(maxCap, target + radius);
+
+          // Candidatos del rango con exclusion de repetidos recientes.
+          const recentSet = new Set(recentGroupIndices);
+          let candidates = [];
+          for (let i = minIdx; i <= maxIdx; i += 1) {
+            if (!recentSet.has(i)) candidates.push(i);
+          }
+          if (candidates.length === 0) {
+            for (let i = minIdx; i <= maxIdx; i += 1) candidates.push(i);
+          }
+
+          // Eleccion aleatoria ponderada por cercania al target.
+          const weighted = candidates.map((idx) => {
+            const dist = Math.abs(idx - target);
+            return { idx, w: 1 / (1 + dist) };
+          });
+          const totalW = weighted.reduce((acc, x) => acc + x.w, 0);
+          let r = Math.random() * totalW;
+          let chosen = weighted[weighted.length - 1].idx;
+          for (const item of weighted) {
+            r -= item.w;
+            if (r <= 0) {
+              chosen = item.idx;
+              break;
+            }
+          }
+
+          recentGroupIndices.push(chosen);
+          if (recentGroupIndices.length > 4) recentGroupIndices.shift();
+          return typeProgressionGroups[chosen];
+        };
+        const hasStairsAtPlayer = () => gridX === currentStairsTile.gx && gridY === currentStairsTile.gy;
+        const generateLevelMap = () => {
+          const map = Array.from({ length: MAP_H }, () => Array.from({ length: MAP_W }, () => '.'));
+          for (let y = 0; y < MAP_H; y += 1) {
+            for (let x = 0; x < MAP_W; x += 1) {
+              const isBorder = x === 0 || y === 0 || x === MAP_W - 1 || y === MAP_H - 1;
+              if (isBorder) {
+                map[y][x] = '#';
+              } else if (Math.random() < 0.22) {
+                map[y][x] = '#';
+              }
+            }
+          }
+          // carve guaranteed path START -> stairs
+          const stairs = {
+            gx: Phaser.Math.Between(2, MAP_W - 3),
+            gy: Phaser.Math.Between(2, MAP_H - 3),
+          };
+          let x = START_TILE.gx;
+          let y = START_TILE.gy;
+          map[y][x] = '.';
+          while (x !== stairs.gx || y !== stairs.gy) {
+            if (x < stairs.gx) x += 1;
+            else if (x > stairs.gx) x -= 1;
+            else if (y < stairs.gy) y += 1;
+            else if (y > stairs.gy) y -= 1;
+            map[y][x] = '.';
+          }
+          map[START_TILE.gy][START_TILE.gx] = '.';
+          map[stairs.gy][stairs.gx] = '.';
+          return { map: map.map((r) => r.join('')), stairs };
+        };
+        const refreshMapVisuals = () => {
+          for (let y = 0; y < MAP_H; y += 1) {
+            for (let x = 0; x < MAP_W; x += 1) {
+              const isWall = currentMap[y][x] === '#';
+              mapTiles[y][x].setFillStyle(isWall ? 0x2f3a4a : 0x1a2534, 1);
+            }
+          }
+        };
         const spawnCreaturesForLevel = (level) => {
           for (const c of creatures) {
             c.sprite.destroy();
@@ -341,62 +706,165 @@ function startGame(configPlayer) {
           }
           creatures.length = 0;
 
-          const tier = progressionTiers[Math.min(level - 1, progressionTiers.length - 1)];
-          const levelPool = (tier && tier.creatures && tier.creatures.length > 0)
-            ? tier.creatures
-            : [{ id: 1116, title: 'Rat', experience: 5, hitpoints: 20, maxDamage: 8, image: 'creature/Rat.gif' }];
-          const templates = pickRandomCreatures(levelPool, CREATURES_PER_LEVEL);
+          const group = currentLevelGroup;
+          const levelPool = (group && group.creatures && group.creatures.length > 0)
+            ? group.creatures.filter((c) => c.type_primary === group.type_primary)
+            : [{ id: 1116, title: 'Rat', type_primary: 'Glires', experience: 5, hitpoints: 20, maxDamage: 8, image: 'creature/Rat.gif' }];
+          creaturesTargetCount = Phaser.Math.Between(MIN_CREATURES_PER_LEVEL, MAX_CREATURES_PER_LEVEL);
+          const templates = pickRandomCreatures(levelPool, creaturesTargetCount);
+          const floorsForSpawn = currentFloors.filter(
+            (t) =>
+              !(t.gx === START_TILE.gx && t.gy === START_TILE.gy)
+              && !(t.gx === currentStairsTile.gx && t.gy === currentStairsTile.gy)
+          );
 
-          for (let i = 0; i < CREATURES_PER_LEVEL; i += 1) {
-            const spawn = CREATURE_SPAWNS[i % CREATURE_SPAWNS.length];
+          for (let i = 0; i < creaturesTargetCount; i += 1) {
+            const spawn = floorsForSpawn.length > 0 ? floorsForSpawn.splice(Phaser.Math.Between(0, floorsForSpawn.length - 1), 1)[0] : null;
             const template = templates[i % templates.length];
-            if (!isWalkableTile(spawn.gx, spawn.gy)) continue;
+            if (!spawn || !isWalkableTile(spawn.gx, spawn.gy)) continue;
 
             const sprite = this.add.sprite(centerX(spawn.gx), centerY(spawn.gy), creatureKey(template));
             sprite.setOrigin(0.5, 0.5);
             sprite.setDisplaySize(tileSize * 0.9, tileSize * 0.9);
             creatures.push({
+              id: Number(template.id),
               sprite,
               gx: spawn.gx,
               gy: spawn.gy,
               hp: Math.max(1, Number(template.hitpoints || 1)),
               maxHp: Math.max(1, Number(template.hitpoints || 1)),
               maxDamage: Math.max(1, Number(template.maxDamage || 1)),
+              runsAt: Math.max(0, Number(template.runs_at || 0)),
               title: template.title,
               experience: Number(template.experience || 0),
+              speed: Math.max(1, Number(template.speed || 100)),
               alive: true,
               nextWanderAt: 0,
+              nextActionAt: 0,
               aggroLocked: false,
               hpBar: makeHealthBar(0xef4444),
               nameTag: makeNameLabel(template.title, '#f3f4f6'),
             });
             updateCreatureBar(creatures[creatures.length - 1]);
           }
-          const first = templates[0];
-          combatLog.setText(
-            `Nivel ${level}: ${creaturePlural(first.title, CREATURES_PER_LEVEL)} (exp base ${first.experience}).`
+          const first = templates[0] || levelPool[0];
+          addCombatLog(
+            `Floor ${level}: ${first.type_primary} (base exp ${first.experience}).`
           );
         };
-        const descendLevel = () => {
-          currentLevel += 1;
+        const descendLevel = (toNext = true) => {
+          if (toNext) currentLevel += 1;
+          currentLevelGroup = pickGroupForLevel(currentLevel);
+          const generated = generateLevelMap();
+          currentMap = generated.map;
+          currentStairsTile = generated.stairs;
+          // Solo usamos casillas conectadas al inicio para evitar monstruos bloqueados.
+          const reachable = [];
+          const visited = Array.from({ length: MAP_H }, () => Array.from({ length: MAP_W }, () => false));
+          const q = [{ gx: START_TILE.gx, gy: START_TILE.gy }];
+          visited[START_TILE.gy][START_TILE.gx] = true;
+          while (q.length > 0) {
+            const cur = q.shift();
+            if (currentMap[cur.gy][cur.gx] === '.') reachable.push(cur);
+            const dirs = [
+              { dx: 1, dy: 0 },
+              { dx: -1, dy: 0 },
+              { dx: 0, dy: 1 },
+              { dx: 0, dy: -1 },
+            ];
+            for (const d of dirs) {
+              const nx = cur.gx + d.dx;
+              const ny = cur.gy + d.dy;
+              if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) continue;
+              if (visited[ny][nx]) continue;
+              if (currentMap[ny][nx] !== '.') continue;
+              visited[ny][nx] = true;
+              q.push({ gx: nx, gy: ny });
+            }
+          }
+          currentFloors = reachable;
+          refreshMapVisuals();
+          stairRect.setPosition(centerX(currentStairsTile.gx), centerY(currentStairsTile.gy));
+          stairText.setPosition(centerX(currentStairsTile.gx), centerY(currentStairsTile.gy));
+          stairRect.setVisible(false);
+          stairText.setVisible(false);
           spawnCreaturesForLevel(currentLevel);
-          gridX = 1;
-          gridY = 1;
+          gridX = START_TILE.gx;
+          gridY = START_TILE.gy;
           player.x = centerX(gridX);
           player.y = centerY(gridY);
           updatePlayerBar();
         };
         const updateHud = () => {
-          const tier = getCurrentTier();
-          const tierName = tier && tier.creatures[0] ? tier.creatures[0].title : 'Creature';
-          combatHud.setText(
-            `HP ${playerHp}/${playerMaxHp} | ${creaturePlural(tierName, aliveCreatures().length)} ${aliveCreatures().length}/${CREATURES_PER_LEVEL}`
-          );
-          levelHud.setText(`Nivel ${currentLevel}/${DUNGEON_LEVELS} | Escalera en (${STAIRS_TILE.gx},${STAIRS_TILE.gy})`);
+          const group = currentLevelGroup;
+          const typeName = group ? group.type_primary : 'Creature';
+          nameLabel.setText(`${configPlayer.name} | Player Lv ${playerLevel}`);
+          levelHud.setText(`Floor ${currentLevel} | ${typeName} ${aliveCreatures().length}/${creaturesTargetCount}`);
+          combatHud.setText(`HP ${playerHp}/${playerMaxHp} MP ${playerMana}/${playerMaxMana}`);
+          const xpNeeded = xpToNextLevel(playerLevel);
+          const progress = xpNeeded > 0 ? playerXp / xpNeeded : 0;
+          const totalWidth = this.scale.width - 18;
+          levelProgressFill.width = Math.max(2, totalWidth * progress);
+          levelProgressText.setText(`XP ${playerXp} / ${xpNeeded}`);
         };
         const pickCreatureDamage = () => {
           const max = Math.max(1, Number(this._activeAttackerMaxDamage || 1));
           return Phaser.Math.Between(1, max);
+        };
+        const didAttackMiss = () => Math.random() < 0.1;
+        const didAttackCrit = () => Math.random() < 0.1;
+        const applyCriticalDamage = (baseDamage) => Math.max(1, Math.round(baseDamage * 2.5)); // +150%
+        const showCritText = (x, y) => {
+          const crit = this.add.text(x, y - tileSize * 0.9, 'CRIT!', {
+            color: '#ff0000',
+            fontSize: '14px',
+            fontStyle: 'bold',
+          });
+          crit.setOrigin(0.5, 0.5);
+          this.tweens.add({
+            targets: crit,
+            y: crit.y - 22,
+            alpha: 0,
+            duration: 900,
+            ease: 'Sine.easeOut',
+            onComplete: () => crit.destroy(),
+          });
+        };
+        const showMissSmoke = (x, y) => {
+          const puffs = [
+            { dx: -7, dy: -4, r: 7 },
+            { dx: 0, dy: -7, r: 8 },
+            { dx: 7, dy: -3, r: 7 },
+            { dx: -3, dy: 3, r: 6 },
+            { dx: 4, dy: 4, r: 6 },
+          ];
+          for (const puff of puffs) {
+            const cloud = this.add.circle(x + puff.dx, y + puff.dy, puff.r, 0x9ca3af, 0.55);
+            this.tweens.add({
+              targets: cloud,
+              y: cloud.y - 10,
+              alpha: 0,
+              scaleX: 1.25,
+              scaleY: 1.25,
+              duration: 260,
+              ease: 'Sine.easeOut',
+              onComplete: () => cloud.destroy(),
+            });
+          }
+          const miss = this.add.text(x, y - tileSize * 0.75, 'MISS', {
+            color: '#e5e7eb',
+            fontSize: '14px',
+            fontStyle: 'bold',
+          });
+          miss.setOrigin(0.5, 0.5);
+          this.tweens.add({
+            targets: miss,
+            y: miss.y - 14,
+            alpha: 0,
+            duration: 320,
+            ease: 'Sine.easeOut',
+            onComplete: () => miss.destroy(),
+          });
         };
         const showPlayerHitEffect = (dmg) => {
           if (playerDead) return;
@@ -505,17 +973,18 @@ function startGame(configPlayer) {
         };
         const tryMoveCreature = (creature) => {
           const next = findNextStepToPlayer(creature.gx, creature.gy);
-          if (!next) return;
-          if (next.x === gridX && next.y === gridY) return;
+          if (!next) return false;
+          if (next.x === gridX && next.y === gridY) return false;
           orientCreatureSprite(creature, next.x - creature.gx, next.y - creature.gy);
           creature.gx = next.x;
           creature.gy = next.y;
           creature.sprite.x = centerX(creature.gx);
           creature.sprite.y = centerY(creature.gy);
           updateCreatureBar(creature);
+          return true;
         };
         const tryWanderCreature = (creature, now) => {
-          if (now < creature.nextWanderAt) return;
+          if (now < creature.nextWanderAt) return false;
           creature.nextWanderAt = now + Phaser.Math.Between(900, 1600);
 
           // Fuera de agro: solo movimiento cardinal de 1 casilla (N/E/O/S).
@@ -538,28 +1007,85 @@ function startGame(configPlayer) {
             creature.sprite.x = centerX(creature.gx);
             creature.sprite.y = centerY(creature.gy);
             updateCreatureBar(creature);
-            return;
+            return true;
           }
+          return false;
+        };
+        const shouldFlee = (creature) => creature.runsAt > 0 && creature.hp <= creature.runsAt;
+        const tryFleeCreature = (creature) => {
+          const options = [
+            { dx: 1, dy: 0 },
+            { dx: -1, dy: 0 },
+            { dx: 0, dy: 1 },
+            { dx: 0, dy: -1 },
+          ];
+          let best = null;
+          let bestDist = Math.abs(creature.gx - gridX) + Math.abs(creature.gy - gridY);
+          for (const d of options) {
+            const nx = creature.gx + d.dx;
+            const ny = creature.gy + d.dy;
+            if (!isWalkable(nx, ny)) continue;
+            if (isOccupiedByActor(nx, ny)) continue;
+            const dist = Math.abs(nx - gridX) + Math.abs(ny - gridY);
+            if (dist > bestDist) {
+              bestDist = dist;
+              best = { nx, ny, d };
+            }
+          }
+          if (!best) return false;
+          orientCreatureSprite(creature, best.d.dx, best.d.dy);
+          creature.gx = best.nx;
+          creature.gy = best.ny;
+          creature.sprite.x = centerX(creature.gx);
+          creature.sprite.y = centerY(creature.gy);
+          updateCreatureBar(creature);
+          return true;
         };
         const creatureTurn = () => {
           if (gameOver) return;
           const now = this.time.now;
           for (const creature of aliveCreatures()) {
+            if (now < creature.nextActionAt) continue;
             if (!hasAggro(creature)) {
-              tryWanderCreature(creature, now);
+              const wandered = tryWanderCreature(creature, now);
+              if (wandered) {
+                creature.nextActionAt = now + actionDelayFromSpeed(creature.speed);
+              } else {
+                creature.nextActionAt = now + 120;
+              }
               continue;
             }
             creature.aggroLocked = true;
+            let acted = false;
+            if (shouldFlee(creature)) {
+              acted = tryFleeCreature(creature) || acted;
+              creature.nextActionAt = now + (acted ? actionDelayFromSpeed(creature.speed) : 120);
+              continue;
+            }
             if (!isAdjacent(creature.gx, creature.gy, gridX, gridY)) {
-              tryMoveCreature(creature);
+              acted = tryMoveCreature(creature) || acted;
             }
             if (isAdjacent(creature.gx, creature.gy, gridX, gridY)) {
               orientCreatureSprite(creature, gridX - creature.gx, gridY - creature.gy);
-              this._activeAttackerMaxDamage = creature.maxDamage;
-              const dmg = pickCreatureDamage();
-              playerHp = Math.max(0, playerHp - dmg);
-              showPlayerHitEffect(dmg);
-              combatLog.setText(`${creature.title} te golpea por ${dmg}.`);
+              if (didAttackMiss()) {
+                showMissSmoke(player.x, player.y);
+                addCombatLog(`${creature.title} misses the hit.`);
+                acted = true;
+              } else {
+                this._activeAttackerMaxDamage = creature.maxDamage;
+                const baseDamage = pickCreatureDamage();
+                const isCrit = didAttackCrit();
+                const dmg = isCrit ? applyCriticalDamage(baseDamage) : baseDamage;
+                playerHp = Math.max(0, playerHp - dmg);
+                showPlayerHitEffect(dmg);
+                if (isCrit) {
+                  showCritText(player.x, player.y);
+                  addCombatLog(`${creature.title} lands a CRITICAL hit for ${dmg}.`);
+                } else {
+                  addCombatLog(`${creature.title} hits you for ${dmg}.`);
+                }
+                acted = true;
+              }
               if (playerHp <= 0) {
                 gameOver = true;
                 playerDead = true;
@@ -573,20 +1099,21 @@ function startGame(configPlayer) {
                 player.setDisplaySize(tileSize, tileSize);
                 deathCaption.setPosition(player.x, player.y + tileSize * 0.72);
                 deathCaption.setVisible(true);
-                combatLog.setText('Has muerto. Recarga para reiniciar.');
+                addCombatLog('You are dead. Reload to restart.');
                 break;
               }
             }
+            creature.nextActionAt = now + (acted ? actionDelayFromSpeed(creature.speed) : 120);
           }
           updatePlayerBar();
           updateHud();
         };
 
-        spawnCreaturesForLevel(currentLevel);
+        descendLevel(false); // initialize first level with random dungeon composition
         updatePlayerBar();
         updateHud();
         this.time.addEvent({
-          delay: 280,
+          delay: 90,
           loop: true,
           callback: creatureTurn,
         });
@@ -594,6 +1121,8 @@ function startGame(configPlayer) {
         this.events.on('update', () => {
           updateAllHealthBars();
           if (moving || gameOver) return;
+          const now = this.time.now;
+          if (now < nextPlayerActionAt) return;
 
           let dx = 0;
           let dy = 0;
@@ -631,26 +1160,67 @@ function startGame(configPlayer) {
 
           const targetCreature = creatureAt(targetGX, targetGY);
           if (targetCreature) {
-            targetCreature.hp = Math.max(0, targetCreature.hp - playerDamage);
-            showCreatureHitEffect(targetCreature, playerDamage);
-            if (targetCreature.hp <= 0) {
-              targetCreature.alive = false;
-              targetCreature.sprite.setVisible(false);
-              updateCreatureBar(targetCreature);
-              combatLog.setText(`Golpeas a ${targetCreature.title} y muere.`);
+            if (didAttackMiss()) {
+              showMissSmoke(targetCreature.sprite.x, targetCreature.sprite.y);
+              addCombatLog(`You miss your hit against ${targetCreature.title}.`);
             } else {
-              combatLog.setText(
-                `Golpeas a ${targetCreature.title} por ${playerDamage} (${targetCreature.hp} HP).`
-              );
+              const isCrit = didAttackCrit();
+              const damage = isCrit ? applyCriticalDamage(playerDamage) : playerDamage;
+              targetCreature.hp = Math.max(0, targetCreature.hp - damage);
+              showCreatureHitEffect(targetCreature, damage);
+              if (isCrit) {
+                showCritText(targetCreature.sprite.x, targetCreature.sprite.y);
+              }
+              if (targetCreature.hp <= 0) {
+                targetCreature.alive = false;
+                targetCreature.sprite.setVisible(false);
+                updateCreatureBar(targetCreature);
+                grantPlayerXp(targetCreature.experience);
+                addCombatLog(
+                  isCrit
+                    ? `CRITICAL hit on ${targetCreature.title} for ${damage}, and it dies.`
+                    : `You hit ${targetCreature.title} and it dies.`
+                );
+                const rolledDrops = rollCreatureDrops(targetCreature.id);
+                if (rolledDrops.length > 0) {
+                  addCombatLog(`${targetCreature.title} dropped: ${rolledDrops.map((d) => d.itemTitle).join(', ')}.`);
+                } else {
+                  addCombatLog(`${targetCreature.title} dropped nothing.`);
+                }
+                if (rolledDrops.length > 0 && window.debugInventory && typeof window.debugInventory.addLoot === 'function') {
+                  for (const d of rolledDrops) {
+                    const stored = window.debugInventory.addLoot({
+                      id: d.itemId,
+                      title: d.itemTitle,
+                      image: d.itemImage || null,
+                      isStackable: Boolean(d.isStackable),
+                      count: 1,
+                    });
+                    if (stored) {
+                      addCombatLog(`Stored in bag: ${d.itemTitle}.`);
+                    } else {
+                      addCombatLog(`Bag full, lost: ${d.itemTitle}.`);
+                    }
+                  }
+                }
+              } else {
+                addCombatLog(
+                  isCrit
+                    ? `CRITICAL hit on ${targetCreature.title} for ${damage} (${targetCreature.hp} HP).`
+                    : `You hit ${targetCreature.title} for ${damage} (${targetCreature.hp} HP).`
+                );
+              }
             }
             updateCreatureBar(targetCreature);
             updateHud();
             if (aliveCreatures().length === 0) {
-              combatLog.setText(
-                `Has derrotado a todas las criaturas del nivel ${currentLevel}. Baja por la escalera.`
-              );
+              stairRect.setVisible(true);
+              stairText.setVisible(true);
+              addCombatLog(`You defeated all creatures on floor ${currentLevel}. Go down the stairs.`);
+              nextPlayerActionAt = now + playerActionDelayMs;
               return;
             }
+            nextPlayerActionAt = now + playerActionDelayMs;
             return;
           }
 
@@ -661,7 +1231,7 @@ function startGame(configPlayer) {
             targets: player,
             x: centerX(gridX),
             y: centerY(gridY),
-            duration: stepDurationMs,
+            duration: playerMoveDurationMs,
             ease: 'Linear',
             onComplete: () => {
               // Asegura alineacion exacta al centro de la casilla.
@@ -669,12 +1239,13 @@ function startGame(configPlayer) {
               player.y = centerY(gridY);
               player.setOrigin(0.5, 0.5);
               moving = false;
-              if (hasStairsAtPlayer()) {
+              if (hasStairsAtPlayer() && aliveCreatures().length === 0) {
                 descendLevel();
               }
               updateHud();
             },
           });
+          nextPlayerActionAt = now + Math.max(playerActionDelayMs, playerMoveDurationMs);
         });
       },
     },
@@ -684,12 +1255,13 @@ function startGame(configPlayer) {
 setupSelectorUI();
 
 async function loadProgressionDatabase() {
-  if (progressionTiers.length > 0) return;
-  progressionTiers = await getCreatureProgressionByExperience(DUNGEON_LEVELS, CREATURE_POOL_PER_LEVEL);
-  if (progressionTiers.length === 0) {
-    progressionTiers = [{
-      level: 1,
-      creatures: [{ id: 1116, title: 'Rat', experience: 5, hitpoints: 20, maxDamage: 8, image: 'creature/Rat.gif' }],
+  if (typeProgressionGroups.length > 0) return;
+  typeProgressionGroups = await getCreatureTypeProgressionGroups();
+  if (typeProgressionGroups.length === 0) {
+    typeProgressionGroups = [{
+      type_primary: 'Glires',
+      average_experience: 5,
+      creatures: [{ id: 1116, title: 'Rat', type_primary: 'Glires', experience: 5, hitpoints: 20, maxDamage: 8, image: 'creature/Rat.gif' }],
     }];
   }
 }
