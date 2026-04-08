@@ -1,0 +1,866 @@
+[
+  {
+    "npc_id": 4884,
+    "name": "Folda",
+    "price": 10,
+    "notes": null
+  },
+  {
+    "npc_id": 4884,
+    "name": "Vega",
+    "price": 10,
+    "notes": null
+  },
+  {
+    "npc_id": 4884,
+    "name": "Tibia (Continent)",
+    "price": 0,
+    "notes": null
+  },
+  {
+    "npc_id": 4959,
+    "name": "Cormaya",
+    "price": 160,
+    "notes": null
+  },
+  {
+    "npc_id": 4959,
+    "name": "Farmine",
+    "price": 210,
+    "notes": "50 gp discount after completing mission 2 of The New Frontier Quest"
+  },
+  {
+    "npc_id": 4857,
+    "name": "Ab'Dendriel",
+    "price": 130,
+    "notes": null
+  },
+  {
+    "npc_id": 4857,
+    "name": "Carlin",
+    "price": 110,
+    "notes": null
+  },
+  {
+    "npc_id": 4857,
+    "name": "Edron",
+    "price": 160,
+    "notes": null
+  },
+  {
+    "npc_id": 4857,
+    "name": "Liberty Bay",
+    "price": 180,
+    "notes": null
+  },
+  {
+    "npc_id": 4857,
+    "name": "Port Hope",
+    "price": 160,
+    "notes": null
+  },
+  {
+    "npc_id": 4857,
+    "name": "Roshamuul",
+    "price": 210,
+    "notes": null
+  },
+  {
+    "npc_id": 4857,
+    "name": "Oramond",
+    "price": 150,
+    "notes": null
+  },
+  {
+    "npc_id": 4857,
+    "name": "Svargrond",
+    "price": 180,
+    "notes": null
+  },
+  {
+    "npc_id": 4857,
+    "name": "Venore",
+    "price": 170,
+    "notes": null
+  },
+  {
+    "npc_id": 4857,
+    "name": "Yalahar",
+    "price": 200,
+    "notes": null
+  },
+  {
+    "npc_id": 17120,
+    "name": "Carlin",
+    "price": 110,
+    "notes": null
+  },
+  {
+    "npc_id": 17120,
+    "name": "Thais",
+    "price": 180,
+    "notes": null
+  },
+  {
+    "npc_id": 17120,
+    "name": "Venore",
+    "price": 150,
+    "notes": null
+  },
+  {
+    "npc_id": 65988,
+    "name": "Thais",
+    "price": 210,
+    "notes": null
+  },
+  {
+    "npc_id": 30720,
+    "name": "Liberty Bay",
+    "price": 400,
+    "notes": null
+  },
+  {
+    "npc_id": 30720,
+    "name": "Thais",
+    "price": 800,
+    "notes": null
+  },
+  {
+    "npc_id": 4856,
+    "name": "Ab'Dendriel",
+    "price": 90,
+    "notes": null
+  },
+  {
+    "npc_id": 4856,
+    "name": "Ankrahmun",
+    "price": 150,
+    "notes": null
+  },
+  {
+    "npc_id": 4856,
+    "name": "Carlin",
+    "price": 130,
+    "notes": null
+  },
+  {
+    "npc_id": 4856,
+    "name": "Darashia",
+    "price": 60,
+    "notes": "There is a chance of 10% to end up on the Ghostship."
+  },
+  {
+    "npc_id": 4856,
+    "name": "Edron",
+    "price": 40,
+    "notes": null
+  },
+  {
+    "npc_id": 4856,
+    "name": "Issavi",
+    "price": 130,
+    "notes": null
+  },
+  {
+    "npc_id": 4856,
+    "name": "Liberty Bay",
+    "price": 180,
+    "notes": null
+  },
+  {
+    "npc_id": 4856,
+    "name": "Oramond",
+    "price": 130,
+    "notes": "Rank of \"Citizen\" in the Rathleton Quest required."
+  },
+  {
+    "npc_id": 4856,
+    "name": "Port Hope",
+    "price": 160,
+    "notes": null
+  },
+  {
+    "npc_id": 4856,
+    "name": "Svargrond",
+    "price": 150,
+    "notes": null
+  },
+  {
+    "npc_id": 4856,
+    "name": "Thais",
+    "price": 170,
+    "notes": null
+  },
+  {
+    "npc_id": 4856,
+    "name": "Yalahar",
+    "price": 185,
+    "notes": null
+  },
+  {
+    "npc_id": 4624,
+    "name": "Ab'Dendriel",
+    "price": 80,
+    "notes": null
+  },
+  {
+    "npc_id": 4624,
+    "name": "Edron",
+    "price": 110,
+    "notes": null
+  },
+  {
+    "npc_id": 4624,
+    "name": "Svargrond",
+    "price": 110,
+    "notes": null
+  },
+  {
+    "npc_id": 4624,
+    "name": "Thais",
+    "price": 110,
+    "notes": null
+  },
+  {
+    "npc_id": 4624,
+    "name": "Venore",
+    "price": 130,
+    "notes": null
+  },
+  {
+    "npc_id": 4624,
+    "name": "Yalahar",
+    "price": 185,
+    "notes": null
+  },
+  {
+    "npc_id": 67946,
+    "name": "Edron",
+    "price": 110,
+    "notes": "Citizen rank only."
+  },
+  {
+    "npc_id": 67946,
+    "name": "Issavi",
+    "price": 120,
+    "notes": "Price is 70 gp for characters that finished Krailos Quest."
+  },
+  {
+    "npc_id": 67946,
+    "name": "Krailos",
+    "price": 60,
+    "notes": "Citizen rank only."
+  },
+  {
+    "npc_id": 67946,
+    "name": "Port Hope",
+    "price": 200,
+    "notes": "Citizen rank only."
+  },
+  {
+    "npc_id": 67946,
+    "name": "Thais",
+    "price": 150,
+    "notes": null
+  },
+  {
+    "npc_id": 67946,
+    "name": "Venore",
+    "price": 130,
+    "notes": "Citizen rank only."
+  },
+  {
+    "npc_id": 88953,
+    "name": "Darashia",
+    "price": 80,
+    "notes": null
+  },
+  {
+    "npc_id": 88953,
+    "name": "Krailos",
+    "price": 80,
+    "notes": null
+  },
+  {
+    "npc_id": 88953,
+    "name": "Oramond",
+    "price": 100,
+    "notes": null
+  },
+  {
+    "npc_id": 88953,
+    "name": "Venore",
+    "price": 80,
+    "notes": null
+  },
+  {
+    "npc_id": 8982,
+    "name": "Calassa",
+    "price": 200,
+    "notes": "rank of Explorer in The Explorer Society Quest"
+  },
+  {
+    "npc_id": 8982,
+    "name": "Yalahar",
+    "price": 400,
+    "notes": "start the In Service of Yalahar Quest"
+  },
+  {
+    "npc_id": 77054,
+    "name": "Darashia",
+    "price": 110,
+    "notes": null
+  },
+  {
+    "npc_id": 77054,
+    "name": "Edron",
+    "price": 100,
+    "notes": null
+  },
+  {
+    "npc_id": 77054,
+    "name": "Issavi",
+    "price": 70,
+    "notes": null
+  },
+  {
+    "npc_id": 77054,
+    "name": "Oramond",
+    "price": 60,
+    "notes": null
+  },
+  {
+    "npc_id": 77054,
+    "name": "Venore",
+    "price": 110,
+    "notes": null
+  },
+  {
+    "npc_id": 4853,
+    "name": "Carlin",
+    "price": 80,
+    "notes": null
+  },
+  {
+    "npc_id": 4853,
+    "name": "Edron",
+    "price": 70,
+    "notes": null
+  },
+  {
+    "npc_id": 4853,
+    "name": "Thais",
+    "price": 130,
+    "notes": null
+  },
+  {
+    "npc_id": 4853,
+    "name": "Venore",
+    "price": 90,
+    "notes": null
+  },
+  {
+    "npc_id": 4853,
+    "name": "Yalahar",
+    "price": 160,
+    "notes": null
+  },
+  {
+    "npc_id": 4876,
+    "name": "Ab'Dendriel",
+    "price": 70,
+    "notes": null
+  },
+  {
+    "npc_id": 4876,
+    "name": "Ankrahmun",
+    "price": 160,
+    "notes": null
+  },
+  {
+    "npc_id": 4876,
+    "name": "Carlin",
+    "price": 110,
+    "notes": null
+  },
+  {
+    "npc_id": 4876,
+    "name": "Cormaya",
+    "price": 20,
+    "notes": null
+  },
+  {
+    "npc_id": 4876,
+    "name": "Liberty Bay",
+    "price": 170,
+    "notes": null
+  },
+  {
+    "npc_id": 4876,
+    "name": "Oramond",
+    "price": 110,
+    "notes": "Rank of \"Citizen\" in the Rathleton Quest required."
+  },
+  {
+    "npc_id": 4876,
+    "name": "Port Hope",
+    "price": 150,
+    "notes": null
+  },
+  {
+    "npc_id": 4876,
+    "name": "Thais",
+    "price": 160,
+    "notes": null
+  },
+  {
+    "npc_id": 4876,
+    "name": "Venore",
+    "price": 40,
+    "notes": null
+  },
+  {
+    "npc_id": 3108,
+    "name": "Darashia",
+    "price": 100,
+    "notes": null
+  },
+  {
+    "npc_id": 3108,
+    "name": "Edron",
+    "price": 160,
+    "notes": null
+  },
+  {
+    "npc_id": 3108,
+    "name": "Liberty Bay",
+    "price": 90,
+    "notes": null
+  },
+  {
+    "npc_id": 3108,
+    "name": "Port Hope",
+    "price": 80,
+    "notes": null
+  },
+  {
+    "npc_id": 3108,
+    "name": "Venore",
+    "price": 150,
+    "notes": null
+  },
+  {
+    "npc_id": 3108,
+    "name": "Yalahar",
+    "price": 230,
+    "notes": null
+  },
+  {
+    "npc_id": 8554,
+    "name": "Treasure Island",
+    "price": 200,
+    "notes": null
+  },
+  {
+    "npc_id": 8554,
+    "name": "Liberty Bay",
+    "price": 50,
+    "notes": null
+  },
+  {
+    "npc_id": 8554,
+    "name": "Meriana",
+    "price": 50,
+    "notes": "after completing the Access to Meriana mission of The Shattered Isles Quest and by saying peg leg"
+  },
+  {
+    "npc_id": 8554,
+    "name": "Treasure Hunt Island",
+    "price": 0,
+    "notes": "during a mission of the Treasure Hunt Quest"
+  },
+  {
+    "npc_id": 5153,
+    "name": "Folda",
+    "price": 10,
+    "notes": null
+  },
+  {
+    "npc_id": 5153,
+    "name": "Senja",
+    "price": 10,
+    "notes": null
+  },
+  {
+    "npc_id": 5153,
+    "name": "Tibia (Continent)",
+    "price": 0,
+    "notes": null
+  },
+  {
+    "npc_id": 5155,
+    "name": "Ankrahmun",
+    "price": 110,
+    "notes": null
+  },
+  {
+    "npc_id": 5155,
+    "name": "Darashia",
+    "price": 180,
+    "notes": null
+  },
+  {
+    "npc_id": 5155,
+    "name": "Edron",
+    "price": 150,
+    "notes": "shortcut cost: 90"
+  },
+  {
+    "npc_id": 5155,
+    "name": "Liberty Bay",
+    "price": 50,
+    "notes": "shortcut cost: 20"
+  },
+  {
+    "npc_id": 5155,
+    "name": "Oramond",
+    "price": 200,
+    "notes": "Rank of \"Citizen\" in the Rathleton Quest required."
+  },
+  {
+    "npc_id": 5155,
+    "name": "Thais",
+    "price": 160,
+    "notes": "shortcut cost: 100"
+  },
+  {
+    "npc_id": 5155,
+    "name": "Venore",
+    "price": 160,
+    "notes": null
+  },
+  {
+    "npc_id": 5155,
+    "name": "Yalahar",
+    "price": 260,
+    "notes": "shortcut cost: 200"
+  },
+  {
+    "npc_id": 75233,
+    "name": "Grimvale",
+    "price": 100,
+    "notes": null
+  },
+  {
+    "npc_id": 75233,
+    "name": "Edron",
+    "price": 100,
+    "notes": null
+  },
+  {
+    "npc_id": 1376,
+    "name": "Isle of the Kings",
+    "price": 10,
+    "notes": "become his friend"
+  },
+  {
+    "npc_id": 4855,
+    "name": "Kazordoon",
+    "price": 160,
+    "notes": null
+  },
+  {
+    "npc_id": 4855,
+    "name": "Farmine",
+    "price": 110,
+    "notes": "50 gp discount after mission 2 of The New Frontier Quest."
+  },
+  {
+    "npc_id": 30907,
+    "name": "Vengoth",
+    "price": 100,
+    "notes": "after mission 4 of the Blood Brothers Quest"
+  },
+  {
+    "npc_id": 30907,
+    "name": "Yalahar",
+    "price": 50,
+    "notes": "after mission 4 of the Blood Brothers Quest"
+  },
+  {
+    "npc_id": 17715,
+    "name": "Ankrahmun",
+    "price": 90,
+    "notes": null
+  },
+  {
+    "npc_id": 17715,
+    "name": "Darashia",
+    "price": 200,
+    "notes": null
+  },
+  {
+    "npc_id": 17715,
+    "name": "Edron",
+    "price": 170,
+    "notes": null
+  },
+  {
+    "npc_id": 17715,
+    "name": "Port Hope",
+    "price": 50,
+    "notes": null
+  },
+  {
+    "npc_id": 17715,
+    "name": "Thais",
+    "price": 180,
+    "notes": "you have ~8% chance to strand on Goroma"
+  },
+  {
+    "npc_id": 17715,
+    "name": "Venore",
+    "price": 180,
+    "notes": null
+  },
+  {
+    "npc_id": 17715,
+    "name": "Yalahar",
+    "price": 275,
+    "notes": null
+  },
+  {
+    "npc_id": 17715,
+    "name": "Goroma",
+    "price": 500,
+    "notes": "after completing Access to Goroma in The Shattered Isles Quest"
+  },
+  {
+    "npc_id": 53948,
+    "name": "Kazordoon",
+    "price": 10,
+    "notes": null
+  },
+  {
+    "npc_id": 53948,
+    "name": "Thais",
+    "price": 90,
+    "notes": null
+  },
+  {
+    "npc_id": 53948,
+    "name": "Robson's Isle",
+    "price": 70,
+    "notes": "during Awash World Change"
+  },
+  {
+    "npc_id": 30606,
+    "name": "Ab'Dendriel",
+    "price": 160,
+    "notes": null
+  },
+  {
+    "npc_id": 30606,
+    "name": "Ankrahmun",
+    "price": 230,
+    "notes": null
+  },
+  {
+    "npc_id": 30606,
+    "name": "Carlin",
+    "price": 185,
+    "notes": null
+  },
+  {
+    "npc_id": 30606,
+    "name": "Darashia",
+    "price": 210,
+    "notes": null
+  },
+  {
+    "npc_id": 30606,
+    "name": "Liberty Bay",
+    "price": 275,
+    "notes": null
+  },
+  {
+    "npc_id": 30606,
+    "name": "Port Hope",
+    "price": 260,
+    "notes": null
+  },
+  {
+    "npc_id": 30606,
+    "name": "Thais",
+    "price": 200,
+    "notes": null
+  },
+  {
+    "npc_id": 30606,
+    "name": "Venore",
+    "price": 185,
+    "notes": null
+  },
+  {
+    "npc_id": 30761,
+    "name": "Fenrock",
+    "price": 100,
+    "notes": "50 gp from Mistrock"
+  },
+  {
+    "npc_id": 30761,
+    "name": "Mistrock",
+    "price": 100,
+    "notes": null
+  },
+  {
+    "npc_id": 30761,
+    "name": "Yalahar",
+    "price": 100,
+    "notes": null
+  },
+  {
+    "npc_id": 4621,
+    "name": "Folda",
+    "price": 20,
+    "notes": null
+  },
+  {
+    "npc_id": 4621,
+    "name": "Senja",
+    "price": 20,
+    "notes": null
+  },
+  {
+    "npc_id": 4621,
+    "name": "Vega",
+    "price": 20,
+    "notes": null
+  },
+  {
+    "npc_id": 4854,
+    "name": "Edron",
+    "price": 20,
+    "notes": null
+  },
+  {
+    "npc_id": 4854,
+    "name": "Eremo",
+    "price": 0,
+    "notes": null
+  },
+  {
+    "npc_id": 4852,
+    "name": "Ankrahmun",
+    "price": 100,
+    "notes": null
+  },
+  {
+    "npc_id": 4852,
+    "name": "Gray Island",
+    "price": 150,
+    "notes": null
+  },
+  {
+    "npc_id": 4852,
+    "name": "Issavi",
+    "price": 130,
+    "notes": null
+  },
+  {
+    "npc_id": 4852,
+    "name": "Krailos",
+    "price": 110,
+    "notes": null
+  },
+  {
+    "npc_id": 4852,
+    "name": "Liberty Bay",
+    "price": 200,
+    "notes": null
+  },
+  {
+    "npc_id": 4852,
+    "name": "Port Hope",
+    "price": 180,
+    "notes": null
+  },
+  {
+    "npc_id": 4852,
+    "name": "Venore",
+    "price": 60,
+    "notes": null
+  },
+  {
+    "npc_id": 4852,
+    "name": "Yalahar",
+    "price": 210,
+    "notes": null
+  },
+  {
+    "npc_id": 9052,
+    "name": "Liberty Bay",
+    "price": 50,
+    "notes": "from Meriana"
+  },
+  {
+    "npc_id": 9052,
+    "name": "Liberty Bay",
+    "price": 100,
+    "notes": "from Nargor"
+  },
+  {
+    "npc_id": 9052,
+    "name": "Nargor",
+    "price": 50,
+    "notes": null
+  },
+  {
+    "npc_id": 9052,
+    "name": "Meriana",
+    "price": 50,
+    "notes": null
+  },
+  {
+    "npc_id": 4885,
+    "name": "Vega",
+    "price": 10,
+    "notes": null
+  },
+  {
+    "npc_id": 4885,
+    "name": "Senja",
+    "price": 10,
+    "notes": null
+  },
+  {
+    "npc_id": 4885,
+    "name": "Tibia (Continent)",
+    "price": 0,
+    "notes": null
+  },
+  {
+    "npc_id": 30857,
+    "name": "Monument Tower",
+    "price": 50,
+    "notes": null
+  },
+  {
+    "npc_id": 30857,
+    "name": "Sunken Quarter",
+    "price": 0,
+    "notes": null
+  },
+  {
+    "npc_id": 41415,
+    "name": "Cormaya",
+    "price": 110,
+    "notes": "50 gp discount after mission 2 of The New Frontier Quest."
+  },
+  {
+    "npc_id": 41415,
+    "name": "Kazordoon",
+    "price": 210,
+    "notes": "50 gp discount after mission 2 of The New Frontier Quest."
+  }
+]

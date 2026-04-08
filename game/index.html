@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tibia Dungeons</title>
+    <style>
+      html, body { height: 100%; margin: 0; background: #0d1117; color: #c9d1d9; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, sans-serif; }
+      #phaser { width: 100vw; height: 100vh; }
+      .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(8, 12, 18, 0.9);
+        display: grid;
+        place-items: center;
+        z-index: 10;
+      }
+      .panel {
+        width: min(760px, 92vw);
+        background: #111827;
+        border: 1px solid #30363d;
+        border-radius: 10px;
+        padding: 18px;
+      }
+      .row { margin-top: 12px; display: flex; gap: 10px; align-items: center; }
+      input[type="text"] {
+        flex: 1;
+        padding: 8px;
+        border-radius: 6px;
+        border: 1px solid #374151;
+        background: #0f172a;
+        color: #e5e7eb;
+      }
+      button {
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid #374151;
+        background: #1f2937;
+        color: #f9fafb;
+        cursor: pointer;
+      }
+      .choices { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 12px; }
+      .choice {
+        border: 1px solid #374151;
+        border-radius: 10px;
+        padding: 8px;
+        background: #0f172a;
+        cursor: pointer;
+      }
+      .choice.active { outline: 2px solid #60a5fa; }
+      .choice img { width: 92px; height: 92px; image-rendering: pixelated; display: block; margin: 0 auto 6px; }
+      .hint { margin-top: 10px; color: #9ca3af; font-size: 13px; }
+    </style>
+    <script src="https://unpkg.com/phaser@3/dist/phaser.min.js"></script>
+  </head>
+  <body>
+    <div id="phaser"></div>
+
+    <div class="overlay" id="startOverlay">
+      <div class="panel">
+        <h2>Seleccion de personaje</h2>
+        <div class="row">
+          <label for="playerName">Nombre:</label>
+          <input id="playerName" type="text" maxlength="12" placeholder="Tu personaje" />
+        </div>
+        <div class="choices">
+          <div class="choice active" data-sex="male" id="choiceMale">
+            <img src="./data/images/outfit/Outfit Citizen Male.gif" alt="Outfit Citizen Male" />
+            <strong>Male</strong>
+            <div>Outfit Citizen Male</div>
+          </div>
+          <div class="choice" data-sex="female" id="choiceFemale">
+            <img src="./data/images/outfit/Outfit Citizen Female Addon 1.gif" alt="Outfit Citizen Female Addon 1" />
+            <strong>Female</strong>
+            <div>Outfit Citizen Female Addon 1</div>
+          </div>
+        </div>
+        <div class="row">
+          <button id="startBtn">Entrar a la mazmorra</button>
+        </div>
+        <div class="hint">Movimientos: WASD o flechas. Sur=frame 0, Este=1, Norte=2, Oeste=3.</div>
+      </div>
+    </div>
+
+    <script type="module" src="./js/main.js"></script>
+  </body>
+</html>

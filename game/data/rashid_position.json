@@ -1,0 +1,58 @@
+[
+  {
+    "day": 0,
+    "city": "Svargrond",
+    "location": "Dankwart's Tavern, south of the temple.",
+    "x": 32210,
+    "y": 31157,
+    "z": 7
+  },
+  {
+    "day": 1,
+    "city": "Liberty Bay",
+    "location": "Lyonel's tavern, west of the depot.",
+    "x": 32303,
+    "y": 32834,
+    "z": 7
+  },
+  {
+    "day": 2,
+    "city": "Port Hope",
+    "location": "Clyde's tavern, west of the depot.",
+    "x": 32578,
+    "y": 32754,
+    "z": 7
+  },
+  {
+    "day": 3,
+    "city": "Ankrahmun",
+    "location": "Arito's tavern, above the post office.",
+    "x": 33068,
+    "y": 32879,
+    "z": 6
+  },
+  {
+    "day": 4,
+    "city": "Darashia",
+    "location": "Miraia's tavern, south of the guildhalls.",
+    "x": 33239,
+    "y": 32480,
+    "z": 7
+  },
+  {
+    "day": 5,
+    "city": "Edron",
+    "location": "Mirabell's tavern, above the depot.",
+    "x": 33172,
+    "y": 31813,
+    "z": 6
+  },
+  {
+    "day": 6,
+    "city": "Carlin",
+    "location": "Carlin depot, one floor above.",
+    "x": 32326,
+    "y": 31784,
+    "z": 6
+  }
+]

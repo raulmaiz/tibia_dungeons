@@ -1,0 +1,5374 @@
+[
+  {
+    "npc_id": 37851,
+    "name": "Artist"
+  },
+  {
+    "npc_id": 48770,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 67979,
+    "name": "Beggar"
+  },
+  {
+    "npc_id": 69737,
+    "name": "Spy"
+  },
+  {
+    "npc_id": 55611,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 14498,
+    "name": "Servant"
+  },
+  {
+    "npc_id": 65563,
+    "name": "Spy"
+  },
+  {
+    "npc_id": 79595,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 69736,
+    "name": "Spy"
+  },
+  {
+    "npc_id": 20372,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 31328,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 41732,
+    "name": "Collector"
+  },
+  {
+    "npc_id": 14497,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 25030,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 30565,
+    "name": "Sage"
+  },
+  {
+    "npc_id": 11911,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 12401,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 77013,
+    "name": "Clairvoyant"
+  },
+  {
+    "npc_id": 77013,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 30905,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 30905,
+    "name": "Shopmaster"
+  },
+  {
+    "npc_id": 65561,
+    "name": "Spy"
+  },
+  {
+    "npc_id": 69738,
+    "name": "Spy"
+  },
+  {
+    "npc_id": 17440,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 65562,
+    "name": "Spy"
+  },
+  {
+    "npc_id": 10048,
+    "name": "Artist"
+  },
+  {
+    "npc_id": 65560,
+    "name": "Spy"
+  },
+  {
+    "npc_id": 5361,
+    "name": "Sorcerer"
+  },
+  {
+    "npc_id": 17156,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 77371,
+    "name": "Merchant"
+  },
+  {
+    "npc_id": 46813,
+    "name": "Servant"
+  },
+  {
+    "npc_id": 17078,
+    "name": "Working Animal"
+  },
+  {
+    "npc_id": 79534,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 4675,
+    "name": "Artist"
+  },
+  {
+    "npc_id": 81373,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 5341,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 12418,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 17442,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 65559,
+    "name": "Spy"
+  },
+  {
+    "npc_id": 31790,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 5331,
+    "name": "Librarian"
+  },
+  {
+    "npc_id": 69739,
+    "name": "Spy"
+  },
+  {
+    "npc_id": 5303,
+    "name": "Shopmaster"
+  },
+  {
+    "npc_id": 9121,
+    "name": "Officer"
+  },
+  {
+    "npc_id": 5349,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 78475,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 78475,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 78475,
+    "name": "Tibia Drome"
+  },
+  {
+    "npc_id": 5241,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 9496,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 57845,
+    "name": "Rebel"
+  },
+  {
+    "npc_id": 1224,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 68014,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 4896,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 78471,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 78471,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 78471,
+    "name": "Tibia Drome"
+  },
+  {
+    "npc_id": 79440,
+    "name": "Clairvoyant"
+  },
+  {
+    "npc_id": 3433,
+    "name": "Armor Shopkeeper"
+  },
+  {
+    "npc_id": 5429,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 4894,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 4514,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 4514,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 36669,
+    "name": "Food Shopkeeper"
+  },
+  {
+    "npc_id": 81324,
+    "name": "Expedition Leader"
+  },
+  {
+    "npc_id": 81324,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 5259,
+    "name": "Shopmaster"
+  },
+  {
+    "npc_id": 5259,
+    "name": "Furniture Shopkeeper"
+  },
+  {
+    "npc_id": 56714,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 5054,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 89022,
+    "name": "Artist"
+  },
+  {
+    "npc_id": 4877,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 4877,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 37021,
+    "name": "Librarian"
+  },
+  {
+    "npc_id": 89104,
+    "name": "Representative"
+  },
+  {
+    "npc_id": 1680,
+    "name": "Adventurer"
+  },
+  {
+    "npc_id": 98781,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 53940,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 53940,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 11912,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 77368,
+    "name": "Servant"
+  },
+  {
+    "npc_id": 5332,
+    "name": "Monarch"
+  },
+  {
+    "npc_id": 53950,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 4884,
+    "name": "Ferryman"
+  },
+  {
+    "npc_id": 5330,
+    "name": "Hunter"
+  },
+  {
+    "npc_id": 5330,
+    "name": "Food Shopkeeper"
+  },
+  {
+    "npc_id": 4618,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 5345,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 5228,
+    "name": "Local Representative of the Explorer Society"
+  },
+  {
+    "npc_id": 109307,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 53941,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 9049,
+    "name": "Rebel"
+  },
+  {
+    "npc_id": 9049,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 5189,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 52425,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 14605,
+    "name": "Monarch"
+  },
+  {
+    "npc_id": 26107,
+    "name": "Headmaster"
+  },
+  {
+    "npc_id": 30841,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 5053,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 78465,
+    "name": "Supervisor"
+  },
+  {
+    "npc_id": 78465,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 2050,
+    "name": "Thief"
+  },
+  {
+    "npc_id": 64734,
+    "name": "Repenter"
+  },
+  {
+    "npc_id": 64734,
+    "name": "Clan Leader"
+  },
+  {
+    "npc_id": 5094,
+    "name": "Furniture Shopkeeper"
+  },
+  {
+    "npc_id": 5038,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 5038,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 65984,
+    "name": "Inquisitor"
+  },
+  {
+    "npc_id": 65984,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 98787,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 5302,
+    "name": "Knight Guild Leader"
+  },
+  {
+    "npc_id": 5302,
+    "name": "Paladin Guild Leader"
+  },
+  {
+    "npc_id": 53942,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 9861,
+    "name": "Assassin"
+  },
+  {
+    "npc_id": 89097,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 91749,
+    "name": "Jewelry Shopkeeper"
+  },
+  {
+    "npc_id": 110150,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 81431,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 65986,
+    "name": "Inquisitor"
+  },
+  {
+    "npc_id": 65986,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 1718,
+    "name": "Hero"
+  },
+  {
+    "npc_id": 109308,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 109308,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 46903,
+    "name": "Monarch"
+  },
+  {
+    "npc_id": 68004,
+    "name": "Druid"
+  },
+  {
+    "npc_id": 68004,
+    "name": "Druid Guild Leader"
+  },
+  {
+    "npc_id": 68004,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 68004,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 68004,
+    "name": "Florist"
+  },
+  {
+    "npc_id": 3423,
+    "name": "Armor Shopkeeper"
+  },
+  {
+    "npc_id": 5488,
+    "name": "Officer"
+  },
+  {
+    "npc_id": 58323,
+    "name": "Member of the Magic Bakery Alliance"
+  },
+  {
+    "npc_id": 17106,
+    "name": "Representative"
+  },
+  {
+    "npc_id": 17106,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 4517,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 68177,
+    "name": "Representative"
+  },
+  {
+    "npc_id": 4626,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 68020,
+    "name": "Sorcerer"
+  },
+  {
+    "npc_id": 68020,
+    "name": "Sorcerer Guild Leader"
+  },
+  {
+    "npc_id": 68020,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 8545,
+    "name": "Treasure Hunter"
+  },
+  {
+    "npc_id": 30906,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 4515,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 4485,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 4686,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 3146,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 37260,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 53943,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 3056,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 58356,
+    "name": "Member of the Magic Bakery Alliance"
+  },
+  {
+    "npc_id": 8563,
+    "name": "Local Representative of the Explorer Society"
+  },
+  {
+    "npc_id": 17122,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 26149,
+    "name": "Servant"
+  },
+  {
+    "npc_id": 4487,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 52438,
+    "name": "Member of the Magic Bakery Alliance"
+  },
+  {
+    "npc_id": 59970,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 62405,
+    "name": "Worker"
+  },
+  {
+    "npc_id": 1685,
+    "name": "Farmer"
+  },
+  {
+    "npc_id": 1685,
+    "name": "Cook"
+  },
+  {
+    "npc_id": 58357,
+    "name": "Member of the Magic Bakery Alliance"
+  },
+  {
+    "npc_id": 25559,
+    "name": "Thief"
+  },
+  {
+    "npc_id": 25559,
+    "name": "Merchant"
+  },
+  {
+    "npc_id": 1218,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 4518,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 5485,
+    "name": "Cook"
+  },
+  {
+    "npc_id": 62406,
+    "name": "Worker"
+  },
+  {
+    "npc_id": 31310,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 4883,
+    "name": "Food Shopkeeper"
+  },
+  {
+    "npc_id": 5310,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 5260,
+    "name": "Furniture Shopkeeper"
+  },
+  {
+    "npc_id": 91725,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 37022,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 76890,
+    "name": "Servant"
+  },
+  {
+    "npc_id": 5087,
+    "name": "Artist"
+  },
+  {
+    "npc_id": 8804,
+    "name": "Sugar Cane Harvester"
+  },
+  {
+    "npc_id": 8928,
+    "name": "Artist"
+  },
+  {
+    "npc_id": 5333,
+    "name": "Food Shopkeeper"
+  },
+  {
+    "npc_id": 4976,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 5263,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 5263,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 58312,
+    "name": "Member of the Magic Bakery Alliance"
+  },
+  {
+    "npc_id": 4661,
+    "name": "Jewelry Shopkeeper"
+  },
+  {
+    "npc_id": 4959,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 4959,
+    "name": "Ore Wagon System Ticket Seller"
+  },
+  {
+    "npc_id": 58277,
+    "name": "Servant"
+  },
+  {
+    "npc_id": 77098,
+    "name": "Supervisor"
+  },
+  {
+    "npc_id": 9495,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 34083,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 5362,
+    "name": "Fisherman"
+  },
+  {
+    "npc_id": 63275,
+    "name": "Supervisor"
+  },
+  {
+    "npc_id": 63264,
+    "name": "Member of the Magic Bakery Alliance"
+  },
+  {
+    "npc_id": 17110,
+    "name": "Ferryman"
+  },
+  {
+    "npc_id": 17110,
+    "name": "Fisherman"
+  },
+  {
+    "npc_id": 6658,
+    "name": "Foreman"
+  },
+  {
+    "npc_id": 4519,
+    "name": "Officer"
+  },
+  {
+    "npc_id": 78470,
+    "name": "Supervisor"
+  },
+  {
+    "npc_id": 78470,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 4520,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 41711,
+    "name": "Sage"
+  },
+  {
+    "npc_id": 8667,
+    "name": "Sugar Cane Harvester"
+  },
+  {
+    "npc_id": 98768,
+    "name": "Monarch"
+  },
+  {
+    "npc_id": 4857,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 17120,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 65988,
+    "name": "Inquisitor"
+  },
+  {
+    "npc_id": 65988,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 30720,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 68624,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 4856,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 4624,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 67946,
+    "name": "Ferryman"
+  },
+  {
+    "npc_id": 25509,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 88953,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 110146,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 5348,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 25222,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 8982,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 77054,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 4853,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 4876,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 3108,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 41007,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 8554,
+    "name": "Ferryman"
+  },
+  {
+    "npc_id": 20331,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 5270,
+    "name": "Jewelry Shopkeeper"
+  },
+  {
+    "npc_id": 25208,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 25208,
+    "name": "Merchant"
+  },
+  {
+    "npc_id": 5153,
+    "name": "Ferryman"
+  },
+  {
+    "npc_id": 51217,
+    "name": "Artist"
+  },
+  {
+    "npc_id": 51217,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 9026,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 9026,
+    "name": "Weapon Shopkeeper"
+  },
+  {
+    "npc_id": 9026,
+    "name": "Armor Shopkeeper"
+  },
+  {
+    "npc_id": 8689,
+    "name": "Druid"
+  },
+  {
+    "npc_id": 37023,
+    "name": "Druid"
+  },
+  {
+    "npc_id": 37023,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 8988,
+    "name": "Jewelry Shopkeeper"
+  },
+  {
+    "npc_id": 5155,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 8670,
+    "name": "Druid"
+  },
+  {
+    "npc_id": 8670,
+    "name": "Druid Guild Leader"
+  },
+  {
+    "npc_id": 61792,
+    "name": "Adventurer"
+  },
+  {
+    "npc_id": 46708,
+    "name": "Rebel"
+  },
+  {
+    "npc_id": 46708,
+    "name": "Clan Leader"
+  },
+  {
+    "npc_id": 5089,
+    "name": "Sorcerer"
+  },
+  {
+    "npc_id": 5089,
+    "name": "Sorcerer Guild Leader"
+  },
+  {
+    "npc_id": 67984,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 4687,
+    "name": "Magic Carpet Manager"
+  },
+  {
+    "npc_id": 4687,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 4983,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 108055,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 5111,
+    "name": "Spy"
+  },
+  {
+    "npc_id": 5111,
+    "name": "Organisation Leader"
+  },
+  {
+    "npc_id": 25907,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 57161,
+    "name": "Lumberjack"
+  },
+  {
+    "npc_id": 8973,
+    "name": "Shaman"
+  },
+  {
+    "npc_id": 41726,
+    "name": "Supervisor"
+  },
+  {
+    "npc_id": 68005,
+    "name": "Food Shopkeeper"
+  },
+  {
+    "npc_id": 5213,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 3070,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 62408,
+    "name": "Worker"
+  },
+  {
+    "npc_id": 30842,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 37020,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 1217,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 1217,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 5364,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 5364,
+    "name": "Officer"
+  },
+  {
+    "npc_id": 77048,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 77048,
+    "name": "Collector"
+  },
+  {
+    "npc_id": 5365,
+    "name": "Innkeeper"
+  },
+  {
+    "npc_id": 29170,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 105198,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 68593,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 68593,
+    "name": "Weapon Shopkeeper"
+  },
+  {
+    "npc_id": 68593,
+    "name": "Armor Shopkeeper"
+  },
+  {
+    "npc_id": 59969,
+    "name": "Officer"
+  },
+  {
+    "npc_id": 3087,
+    "name": "Armor Shopkeeper"
+  },
+  {
+    "npc_id": 75233,
+    "name": "Ferryman"
+  },
+  {
+    "npc_id": 83312,
+    "name": "Worker"
+  },
+  {
+    "npc_id": 83311,
+    "name": "Worker"
+  },
+  {
+    "npc_id": 83307,
+    "name": "Foreman"
+  },
+  {
+    "npc_id": 83307,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 83308,
+    "name": "Servant"
+  },
+  {
+    "npc_id": 83310,
+    "name": "Worker"
+  },
+  {
+    "npc_id": 83309,
+    "name": "Worker"
+  },
+  {
+    "npc_id": 4633,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 4633,
+    "name": "Clan Leader"
+  },
+  {
+    "npc_id": 46777,
+    "name": "Fisherman"
+  },
+  {
+    "npc_id": 53944,
+    "name": "Hunter"
+  },
+  {
+    "npc_id": 53944,
+    "name": "Merchant"
+  },
+  {
+    "npc_id": 41725,
+    "name": "Tribe Leader"
+  },
+  {
+    "npc_id": 4785,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 5147,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 91747,
+    "name": "Hunter"
+  },
+  {
+    "npc_id": 1376,
+    "name": "Fisherman"
+  },
+  {
+    "npc_id": 1376,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 2779,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 2779,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 4629,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 4880,
+    "name": "Representative"
+  },
+  {
+    "npc_id": 17124,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 8547,
+    "name": "Treasure Hunter"
+  },
+  {
+    "npc_id": 3095,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 3095,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 3095,
+    "name": "Paladin Guild Leader"
+  },
+  {
+    "npc_id": 3095,
+    "name": "Adventurer"
+  },
+  {
+    "npc_id": 52878,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 65568,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 12634,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 77415,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 4671,
+    "name": "Representative"
+  },
+  {
+    "npc_id": 78035,
+    "name": "Supervisor"
+  },
+  {
+    "npc_id": 78035,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 5091,
+    "name": "Necromancer"
+  },
+  {
+    "npc_id": 5091,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 80192,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 1681,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 17339,
+    "name": "Librarian"
+  },
+  {
+    "npc_id": 59981,
+    "name": "Physician"
+  },
+  {
+    "npc_id": 57160,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 4676,
+    "name": "Farmer"
+  },
+  {
+    "npc_id": 30843,
+    "name": "Furniture Shopkeeper"
+  },
+  {
+    "npc_id": 25560,
+    "name": "Thief"
+  },
+  {
+    "npc_id": 25560,
+    "name": "Organisation Leader"
+  },
+  {
+    "npc_id": 67986,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 8805,
+    "name": "Sugar Cane Harvester"
+  },
+  {
+    "npc_id": 4523,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 68378,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 68378,
+    "name": "Merchant"
+  },
+  {
+    "npc_id": 59967,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 36752,
+    "name": "Necromancer"
+  },
+  {
+    "npc_id": 65979,
+    "name": "Inquisitor"
+  },
+  {
+    "npc_id": 69692,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 31309,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 53946,
+    "name": "Foreman"
+  },
+  {
+    "npc_id": 25225,
+    "name": "Druid Guild Leader"
+  },
+  {
+    "npc_id": 69440,
+    "name": "Druid"
+  },
+  {
+    "npc_id": 61980,
+    "name": "Ore Wagon System Ticket Seller"
+  },
+  {
+    "npc_id": 9056,
+    "name": "Rebel"
+  },
+  {
+    "npc_id": 9056,
+    "name": "Furniture Shopkeeper"
+  },
+  {
+    "npc_id": 5353,
+    "name": "Knight Guild Leader"
+  },
+  {
+    "npc_id": 5315,
+    "name": "Working Animal"
+  },
+  {
+    "npc_id": 83501,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 83499,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 83502,
+    "name": "Explorer"
+  },
+  {
+    "npc_id": 83561,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 83500,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 83564,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 61742,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 69685,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 4878,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 36682,
+    "name": "Sorcerer"
+  },
+  {
+    "npc_id": 4544,
+    "name": "Sage"
+  },
+  {
+    "npc_id": 4544,
+    "name": "Blesser"
+  },
+  {
+    "npc_id": 4544,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 5107,
+    "name": "Furniture Shopkeeper"
+  },
+  {
+    "npc_id": 80745,
+    "name": "Artist"
+  },
+  {
+    "npc_id": 68026,
+    "name": "Jewelry Shopkeeper"
+  },
+  {
+    "npc_id": 68026,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 4684,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 4684,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 7273,
+    "name": "Clairvoyant"
+  },
+  {
+    "npc_id": 7273,
+    "name": "Sage"
+  },
+  {
+    "npc_id": 20534,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 5212,
+    "name": "Furniture Shopkeeper"
+  },
+  {
+    "npc_id": 57159,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 17049,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 5373,
+    "name": "Paladin Guild Leader"
+  },
+  {
+    "npc_id": 5050,
+    "name": "Officer"
+  },
+  {
+    "npc_id": 5050,
+    "name": "Caste Leader"
+  },
+  {
+    "npc_id": 69437,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 8832,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 4539,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 41008,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 41008,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 89064,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 30844,
+    "name": "Necromancer"
+  },
+  {
+    "npc_id": 30844,
+    "name": "Spell Instructor"
+  },
+  {
+    "npc_id": 68096,
+    "name": "Worker"
+  },
+  {
+    "npc_id": 5334,
+    "name": "Instrument Shopkeeper"
+  },
+  {
+    "npc_id": 64594,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 98772,
+    "name": "Adventurer"
+  },
+  {
+    "npc_id": 55770,
+    "name": "Member of the Combined Magical Winterberry Society"
+  },
+  {
+    "npc_id": 78466,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 78466,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 78466,
+    "name": "Tibia Drome"
+  },
+  {
+    "npc_id": 68011,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 20253,
+    "name": "Spy"
+  },
+  {
+    "npc_id": 20253,
+    "name": "Organisation Leader"
+  },
+  {
+    "npc_id": 4574,
+    "name": "Monarch"
+  },
+  {
+    "npc_id": 31222,
+    "name": "Monarch"
+  },
+  {
+    "npc_id": 108054,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 108054,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 108054,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 8548,
+    "name": "Treasure Hunter"
+  },
+  {
+    "npc_id": 9860,
+    "name": "Assassin"
+  },
+  {
+    "npc_id": 1410,
+    "name": "Sage"
+  },
+  {
+    "npc_id": 1410,
+    "name": "Blesser"
+  },
+  {
+    "npc_id": 1410,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 5335,
+    "name": "Caste Leader"
+  },
+  {
+    "npc_id": 65987,
+    "name": "Inquisitor"
+  },
+  {
+    "npc_id": 65987,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 89098,
+    "name": "Clan Leader"
+  },
+  {
+    "npc_id": 41712,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 41712,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 30845,
+    "name": "Paladin Guild Leader"
+  },
+  {
+    "npc_id": 5354,
+    "name": "Sorcerer"
+  },
+  {
+    "npc_id": 5354,
+    "name": "Sorcerer Guild Leader"
+  },
+  {
+    "npc_id": 92802,
+    "name": "Businessman"
+  },
+  {
+    "npc_id": 93056,
+    "name": "Spy"
+  },
+  {
+    "npc_id": 3085,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 8976,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 80194,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 52629,
+    "name": "Rebel"
+  },
+  {
+    "npc_id": 52629,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 68094,
+    "name": "Representative"
+  },
+  {
+    "npc_id": 5484,
+    "name": "Officer"
+  },
+  {
+    "npc_id": 78450,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 78450,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 78450,
+    "name": "Tibia Drome"
+  },
+  {
+    "npc_id": 78446,
+    "name": "Merchant"
+  },
+  {
+    "npc_id": 4897,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 4897,
+    "name": "Officer"
+  },
+  {
+    "npc_id": 64785,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 89063,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 5336,
+    "name": "Caste Leader"
+  },
+  {
+    "npc_id": 68009,
+    "name": "Instrument Shopkeeper"
+  },
+  {
+    "npc_id": 68009,
+    "name": "Teacher"
+  },
+  {
+    "npc_id": 5190,
+    "name": "Furniture Shopkeeper"
+  },
+  {
+    "npc_id": 4625,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 5243,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 8666,
+    "name": "Sugar Cane Harvester"
+  },
+  {
+    "npc_id": 4980,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 36677,
+    "name": "Ferryman"
+  },
+  {
+    "npc_id": 37024,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 37024,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 37024,
+    "name": "Marriage Officiant"
+  },
+  {
+    "npc_id": 67982,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 37025,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 9266,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 91728,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 109306,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 91716,
+    "name": "Necromancer"
+  },
+  {
+    "npc_id": 91716,
+    "name": "King"
+  },
+  {
+    "npc_id": 68017,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 30568,
+    "name": "Florist"
+  },
+  {
+    "npc_id": 31306,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 91740,
+    "name": "Food Shopkeeper"
+  },
+  {
+    "npc_id": 61768,
+    "name": "Explorer"
+  },
+  {
+    "npc_id": 5092,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 8672,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 8672,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 20973,
+    "name": "Clan Leader"
+  },
+  {
+    "npc_id": 52853,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 4986,
+    "name": "Innkeeper"
+  },
+  {
+    "npc_id": 31234,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 17048,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 68007,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 68007,
+    "name": "News Editor"
+  },
+  {
+    "npc_id": 5483,
+    "name": "Tribe Leader"
+  },
+  {
+    "npc_id": 67642,
+    "name": "Gift Giver"
+  },
+  {
+    "npc_id": 5161,
+    "name": "Jewelry Shopkeeper"
+  },
+  {
+    "npc_id": 5423,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 5423,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 3437,
+    "name": "Rebel"
+  },
+  {
+    "npc_id": 3437,
+    "name": "Weapon Shopkeeper"
+  },
+  {
+    "npc_id": 5083,
+    "name": "Furniture Shopkeeper"
+  },
+  {
+    "npc_id": 68619,
+    "name": "Mage"
+  },
+  {
+    "npc_id": 68619,
+    "name": "Sorcerer Guild Leader"
+  },
+  {
+    "npc_id": 68619,
+    "name": "Druid Guild Leader"
+  },
+  {
+    "npc_id": 81425,
+    "name": "Museum Curator"
+  },
+  {
+    "npc_id": 32574,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 46892,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 65983,
+    "name": "Inquisitor"
+  },
+  {
+    "npc_id": 65983,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 15792,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 80402,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 62402,
+    "name": "Explorer"
+  },
+  {
+    "npc_id": 69436,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 102853,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 81104,
+    "name": "Druid"
+  },
+  {
+    "npc_id": 61735,
+    "name": "Magic Carpet Manager"
+  },
+  {
+    "npc_id": 61735,
+    "name": "Ore Wagon System Ticket Seller"
+  },
+  {
+    "npc_id": 77301,
+    "name": "Shaman"
+  },
+  {
+    "npc_id": 77301,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 50588,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 46812,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 81371,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 75244,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 98784,
+    "name": "Jewelry Shopkeeper"
+  },
+  {
+    "npc_id": 75235,
+    "name": "Druid"
+  },
+  {
+    "npc_id": 75235,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 59994,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 59971,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 59977,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 65406,
+    "name": "Officer"
+  },
+  {
+    "npc_id": 59983,
+    "name": "Supervisor"
+  },
+  {
+    "npc_id": 65408,
+    "name": "Officer"
+  },
+  {
+    "npc_id": 98762,
+    "name": "Recruiter"
+  },
+  {
+    "npc_id": 83506,
+    "name": "Explorer"
+  },
+  {
+    "npc_id": 83566,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 83505,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 83503,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 65412,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 60013,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 59973,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 59986,
+    "name": "Supervisor"
+  },
+  {
+    "npc_id": 59991,
+    "name": "Supervisor"
+  },
+  {
+    "npc_id": 59982,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 59982,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 59989,
+    "name": "Officer"
+  },
+  {
+    "npc_id": 60012,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 59979,
+    "name": "Recruitment Officer"
+  },
+  {
+    "npc_id": 59972,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 59972,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 59980,
+    "name": "Physician"
+  },
+  {
+    "npc_id": 59968,
+    "name": "Recruit instructor"
+  },
+  {
+    "npc_id": 59985,
+    "name": "Physician"
+  },
+  {
+    "npc_id": 59976,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 65409,
+    "name": "Officer"
+  },
+  {
+    "npc_id": 59987,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 59975,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 98888,
+    "name": "Archeologist"
+  },
+  {
+    "npc_id": 98889,
+    "name": "Archeologist"
+  },
+  {
+    "npc_id": 98890,
+    "name": "Archeologist"
+  },
+  {
+    "npc_id": 98891,
+    "name": "Inventor"
+  },
+  {
+    "npc_id": 98892,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 59992,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 65410,
+    "name": "Officer"
+  },
+  {
+    "npc_id": 60011,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 65407,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 31804,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 54079,
+    "name": "Servant"
+  },
+  {
+    "npc_id": 8669,
+    "name": "Sugar Cane Harvester"
+  },
+  {
+    "npc_id": 3143,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 68010,
+    "name": "Knight Guild Leader"
+  },
+  {
+    "npc_id": 5363,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 5363,
+    "name": "Merchant"
+  },
+  {
+    "npc_id": 30695,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 5374,
+    "name": "Knight Guild Leader"
+  },
+  {
+    "npc_id": 37026,
+    "name": "Hunter"
+  },
+  {
+    "npc_id": 37026,
+    "name": "Organisation Leader"
+  },
+  {
+    "npc_id": 37027,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 4788,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 31307,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 77012,
+    "name": "Foreman"
+  },
+  {
+    "npc_id": 55771,
+    "name": "Member of the Combined Magical Winterberry Society"
+  },
+  {
+    "npc_id": 89161,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 89100,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 89101,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 89160,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 69433,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 25892,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 25751,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 25885,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 30719,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 25889,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 25886,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 67953,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 25750,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 89159,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 25888,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 25891,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 25890,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 4889,
+    "name": "Druid Guild Leader"
+  },
+  {
+    "npc_id": 4889,
+    "name": "Sorcerer Guild Leader"
+  },
+  {
+    "npc_id": 4855,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 109327,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 2935,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 98779,
+    "name": "Furniture Shopkeeper"
+  },
+  {
+    "npc_id": 3429,
+    "name": "Weapon Shopkeeper"
+  },
+  {
+    "npc_id": 5350,
+    "name": "Adventurer"
+  },
+  {
+    "npc_id": 5366,
+    "name": "Tribe Leader"
+  },
+  {
+    "npc_id": 35150,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 4677,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 17123,
+    "name": "Supervisor"
+  },
+  {
+    "npc_id": 8671,
+    "name": "Sugar Cane Harvester"
+  },
+  {
+    "npc_id": 68594,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 5375,
+    "name": "Jewelry Shopkeeper"
+  },
+  {
+    "npc_id": 3425,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 5110,
+    "name": "Officer"
+  },
+  {
+    "npc_id": 30907,
+    "name": "Ferryman"
+  },
+  {
+    "npc_id": 31311,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 6103,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 5056,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 101087,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 17126,
+    "name": "Paladin Guild Leader"
+  },
+  {
+    "npc_id": 104580,
+    "name": "Philosopher"
+  },
+  {
+    "npc_id": 104580,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 5367,
+    "name": "Paladin Guild Leader"
+  },
+  {
+    "npc_id": 78449,
+    "name": "Supervisor"
+  },
+  {
+    "npc_id": 78449,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 30666,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 25873,
+    "name": "Inquisitor"
+  },
+  {
+    "npc_id": 25873,
+    "name": "Organisation Leader"
+  },
+  {
+    "npc_id": 25873,
+    "name": "Blesser"
+  },
+  {
+    "npc_id": 9125,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 78474,
+    "name": "Supervisor"
+  },
+  {
+    "npc_id": 78474,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 69690,
+    "name": "Foreman"
+  },
+  {
+    "npc_id": 16979,
+    "name": "Shaman"
+  },
+  {
+    "npc_id": 16979,
+    "name": "Druid Guild Leader"
+  },
+  {
+    "npc_id": 23713,
+    "name": "Artist"
+  },
+  {
+    "npc_id": 4581,
+    "name": "Furniture Shopkeeper"
+  },
+  {
+    "npc_id": 5298,
+    "name": "Fisherman"
+  },
+  {
+    "npc_id": 5307,
+    "name": "Artist"
+  },
+  {
+    "npc_id": 5307,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 5307,
+    "name": "Shopmaster"
+  },
+  {
+    "npc_id": 5355,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 30548,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 3081,
+    "name": "Blesser"
+  },
+  {
+    "npc_id": 3081,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 53947,
+    "name": "Hunter"
+  },
+  {
+    "npc_id": 1223,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 81355,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 3088,
+    "name": "Food Shopkeeper"
+  },
+  {
+    "npc_id": 5156,
+    "name": "Ferryman"
+  },
+  {
+    "npc_id": 68595,
+    "name": "Adventurer"
+  },
+  {
+    "npc_id": 68595,
+    "name": "Tanner"
+  },
+  {
+    "npc_id": 92244,
+    "name": "Furniture Shopkeeper"
+  },
+  {
+    "npc_id": 91730,
+    "name": "Innkeeper"
+  },
+  {
+    "npc_id": 89023,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 89023,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 5337,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 5337,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 30847,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 8558,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 8558,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 8806,
+    "name": "Sugar Cane Harvester"
+  },
+  {
+    "npc_id": 4578,
+    "name": "Representative"
+  },
+  {
+    "npc_id": 4683,
+    "name": "Jewelry Shopkeeper"
+  },
+  {
+    "npc_id": 98783,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 5048,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 5048,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 17011,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 8990,
+    "name": "Officer"
+  },
+  {
+    "npc_id": 8990,
+    "name": "Paladin Guild Leader"
+  },
+  {
+    "npc_id": 79439,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 4887,
+    "name": "Jewelry Shopkeeper"
+  },
+  {
+    "npc_id": 5356,
+    "name": "Furniture Shopkeeper"
+  },
+  {
+    "npc_id": 17132,
+    "name": "Magic Carpet Manager"
+  },
+  {
+    "npc_id": 49978,
+    "name": "Representative"
+  },
+  {
+    "npc_id": 50536,
+    "name": "Artist"
+  },
+  {
+    "npc_id": 17715,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 88544,
+    "name": "Inquisitor"
+  },
+  {
+    "npc_id": 62407,
+    "name": "Worker"
+  },
+  {
+    "npc_id": 68095,
+    "name": "Worker"
+  },
+  {
+    "npc_id": 61920,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 3073,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 4895,
+    "name": "Farmer"
+  },
+  {
+    "npc_id": 81434,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 17125,
+    "name": "Furniture Shopkeeper"
+  },
+  {
+    "npc_id": 8549,
+    "name": "Treasure Hunter"
+  },
+  {
+    "npc_id": 98851,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 5052,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 36956,
+    "name": "Cook"
+  },
+  {
+    "npc_id": 9124,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 91741,
+    "name": "Food Shopkeeper"
+  },
+  {
+    "npc_id": 25558,
+    "name": "Merchant"
+  },
+  {
+    "npc_id": 17128,
+    "name": "Jewelry Shopkeeper"
+  },
+  {
+    "npc_id": 17128,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 5240,
+    "name": "Food Shopkeeper"
+  },
+  {
+    "npc_id": 4985,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 30848,
+    "name": "Thief"
+  },
+  {
+    "npc_id": 8552,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 94870,
+    "name": "Carpenter"
+  },
+  {
+    "npc_id": 94871,
+    "name": "Carpenter"
+  },
+  {
+    "npc_id": 68178,
+    "name": "Representative"
+  },
+  {
+    "npc_id": 64416,
+    "name": "Adventurer"
+  },
+  {
+    "npc_id": 64416,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 64416,
+    "name": "Collector"
+  },
+  {
+    "npc_id": 69687,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 5309,
+    "name": "Instrument Shopkeeper"
+  },
+  {
+    "npc_id": 30276,
+    "name": "Inquisitor"
+  },
+  {
+    "npc_id": 53948,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 80829,
+    "name": "Servant"
+  },
+  {
+    "npc_id": 80829,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 80829,
+    "name": "Blesser"
+  },
+  {
+    "npc_id": 89099,
+    "name": "Representative"
+  },
+  {
+    "npc_id": 8553,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 8553,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 30606,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 6829,
+    "name": "Rebel"
+  },
+  {
+    "npc_id": 6829,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 5039,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 5039,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 5357,
+    "name": "Geomancer"
+  },
+  {
+    "npc_id": 5357,
+    "name": "Caste Leader"
+  },
+  {
+    "npc_id": 5357,
+    "name": "Blesser"
+  },
+  {
+    "npc_id": 5357,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 77061,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 77061,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 77061,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 1717,
+    "name": "Monarch"
+  },
+  {
+    "npc_id": 80191,
+    "name": "Ferryman"
+  },
+  {
+    "npc_id": 61793,
+    "name": "Adventurer"
+  },
+  {
+    "npc_id": 61793,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 4331,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 89062,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 31235,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 2849,
+    "name": "Monarch"
+  },
+  {
+    "npc_id": 41720,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 80804,
+    "name": "Servant"
+  },
+  {
+    "npc_id": 17127,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 17127,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 17127,
+    "name": "Shaman"
+  },
+  {
+    "npc_id": 9802,
+    "name": "Rebel"
+  },
+  {
+    "npc_id": 9802,
+    "name": "Tribe Leader"
+  },
+  {
+    "npc_id": 9802,
+    "name": "Gambler"
+  },
+  {
+    "npc_id": 69691,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 25883,
+    "name": "Knight Guild Leader"
+  },
+  {
+    "npc_id": 57736,
+    "name": "Sage"
+  },
+  {
+    "npc_id": 57736,
+    "name": "Gift Giver"
+  },
+  {
+    "npc_id": 57736,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 57736,
+    "name": "Gambler"
+  },
+  {
+    "npc_id": 69686,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 3133,
+    "name": "Armor Shopkeeper"
+  },
+  {
+    "npc_id": 5057,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 25519,
+    "name": "Necromancer"
+  },
+  {
+    "npc_id": 25519,
+    "name": "Armor Shopkeeper"
+  },
+  {
+    "npc_id": 83496,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 77063,
+    "name": "Adventurer"
+  },
+  {
+    "npc_id": 77063,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 77063,
+    "name": "Merchant"
+  },
+  {
+    "npc_id": 77063,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 77063,
+    "name": "Jewelry Shopkeeper"
+  },
+  {
+    "npc_id": 64735,
+    "name": "Repenter"
+  },
+  {
+    "npc_id": 64735,
+    "name": "Shaman"
+  },
+  {
+    "npc_id": 95726,
+    "name": "Pir-rot"
+  },
+  {
+    "npc_id": 64508,
+    "name": "Sage"
+  },
+  {
+    "npc_id": 41719,
+    "name": "Tribe Leader"
+  },
+  {
+    "npc_id": 4623,
+    "name": "Sorcerer"
+  },
+  {
+    "npc_id": 4623,
+    "name": "Sorcerer Guild Leader"
+  },
+  {
+    "npc_id": 3090,
+    "name": "Food Shopkeeper"
+  },
+  {
+    "npc_id": 1226,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 5308,
+    "name": "Shopmaster"
+  },
+  {
+    "npc_id": 3082,
+    "name": "Paladin Guild Leader"
+  },
+  {
+    "npc_id": 58007,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 94873,
+    "name": "Seer"
+  },
+  {
+    "npc_id": 78554,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 3084,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 5316,
+    "name": "Working Animal"
+  },
+  {
+    "npc_id": 2396,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 30849,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 4988,
+    "name": "Food Shopkeeper"
+  },
+  {
+    "npc_id": 58667,
+    "name": "Rebel"
+  },
+  {
+    "npc_id": 46894,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 36960,
+    "name": "Marriage Officiant"
+  },
+  {
+    "npc_id": 4609,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 4609,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 4609,
+    "name": "Ore Wagon System Ticket Seller"
+  },
+  {
+    "npc_id": 80133,
+    "name": "Gift Giver"
+  },
+  {
+    "npc_id": 5143,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 5143,
+    "name": "Clan Leader"
+  },
+  {
+    "npc_id": 5158,
+    "name": "Ferryman"
+  },
+  {
+    "npc_id": 78036,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 78036,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 78036,
+    "name": "Tibia Drome"
+  },
+  {
+    "npc_id": 5146,
+    "name": "Sorcerer"
+  },
+  {
+    "npc_id": 30721,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 30721,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 30721,
+    "name": "Artist"
+  },
+  {
+    "npc_id": 50314,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 51047,
+    "name": "Artist"
+  },
+  {
+    "npc_id": 4524,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 5217,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 36957,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 5376,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 61979,
+    "name": "Ore Wagon System Ticket Seller"
+  },
+  {
+    "npc_id": 4891,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 53949,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 53949,
+    "name": "Fisherman"
+  },
+  {
+    "npc_id": 7670,
+    "name": "Sorcerer"
+  },
+  {
+    "npc_id": 7670,
+    "name": "Sorcerer Guild Leader"
+  },
+  {
+    "npc_id": 17111,
+    "name": "Local Representative of the Explorer Society"
+  },
+  {
+    "npc_id": 5377,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 5377,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 5377,
+    "name": "Marriage Officiant"
+  },
+  {
+    "npc_id": 8992,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 5264,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 5264,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 81427,
+    "name": "Clan Leader"
+  },
+  {
+    "npc_id": 75234,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 41721,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 61741,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 5435,
+    "name": "Tribe Leader"
+  },
+  {
+    "npc_id": 8991,
+    "name": "Sorcerer"
+  },
+  {
+    "npc_id": 8991,
+    "name": "Sorcerer Guild Leader"
+  },
+  {
+    "npc_id": 10017,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 5313,
+    "name": "Shopmaster"
+  },
+  {
+    "npc_id": 5313,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 8557,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 30761,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 31947,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 4672,
+    "name": "Monarch"
+  },
+  {
+    "npc_id": 4620,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 68012,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 4792,
+    "name": "Druid"
+  },
+  {
+    "npc_id": 4792,
+    "name": "Druid Guild Leader"
+  },
+  {
+    "npc_id": 68176,
+    "name": "Representative"
+  },
+  {
+    "npc_id": 4522,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 4522,
+    "name": "Cook"
+  },
+  {
+    "npc_id": 65981,
+    "name": "Inquisitor"
+  },
+  {
+    "npc_id": 65981,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 76903,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 5244,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 5242,
+    "name": "Beggar"
+  },
+  {
+    "npc_id": 41729,
+    "name": "Foreman"
+  },
+  {
+    "npc_id": 41713,
+    "name": "Magic Carpet Manager"
+  },
+  {
+    "npc_id": 5238,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 30908,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 66612,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 8550,
+    "name": "Treasure Hunter"
+  },
+  {
+    "npc_id": 58189,
+    "name": "Artist"
+  },
+  {
+    "npc_id": 58190,
+    "name": "Artist"
+  },
+  {
+    "npc_id": 58185,
+    "name": "Artist"
+  },
+  {
+    "npc_id": 78553,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 62185,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 25992,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 37028,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 37028,
+    "name": "Mage"
+  },
+  {
+    "npc_id": 37028,
+    "name": "Teacher"
+  },
+  {
+    "npc_id": 51620,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 4886,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 4984,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 89025,
+    "name": "Adventurer"
+  },
+  {
+    "npc_id": 65978,
+    "name": "Inquisitor"
+  },
+  {
+    "npc_id": 68013,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 8941,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 30909,
+    "name": "Weapon Shopkeeper"
+  },
+  {
+    "npc_id": 6946,
+    "name": "Local Representative of the Explorer Society"
+  },
+  {
+    "npc_id": 65982,
+    "name": "Inquisitor"
+  },
+  {
+    "npc_id": 65982,
+    "name": "Worker"
+  },
+  {
+    "npc_id": 5047,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 50586,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 30873,
+    "name": "Merchant"
+  },
+  {
+    "npc_id": 30873,
+    "name": "Organisation Leader"
+  },
+  {
+    "npc_id": 69190,
+    "name": "Fisherman"
+  },
+  {
+    "npc_id": 69190,
+    "name": "Ferryman"
+  },
+  {
+    "npc_id": 68625,
+    "name": "Adventurer"
+  },
+  {
+    "npc_id": 68625,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 4681,
+    "name": "Food Shopkeeper"
+  },
+  {
+    "npc_id": 77264,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 19584,
+    "name": "Tribe Leader"
+  },
+  {
+    "npc_id": 5378,
+    "name": "Sorcerer"
+  },
+  {
+    "npc_id": 5378,
+    "name": "Sorcerer Guild Leader"
+  },
+  {
+    "npc_id": 41714,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 41714,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 4962,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 5368,
+    "name": "Sorcerer"
+  },
+  {
+    "npc_id": 5368,
+    "name": "Sorcerer Guild Leader"
+  },
+  {
+    "npc_id": 79591,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 65046,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 5820,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 37029,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 41722,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 89157,
+    "name": "Clairvoyant"
+  },
+  {
+    "npc_id": 52854,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 59399,
+    "name": "Monarch"
+  },
+  {
+    "npc_id": 59399,
+    "name": "Officer"
+  },
+  {
+    "npc_id": 13153,
+    "name": "Inventor"
+  },
+  {
+    "npc_id": 13153,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 61807,
+    "name": "Combat Instructor"
+  },
+  {
+    "npc_id": 4982,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 17131,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 17131,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 5351,
+    "name": "Adventurer"
+  },
+  {
+    "npc_id": 4630,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 77365,
+    "name": "Tribe Leader"
+  },
+  {
+    "npc_id": 77365,
+    "name": "Servant"
+  },
+  {
+    "npc_id": 68008,
+    "name": "Artist"
+  },
+  {
+    "npc_id": 68008,
+    "name": "Furniture Shopkeeper"
+  },
+  {
+    "npc_id": 4621,
+    "name": "Ferryman"
+  },
+  {
+    "npc_id": 36670,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 98774,
+    "name": "Monarch"
+  },
+  {
+    "npc_id": 17088,
+    "name": "Shaman"
+  },
+  {
+    "npc_id": 17088,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 63750,
+    "name": "Adventurer"
+  },
+  {
+    "npc_id": 63750,
+    "name": "Clan Leader"
+  },
+  {
+    "npc_id": 89024,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 89026,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 98780,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 102854,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 31308,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 80830,
+    "name": "Hunter"
+  },
+  {
+    "npc_id": 80830,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 80830,
+    "name": "Blesser"
+  },
+  {
+    "npc_id": 5088,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 81426,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 17138,
+    "name": "Spy"
+  },
+  {
+    "npc_id": 3435,
+    "name": "Armor Shopkeeper"
+  },
+  {
+    "npc_id": 5379,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 5379,
+    "name": "Blesser"
+  },
+  {
+    "npc_id": 5379,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 4516,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 61788,
+    "name": "Foreman"
+  },
+  {
+    "npc_id": 69688,
+    "name": "Worker"
+  },
+  {
+    "npc_id": 8807,
+    "name": "Sugar Cane Harvester"
+  },
+  {
+    "npc_id": 26156,
+    "name": "Merchant"
+  },
+  {
+    "npc_id": 4628,
+    "name": "Furniture Shopkeeper"
+  },
+  {
+    "npc_id": 1111,
+    "name": "Weapon Shopkeeper"
+  },
+  {
+    "npc_id": 64595,
+    "name": "Necromancer"
+  },
+  {
+    "npc_id": 109304,
+    "name": "Mage"
+  },
+  {
+    "npc_id": 9057,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 5269,
+    "name": "Jewelry Shopkeeper"
+  },
+  {
+    "npc_id": 30694,
+    "name": "Jewelry Shopkeeper"
+  },
+  {
+    "npc_id": 5157,
+    "name": "Ferryman"
+  },
+  {
+    "npc_id": 56715,
+    "name": "Tribe Leader"
+  },
+  {
+    "npc_id": 56715,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 4674,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 30910,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 67951,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 3067,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 92803,
+    "name": "Trader"
+  },
+  {
+    "npc_id": 64333,
+    "name": "Necromancer"
+  },
+  {
+    "npc_id": 4682,
+    "name": "Food Shopkeeper"
+  },
+  {
+    "npc_id": 69432,
+    "name": "Rebel"
+  },
+  {
+    "npc_id": 69432,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 91745,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 41385,
+    "name": "Explorer"
+  },
+  {
+    "npc_id": 41385,
+    "name": "Expedition Leader"
+  },
+  {
+    "npc_id": 41385,
+    "name": "Representative"
+  },
+  {
+    "npc_id": 65696,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 31755,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 68596,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 5342,
+    "name": "Knight Guild Leader"
+  },
+  {
+    "npc_id": 56716,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 56716,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 30850,
+    "name": "Beggar"
+  },
+  {
+    "npc_id": 5144,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 53951,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 75279,
+    "name": "Hunter"
+  },
+  {
+    "npc_id": 75279,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 4513,
+    "name": "Druid"
+  },
+  {
+    "npc_id": 4513,
+    "name": "Druid Guild Leader"
+  },
+  {
+    "npc_id": 25226,
+    "name": "Paladin Guild Leader"
+  },
+  {
+    "npc_id": 30852,
+    "name": "Clairvoyant"
+  },
+  {
+    "npc_id": 53952,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 8551,
+    "name": "Treasure Hunter"
+  },
+  {
+    "npc_id": 8668,
+    "name": "Sugar Cane Harvester"
+  },
+  {
+    "npc_id": 5145,
+    "name": "Thief"
+  },
+  {
+    "npc_id": 62404,
+    "name": "Worker"
+  },
+  {
+    "npc_id": 52857,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 12374,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 9163,
+    "name": "Furniture Shopkeeper"
+  },
+  {
+    "npc_id": 4854,
+    "name": "Fisherman"
+  },
+  {
+    "npc_id": 4854,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 8321,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 3083,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 3083,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 8662,
+    "name": "Representative"
+  },
+  {
+    "npc_id": 25913,
+    "name": "Artist"
+  },
+  {
+    "npc_id": 69689,
+    "name": "Worker"
+  },
+  {
+    "npc_id": 5160,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 30911,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 4852,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 4627,
+    "name": "Teacher"
+  },
+  {
+    "npc_id": 20289,
+    "name": "Artist"
+  },
+  {
+    "npc_id": 4673,
+    "name": "Magic Carpet Manager"
+  },
+  {
+    "npc_id": 81142,
+    "name": "Roleplay"
+  },
+  {
+    "npc_id": 81143,
+    "name": "Roleplay"
+  },
+  {
+    "npc_id": 81144,
+    "name": "Roleplay"
+  },
+  {
+    "npc_id": 81866,
+    "name": "Roleplay"
+  },
+  {
+    "npc_id": 81867,
+    "name": "Roleplay"
+  },
+  {
+    "npc_id": 68618,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 37082,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 41715,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 41716,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 27332,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 4670,
+    "name": "Knight Guild Leader"
+  },
+  {
+    "npc_id": 30724,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 30724,
+    "name": "Cook"
+  },
+  {
+    "npc_id": 61975,
+    "name": "Ore Wagon System Ticket Seller"
+  },
+  {
+    "npc_id": 6502,
+    "name": "Pyromancer"
+  },
+  {
+    "npc_id": 6502,
+    "name": "Caste Leader"
+  },
+  {
+    "npc_id": 6502,
+    "name": "Blesser"
+  },
+  {
+    "npc_id": 6502,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 53953,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 38127,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 31558,
+    "name": "Collector"
+  },
+  {
+    "npc_id": 31558,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 88552,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 2867,
+    "name": "Monarch"
+  },
+  {
+    "npc_id": 5265,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 5265,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 3238,
+    "name": "Instrument Shopkeeper"
+  },
+  {
+    "npc_id": 96533,
+    "name": "Witch"
+  },
+  {
+    "npc_id": 41717,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 41717,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 3091,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 26187,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 26187,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 61802,
+    "name": "Merchant"
+  },
+  {
+    "npc_id": 5343,
+    "name": "Druid"
+  },
+  {
+    "npc_id": 5343,
+    "name": "Druid Guild Leader"
+  },
+  {
+    "npc_id": 5343,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 5343,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 89027,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 36733,
+    "name": "Inventor"
+  },
+  {
+    "npc_id": 103950,
+    "name": "Ferryman"
+  },
+  {
+    "npc_id": 20103,
+    "name": "Merchant"
+  },
+  {
+    "npc_id": 6964,
+    "name": "Spy"
+  },
+  {
+    "npc_id": 5162,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 8556,
+    "name": "Rebel"
+  },
+  {
+    "npc_id": 8556,
+    "name": "Clan Leader"
+  },
+  {
+    "npc_id": 4580,
+    "name": "Knight Guild Leader"
+  },
+  {
+    "npc_id": 4580,
+    "name": "Paladin Guild Leader"
+  },
+  {
+    "npc_id": 63257,
+    "name": "Rebel"
+  },
+  {
+    "npc_id": 9175,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 80193,
+    "name": "Supervisor"
+  },
+  {
+    "npc_id": 80193,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 30853,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 35154,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 37081,
+    "name": "Explorer"
+  },
+  {
+    "npc_id": 37081,
+    "name": "Expedition Leader"
+  },
+  {
+    "npc_id": 81139,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 64830,
+    "name": "Repenter"
+  },
+  {
+    "npc_id": 64346,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 64346,
+    "name": "Food Shopkeeper"
+  },
+  {
+    "npc_id": 5358,
+    "name": "Necromancer"
+  },
+  {
+    "npc_id": 5358,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 17042,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 17042,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 5380,
+    "name": "Hunter"
+  },
+  {
+    "npc_id": 53954,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 56603,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 56603,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 56603,
+    "name": "Weapon Shopkeeper"
+  },
+  {
+    "npc_id": 56603,
+    "name": "Armor Shopkeeper"
+  },
+  {
+    "npc_id": 56603,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 56603,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 56718,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 56718,
+    "name": "Collector"
+  },
+  {
+    "npc_id": 57059,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 57059,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 5338,
+    "name": "Representative"
+  },
+  {
+    "npc_id": 4989,
+    "name": "Food Shopkeeper"
+  },
+  {
+    "npc_id": 62403,
+    "name": "Worker"
+  },
+  {
+    "npc_id": 5268,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 3427,
+    "name": "Weapon Shopkeeper"
+  },
+  {
+    "npc_id": 17129,
+    "name": "Sorcerer"
+  },
+  {
+    "npc_id": 17129,
+    "name": "Sorcerer Guild Leader"
+  },
+  {
+    "npc_id": 17129,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 5266,
+    "name": "Florist"
+  },
+  {
+    "npc_id": 24916,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 109328,
+    "name": "Guide"
+  },
+  {
+    "npc_id": 17397,
+    "name": "Sugar Cane Harvester"
+  },
+  {
+    "npc_id": 67980,
+    "name": "Innkeeper"
+  },
+  {
+    "npc_id": 61791,
+    "name": "Adventurer"
+  },
+  {
+    "npc_id": 61791,
+    "name": "Organisation Leader"
+  },
+  {
+    "npc_id": 50312,
+    "name": "Hunter"
+  },
+  {
+    "npc_id": 50312,
+    "name": "Clan Leader"
+  },
+  {
+    "npc_id": 50312,
+    "name": "Merchant"
+  },
+  {
+    "npc_id": 77095,
+    "name": "Supervisor"
+  },
+  {
+    "npc_id": 3086,
+    "name": "Weapon Shopkeeper"
+  },
+  {
+    "npc_id": 3136,
+    "name": "Armor Shopkeeper"
+  },
+  {
+    "npc_id": 12350,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 93018,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 108056,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 61809,
+    "name": "Combat Instructor"
+  },
+  {
+    "npc_id": 2339,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 2339,
+    "name": "Weapon Shopkeeper"
+  },
+  {
+    "npc_id": 2339,
+    "name": "Armor Shopkeeper"
+  },
+  {
+    "npc_id": 9464,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 65980,
+    "name": "Inquisitor"
+  },
+  {
+    "npc_id": 65980,
+    "name": "Expedition Leader"
+  },
+  {
+    "npc_id": 4660,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 65707,
+    "name": "Sorcerer"
+  },
+  {
+    "npc_id": 65707,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 4372,
+    "name": "Gift Giver"
+  },
+  {
+    "npc_id": 25206,
+    "name": "Fisherman"
+  },
+  {
+    "npc_id": 3089,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 36672,
+    "name": "Food Shopkeeper"
+  },
+  {
+    "npc_id": 5152,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 61769,
+    "name": "Explorer"
+  },
+  {
+    "npc_id": 56563,
+    "name": "Clairvoyant"
+  },
+  {
+    "npc_id": 37030,
+    "name": "Technomancer"
+  },
+  {
+    "npc_id": 9052,
+    "name": "Rebel"
+  },
+  {
+    "npc_id": 9052,
+    "name": "Ferryman"
+  },
+  {
+    "npc_id": 68620,
+    "name": "Knight Guild Leader"
+  },
+  {
+    "npc_id": 68620,
+    "name": "Paladin Guild Leader"
+  },
+  {
+    "npc_id": 30854,
+    "name": "Food Shopkeeper"
+  },
+  {
+    "npc_id": 53957,
+    "name": "Servant"
+  },
+  {
+    "npc_id": 98791,
+    "name": "Food Shopkeeper"
+  },
+  {
+    "npc_id": 1683,
+    "name": "Headmaster"
+  },
+  {
+    "npc_id": 1683,
+    "name": "Teacher"
+  },
+  {
+    "npc_id": 1683,
+    "name": "Librarian"
+  },
+  {
+    "npc_id": 77091,
+    "name": "Supervisor"
+  },
+  {
+    "npc_id": 3371,
+    "name": "Druid Guild Leader"
+  },
+  {
+    "npc_id": 3371,
+    "name": "Sorcerer Guild Leader"
+  },
+  {
+    "npc_id": 3053,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 61810,
+    "name": "Combat Instructor"
+  },
+  {
+    "npc_id": 41009,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 4622,
+    "name": "Officer"
+  },
+  {
+    "npc_id": 5381,
+    "name": "Farmer"
+  },
+  {
+    "npc_id": 4981,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 93541,
+    "name": "Fisherman"
+  },
+  {
+    "npc_id": 5339,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 5340,
+    "name": "Foreman"
+  },
+  {
+    "npc_id": 41731,
+    "name": "Beggar"
+  },
+  {
+    "npc_id": 68179,
+    "name": "Representative"
+  },
+  {
+    "npc_id": 61743,
+    "name": "Rebel"
+  },
+  {
+    "npc_id": 65985,
+    "name": "Inquisitor"
+  },
+  {
+    "npc_id": 65985,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 17087,
+    "name": "Shaman"
+  },
+  {
+    "npc_id": 6856,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 68018,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 68018,
+    "name": "Paladin Guild Leader"
+  },
+  {
+    "npc_id": 4699,
+    "name": "Beggar"
+  },
+  {
+    "npc_id": 17121,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 50313,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 17050,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 98782,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 50585,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 37080,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 37079,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 4392,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 50587,
+    "name": "Clairvoyant"
+  },
+  {
+    "npc_id": 5090,
+    "name": "Druid"
+  },
+  {
+    "npc_id": 5090,
+    "name": "Druid Guild Leader"
+  },
+  {
+    "npc_id": 6303,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 96531,
+    "name": "Merchant"
+  },
+  {
+    "npc_id": 30682,
+    "name": "Food Shopkeeper"
+  },
+  {
+    "npc_id": 58004,
+    "name": "Gift Giver"
+  },
+  {
+    "npc_id": 25227,
+    "name": "Sorcerer"
+  },
+  {
+    "npc_id": 25227,
+    "name": "Sorcerer Guild Leader"
+  },
+  {
+    "npc_id": 41730,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 41730,
+    "name": "Inventor"
+  },
+  {
+    "npc_id": 64240,
+    "name": "Shaman"
+  },
+  {
+    "npc_id": 64240,
+    "name": "Sage"
+  },
+  {
+    "npc_id": 105193,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 75783,
+    "name": "Merchant"
+  },
+  {
+    "npc_id": 22433,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 57774,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 25931,
+    "name": "Inquisitor"
+  },
+  {
+    "npc_id": 69693,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 81140,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 5055,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 98778,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 4963,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 16989,
+    "name": "Monarch"
+  },
+  {
+    "npc_id": 4885,
+    "name": "Ferryman"
+  },
+  {
+    "npc_id": 41718,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 5215,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 5215,
+    "name": "Officer"
+  },
+  {
+    "npc_id": 81428,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 81428,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 5267,
+    "name": "Shopmaster"
+  },
+  {
+    "npc_id": 81430,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 81430,
+    "name": "Jewelry Shopkeeper"
+  },
+  {
+    "npc_id": 5359,
+    "name": "Technomancer"
+  },
+  {
+    "npc_id": 5359,
+    "name": "Caste Leader"
+  },
+  {
+    "npc_id": 30855,
+    "name": "Druid"
+  },
+  {
+    "npc_id": 30855,
+    "name": "Druid Guild Leader"
+  },
+  {
+    "npc_id": 89102,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 31134,
+    "name": "Druid"
+  },
+  {
+    "npc_id": 31134,
+    "name": "Caretaker"
+  },
+  {
+    "npc_id": 30856,
+    "name": "Sorcerer"
+  },
+  {
+    "npc_id": 30856,
+    "name": "Sorcerer Guild Leader"
+  },
+  {
+    "npc_id": 30856,
+    "name": "Collector"
+  },
+  {
+    "npc_id": 36671,
+    "name": "Food Shopkeeper"
+  },
+  {
+    "npc_id": 4970,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 88957,
+    "name": "Magic Carpet Manager"
+  },
+  {
+    "npc_id": 30857,
+    "name": "Ferryman"
+  },
+  {
+    "npc_id": 98770,
+    "name": "Shaman"
+  },
+  {
+    "npc_id": 75248,
+    "name": "Merchant"
+  },
+  {
+    "npc_id": 41723,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 96306,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 89164,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 37078,
+    "name": "Cook"
+  },
+  {
+    "npc_id": 37031,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 37031,
+    "name": "Inventor"
+  },
+  {
+    "npc_id": 38611,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 46476,
+    "name": "Artist"
+  },
+  {
+    "npc_id": 68037,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 68037,
+    "name": "Officer"
+  },
+  {
+    "npc_id": 5239,
+    "name": "Jewelry Shopkeeper"
+  },
+  {
+    "npc_id": 5239,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 36864,
+    "name": "Gift Giver"
+  },
+  {
+    "npc_id": 5360,
+    "name": "Jewelry Shopkeeper"
+  },
+  {
+    "npc_id": 5049,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 68053,
+    "name": "Beggar"
+  },
+  {
+    "npc_id": 68053,
+    "name": "Clan Leader"
+  },
+  {
+    "npc_id": 5369,
+    "name": "Clairvoyant"
+  },
+  {
+    "npc_id": 13814,
+    "name": "Necromancer"
+  },
+  {
+    "npc_id": 13814,
+    "name": "Organisation Leader"
+  },
+  {
+    "npc_id": 18812,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 66827,
+    "name": "Clairvoyant"
+  },
+  {
+    "npc_id": 13813,
+    "name": "Organisation Leader"
+  },
+  {
+    "npc_id": 89103,
+    "name": "Monarch"
+  },
+  {
+    "npc_id": 80453,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 65299,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 4655,
+    "name": "Clairvoyant"
+  },
+  {
+    "npc_id": 89158,
+    "name": "Librarian"
+  },
+  {
+    "npc_id": 1215,
+    "name": "Clairvoyant"
+  },
+  {
+    "npc_id": 5384,
+    "name": "Monarch"
+  },
+  {
+    "npc_id": 6379,
+    "name": "Monarch"
+  },
+  {
+    "npc_id": 6379,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 10643,
+    "name": "Representative"
+  },
+  {
+    "npc_id": 4892,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 41415,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 17130,
+    "name": "Knight Guild Leader"
+  },
+  {
+    "npc_id": 3092,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 3092,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 3092,
+    "name": "Marriage Officiant"
+  },
+  {
+    "npc_id": 81435,
+    "name": "Clan Leader"
+  },
+  {
+    "npc_id": 92805,
+    "name": "Shaman"
+  },
+  {
+    "npc_id": 5109,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 99736,
+    "name": "Philosopher"
+  },
+  {
+    "npc_id": 30700,
+    "name": "Local Representative of the Explorer Society"
+  },
+  {
+    "npc_id": 4787,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 4329,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 105199,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 5347,
+    "name": "Farmer"
+  },
+  {
+    "npc_id": 1682,
+    "name": "Tanner"
+  },
+  {
+    "npc_id": 64598,
+    "name": "Necromancer"
+  },
+  {
+    "npc_id": 30763,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 81421,
+    "name": "Tooth Fairy"
+  },
+  {
+    "npc_id": 107037,
+    "name": "Tooth Fairy"
+  },
+  {
+    "npc_id": 20037,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 5084,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 8808,
+    "name": "Sugar Cane Harvester"
+  },
+  {
+    "npc_id": 4579,
+    "name": "Sorcerer"
+  },
+  {
+    "npc_id": 4579,
+    "name": "Sorcerer Guild Leader"
+  },
+  {
+    "npc_id": 4579,
+    "name": "Clairvoyant"
+  },
+  {
+    "npc_id": 30608,
+    "name": "Informer"
+  },
+  {
+    "npc_id": 5382,
+    "name": "Sorcerer"
+  },
+  {
+    "npc_id": 4521,
+    "name": "Knight Guild Leader"
+  },
+  {
+    "npc_id": 9978,
+    "name": "Officer"
+  },
+  {
+    "npc_id": 9978,
+    "name": "Knight Guild Leader"
+  },
+  {
+    "npc_id": 5051,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 5051,
+    "name": "Officer"
+  },
+  {
+    "npc_id": 5085,
+    "name": "Armor Shopkeeper"
+  },
+  {
+    "npc_id": 61808,
+    "name": "Combat Instructor"
+  },
+  {
+    "npc_id": 9310,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 9310,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 5487,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 98775,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 5211,
+    "name": "Furniture Shopkeeper"
+  },
+  {
+    "npc_id": 66825,
+    "name": "Sorcerer"
+  },
+  {
+    "npc_id": 66825,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 41724,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 5346,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 5346,
+    "name": "Weapon Shopkeeper"
+  },
+  {
+    "npc_id": 5346,
+    "name": "Armor Shopkeeper"
+  },
+  {
+    "npc_id": 5486,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 20285,
+    "name": "Spy"
+  },
+  {
+    "npc_id": 20285,
+    "name": "Organisation Leader"
+  },
+  {
+    "npc_id": 4987,
+    "name": "Barkeeper"
+  },
+  {
+    "npc_id": 98763,
+    "name": "Ship Captain"
+  },
+  {
+    "npc_id": 4888,
+    "name": "Paladin Guild Leader"
+  },
+  {
+    "npc_id": 5370,
+    "name": "Foreman"
+  },
+  {
+    "npc_id": 5370,
+    "name": "Knight Guild Leader"
+  },
+  {
+    "npc_id": 5371,
+    "name": "Druid Guild Leader"
+  },
+  {
+    "npc_id": 3420,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 3420,
+    "name": "Weapon Shopkeeper"
+  },
+  {
+    "npc_id": 4689,
+    "name": "Inquisitor"
+  },
+  {
+    "npc_id": 4689,
+    "name": "Magic Carpet Manager"
+  },
+  {
+    "npc_id": 51046,
+    "name": "Artist"
+  },
+  {
+    "npc_id": 22825,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 81429,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 81429,
+    "name": "Jewelry Shopkeeper"
+  },
+  {
+    "npc_id": 53958,
+    "name": "Adventurer"
+  },
+  {
+    "npc_id": 5095,
+    "name": "Furniture Shopkeeper"
+  },
+  {
+    "npc_id": 5372,
+    "name": "Furniture Shopkeeper"
+  },
+  {
+    "npc_id": 8851,
+    "name": "Assassin"
+  },
+  {
+    "npc_id": 77051,
+    "name": "Supervisor"
+  },
+  {
+    "npc_id": 80195,
+    "name": "Supervisor"
+  },
+  {
+    "npc_id": 80195,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 30699,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 30699,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 109305,
+    "name": "Guild Leader"
+  },
+  {
+    "npc_id": 68006,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 5093,
+    "name": "Shopmaster"
+  },
+  {
+    "npc_id": 98771,
+    "name": "Shaman"
+  },
+  {
+    "npc_id": 9803,
+    "name": "Rebel"
+  },
+  {
+    "npc_id": 9803,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 77266,
+    "name": "Tribe Leader"
+  },
+  {
+    "npc_id": 4585,
+    "name": "Postman"
+  },
+  {
+    "npc_id": 4585,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 5108,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 89843,
+    "name": "Organisation Leader"
+  },
+  {
+    "npc_id": 5214,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 79652,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 60971,
+    "name": "Assistant"
+  },
+  {
+    "npc_id": 68617,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 91743,
+    "name": "Weapon Shopkeeper"
+  },
+  {
+    "npc_id": 91743,
+    "name": "Armor Shopkeeper"
+  },
+  {
+    "npc_id": 69439,
+    "name": "Farmer"
+  },
+  {
+    "npc_id": 3119,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 66819,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 6873,
+    "name": "Rebel"
+  },
+  {
+    "npc_id": 1684,
+    "name": "Farmer"
+  },
+  {
+    "npc_id": 1684,
+    "name": "Cook"
+  },
+  {
+    "npc_id": 67083,
+    "name": "Druid"
+  },
+  {
+    "npc_id": 68614,
+    "name": "Adventurer"
+  },
+  {
+    "npc_id": 5383,
+    "name": "Officer"
+  },
+  {
+    "npc_id": 5828,
+    "name": "Sorcerer"
+  },
+  {
+    "npc_id": 30609,
+    "name": "Mage"
+  },
+  {
+    "npc_id": 30609,
+    "name": "Librarian"
+  },
+  {
+    "npc_id": 90763,
+    "name": "Roleplay"
+  },
+  {
+    "npc_id": 5304,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 5304,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 59549,
+    "name": "Recruiter"
+  },
+  {
+    "npc_id": 4679,
+    "name": "Magic Shopkeeper"
+  },
+  {
+    "npc_id": 31300,
+    "name": "Foreman"
+  },
+  {
+    "npc_id": 31866,
+    "name": "Monarch"
+  },
+  {
+    "npc_id": 5432,
+    "name": "Shopkeeper"
+  },
+  {
+    "npc_id": 78032,
+    "name": "Artisan"
+  },
+  {
+    "npc_id": 78032,
+    "name": "Collector"
+  },
+  {
+    "npc_id": 3431,
+    "name": "Armor Shopkeeper"
+  },
+  {
+    "npc_id": 56612,
+    "name": "Merchant"
+  },
+  {
+    "npc_id": 53959,
+    "name": "Fisherman"
+  },
+  {
+    "npc_id": 5262,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 5262,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 69435,
+    "name": "Fisherman"
+  },
+  {
+    "npc_id": 5344,
+    "name": "Furniture Shopkeeper"
+  },
+  {
+    "npc_id": 89065,
+    "name": "Jewelry Shopkeeper"
+  },
+  {
+    "npc_id": 5261,
+    "name": "Furniture Shopkeeper"
+  },
+  {
+    "npc_id": 5159,
+    "name": "Furniture Shopkeeper"
+  },
+  {
+    "npc_id": 41588,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 41588,
+    "name": "Clairvoyant"
+  },
+  {
+    "npc_id": 30762,
+    "name": "Knight Guild Leader"
+  },
+  {
+    "npc_id": 64736,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 5314,
+    "name": "Gambler"
+  },
+  {
+    "npc_id": 65989,
+    "name": "Inquisitor"
+  },
+  {
+    "npc_id": 65989,
+    "name": "Cleric"
+  },
+  {
+    "npc_id": 65989,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 4786,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 4786,
+    "name": "Healer"
+  },
+  {
+    "npc_id": 69438,
+    "name": "Scientist"
+  },
+  {
+    "npc_id": 61794,
+    "name": "Adventurer"
+  },
+  {
+    "npc_id": 61794,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 25207,
+    "name": "Fisherman"
+  },
+  {
+    "npc_id": 38128,
+    "name": "Unknown Occupation"
+  },
+  {
+    "npc_id": 98785,
+    "name": "Magic Carpet Manager"
+  },
+  {
+    "npc_id": 46930,
+    "name": "Rebel"
+  },
+  {
+    "npc_id": 46913,
+    "name": "Rebel"
+  },
+  {
+    "npc_id": 30858,
+    "name": "Banker"
+  },
+  {
+    "npc_id": 4890,
+    "name": "Druid Guild Leader"
+  },
+  {
+    "npc_id": 4890,
+    "name": "Sorcerer Guild Leader"
+  },
+  {
+    "npc_id": 17143,
+    "name": "Equipment Shopkeeper"
+  },
+  {
+    "npc_id": 41727,
+    "name": "Representative"
+  },
+  {
+    "npc_id": 46965,
+    "name": "Guard"
+  },
+  {
+    "npc_id": 41728,
+    "name": "Ferryman"
+  }
+]

@@ -1,0 +1,146 @@
+{
+  "achievement": {
+    "rows": 556,
+    "file": "achievement.json"
+  },
+  "book": {
+    "rows": 1224,
+    "file": "book.json"
+  },
+  "charm": {
+    "rows": 25,
+    "file": "charm.json"
+  },
+  "creature": {
+    "rows": 2142,
+    "file": "creature.json"
+  },
+  "creature_ability": {
+    "rows": 5763,
+    "file": "creature_ability.json"
+  },
+  "creature_drop": {
+    "rows": 19257,
+    "file": "creature_drop.json"
+  },
+  "creature_max_damage": {
+    "rows": 1382,
+    "file": "creature_max_damage.json"
+  },
+  "creature_sound": {
+    "rows": 3577,
+    "file": "creature_sound.json"
+  },
+  "database_info": {
+    "rows": 0,
+    "file": "database_info.json"
+  },
+  "game_update": {
+    "rows": 669,
+    "file": "game_update.json"
+  },
+  "house": {
+    "rows": 1088,
+    "file": "house.json"
+  },
+  "imbuement": {
+    "rows": 72,
+    "file": "imbuement.json"
+  },
+  "imbuement_material": {
+    "rows": 144,
+    "file": "imbuement_material.json"
+  },
+  "item": {
+    "rows": 9630,
+    "file": "item.json"
+  },
+  "item_attribute": {
+    "rows": 21745,
+    "file": "item_attribute.json"
+  },
+  "item_key": {
+    "rows": 123,
+    "file": "item_key.json"
+  },
+  "item_proficiency_perk": {
+    "rows": 4308,
+    "file": "item_proficiency_perk.json"
+  },
+  "item_sound": {
+    "rows": 625,
+    "file": "item_sound.json"
+  },
+  "item_store_offer": {
+    "rows": 803,
+    "file": "item_store_offer.json"
+  },
+  "map": {
+    "rows": 0,
+    "file": "map.json"
+  },
+  "mount": {
+    "rows": 248,
+    "file": "mount.json"
+  },
+  "npc": {
+    "rows": 1227,
+    "file": "npc.json"
+  },
+  "npc_destination": {
+    "rows": 144,
+    "file": "npc_destination.json"
+  },
+  "npc_job": {
+    "rows": 1343,
+    "file": "npc_job.json"
+  },
+  "npc_offer_buy": {
+    "rows": 5678,
+    "file": "npc_offer_buy.json"
+  },
+  "npc_offer_sell": {
+    "rows": 8181,
+    "file": "npc_offer_sell.json"
+  },
+  "npc_race": {
+    "rows": 1138,
+    "file": "npc_race.json"
+  },
+  "outfit": {
+    "rows": 132,
+    "file": "outfit.json"
+  },
+  "outfit_image": {
+    "rows": 0,
+    "file": "outfit_image.json"
+  },
+  "outfit_quest": {
+    "rows": 103,
+    "file": "outfit_quest.json"
+  },
+  "quest": {
+    "rows": 363,
+    "file": "quest.json"
+  },
+  "quest_danger": {
+    "rows": 2672,
+    "file": "quest_danger.json"
+  },
+  "quest_reward": {
+    "rows": 745,
+    "file": "quest_reward.json"
+  },
+  "rashid_position": {
+    "rows": 7,
+    "file": "rashid_position.json"
+  },
+  "spell": {
+    "rows": 192,
+    "file": "spell.json"
+  },
+  "world": {
+    "rows": 286,
+    "file": "world.json"
+  }
+}

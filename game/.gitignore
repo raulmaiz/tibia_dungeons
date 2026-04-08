@@ -1,0 +1,14 @@
+# Dependencias y entornos
+node_modules/
+.venv/
+venv/
+__pycache__/
+
+# Datos pesados y locales
+*.db
+data/images/
+images/
+
+# Sistema
+.DS_Store
+Thumbs.db

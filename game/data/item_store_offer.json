@@ -1,0 +1,4820 @@
+[
+  {
+    "item_id": 84073,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84071,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84074,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84078,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84075,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84076,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77975,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77975,
+    "price": 300,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84957,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84956,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 50793,
+    "price": 75,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96579,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84106,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96630,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96631,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96632,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 100989,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96633,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 50814,
+    "price": 12,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99819,
+    "price": 35,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99819,
+    "price": 175,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 48331,
+    "price": 250,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 94434,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77957,
+    "price": 250,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96580,
+    "price": 250,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 88450,
+    "price": 150,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 90221,
+    "price": 250,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84963,
+    "price": 150,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 91852,
+    "price": 250,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 88453,
+    "price": 250,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101265,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99821,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99821,
+    "price": 125,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96586,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96602,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104848,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96598,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81957,
+    "price": 250,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107125,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84965,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81950,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104795,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96430,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96430,
+    "price": 250,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81949,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99800,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104818,
+    "price": 150,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104810,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104811,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104812,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96611,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96612,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107286,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 108318,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78894,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78894,
+    "price": 250,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107122,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101716,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84962,
+    "price": 150,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101991,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101989,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101990,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77979,
+    "price": 150,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 102636,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103697,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103703,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103717,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103773,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103753,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103701,
+    "price": 70,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103740,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103746,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103749,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103750,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103713,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103711,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103711,
+    "price": 125,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103751,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103752,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103736,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103738,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103745,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103742,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103747,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103716,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103699,
+    "price": 70,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103744,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103705,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103707,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103763,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103763,
+    "price": 250,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103762,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103762,
+    "price": 250,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103761,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103761,
+    "price": 250,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103760,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103760,
+    "price": 250,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103754,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81948,
+    "price": 250,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 50815,
+    "price": 42,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 102649,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 86087,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107287,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99836,
+    "price": 35,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99836,
+    "price": 175,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96572,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96572,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96917,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96917,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 86088,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 86089,
+    "price": 70,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 86090,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 86091,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 50816,
+    "price": 16,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107289,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101987,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101984,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101988,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101985,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101986,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 108316,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99842,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99842,
+    "price": 125,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99844,
+    "price": 35,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99844,
+    "price": 175,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103963,
+    "price": 150,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103964,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103970,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103965,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103973,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103972,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96680,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103966,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103974,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103975,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96634,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 60415,
+    "price": 13,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 88459,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 88460,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78908,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78908,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99845,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99845,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99847,
+    "price": 35,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99847,
+    "price": 175,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 82858,
+    "price": 250,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 93665,
+    "price": 250,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84916,
+    "price": 900,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96613,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96594,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99849,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99849,
+    "price": 125,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 50794,
+    "price": 5,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101823,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101824,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78884,
+    "price": 150,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95221,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96595,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 92769,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 92771,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 92770,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 92772,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103808,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 92768,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 92773,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 108202,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96635,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96636,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96637,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96638,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107315,
+    "price": 150,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107316,
+    "price": 70,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107317,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107319,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107318,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107320,
+    "price": 35,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107320,
+    "price": 175,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107321,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107321,
+    "price": 125,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107325,
+    "price": 70,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107323,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 109367,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99850,
+    "price": 35,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99850,
+    "price": 175,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95565,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 23886,
+    "price": 40,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 50796,
+    "price": 8,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 23881,
+    "price": 17,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 88456,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84895,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84897,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84896,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84898,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103807,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84892,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84899,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 108203,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 27588,
+    "price": 6,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84964,
+    "price": 150,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77917,
+    "price": 110,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77918,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77920,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77919,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84100,
+    "price": 70,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84917,
+    "price": 900,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84108,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 90225,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96621,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96622,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 100985,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96623,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96624,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96625,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96626,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96627,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96628,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96629,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 100983,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95566,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 50797,
+    "price": 29,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 23572,
+    "price": 6,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 23882,
+    "price": 12,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 50798,
+    "price": 6,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101723,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78881,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99764,
+    "price": 150,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99781,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99770,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99780,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99791,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104796,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99803,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99853,
+    "price": 35,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99853,
+    "price": 175,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99777,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99777,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99776,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99776,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 86104,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 86103,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96581,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84966,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99855,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99855,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103709,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103709,
+    "price": 125,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95440,
+    "price": 250,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 92331,
+    "price": 250,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96759,
+    "price": 1500,
+    "amount": 1,
+    "currency": "Tournament Coin"
+  },
+  {
+    "item_id": 81640,
+    "price": 200,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 94950,
+    "price": 250,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99706,
+    "price": 250,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 86106,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 86105,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 86108,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 86107,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96587,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101533,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103976,
+    "price": 150,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78927,
+    "price": 5,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96614,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78895,
+    "price": 70,
+    "amount": 1,
+    "currency": "Tournament Coin"
+  },
+  {
+    "item_id": 78895,
+    "price": 350,
+    "amount": 5,
+    "currency": "Tournament Coin"
+  },
+  {
+    "item_id": 96615,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96673,
+    "price": 150,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96568,
+    "price": 35,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96568,
+    "price": 175,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99857,
+    "price": 35,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99857,
+    "price": 175,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96639,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96641,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96642,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96643,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 100849,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96644,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96645,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96569,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 100987,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96570,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96646,
+    "price": 70,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96647,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95224,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95224,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95220,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95220,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104813,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104814,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 50799,
+    "price": 12,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81643,
+    "price": 22,
+    "amount": 1,
+    "currency": "Transferrable Tibia Coin"
+  },
+  {
+    "item_id": 20058,
+    "price": 18,
+    "amount": 100,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 20058,
+    "price": 41,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81648,
+    "price": 14,
+    "amount": 1,
+    "currency": "Transferrable Tibia Coin"
+  },
+  {
+    "item_id": 20052,
+    "price": 11,
+    "amount": 100,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 20052,
+    "price": 26,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81651,
+    "price": 22,
+    "amount": 1,
+    "currency": "Transferrable Tibia Coin"
+  },
+  {
+    "item_id": 23923,
+    "price": 18,
+    "amount": 100,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 23923,
+    "price": 41,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96616,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96617,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96582,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101267,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77955,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81641,
+    "price": 5,
+    "amount": 1,
+    "currency": "Transferrable Tibia Coin"
+  },
+  {
+    "item_id": 20308,
+    "price": 6,
+    "amount": 125,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 20308,
+    "price": 11,
+    "amount": 300,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96648,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96649,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96650,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96600,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96599,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104851,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96601,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107121,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96651,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96764,
+    "price": 150,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96765,
+    "price": 250,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96766,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96678,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 88443,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 88444,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 88445,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 88446,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 82101,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 90226,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 90222,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 90229,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 90228,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 90227,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 50809,
+    "price": 6,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96618,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 86092,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 60416,
+    "price": 19,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 88320,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107293,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96440,
+    "price": 70,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84104,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96652,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96653,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96588,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96589,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96590,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96654,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 97153,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 97163,
+    "price": 140,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 100822,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 100826,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 100827,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 100828,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 100824,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 97154,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 97158,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 100832,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 97159,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 100850,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 97149,
+    "price": 70,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 97152,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 97161,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 97160,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 97155,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 100854,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 100852,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 97162,
+    "price": 250,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 97157,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 100858,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 97150,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 97156,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 100856,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96671,
+    "price": 150,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95563,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95573,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95559,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95557,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95560,
+    "price": 70,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95558,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95564,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95574,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95561,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95562,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95575,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 92775,
+    "price": 720,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 92777,
+    "price": 720,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 92776,
+    "price": 720,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 92778,
+    "price": 720,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103814,
+    "price": 720,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 92774,
+    "price": 720,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 92779,
+    "price": 720,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 108041,
+    "price": 720,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95212,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 108327,
+    "price": 150,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101714,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78906,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78906,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99860,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99860,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84089,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96573,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96573,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99862,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99862,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104815,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77948,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77951,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103596,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 87907,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 88464,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 88463,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96672,
+    "price": 150,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95215,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101861,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101861,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77976,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77976,
+    "price": 250,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103741,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103737,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103739,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103743,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 86109,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 86110,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84902,
+    "price": 15,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 50802,
+    "price": 23,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96674,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77913,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77914,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77916,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77915,
+    "price": 70,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77960,
+    "price": 150,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81646,
+    "price": 5,
+    "amount": 1,
+    "currency": "Transferrable Tibia Coin"
+  },
+  {
+    "item_id": 20228,
+    "price": 6,
+    "amount": 125,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 20228,
+    "price": 12,
+    "amount": 300,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78910,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78910,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99868,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99868,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103256,
+    "price": 1500,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77977,
+    "price": 70,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77977,
+    "price": 350,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101817,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96603,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96583,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96574,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96574,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99870,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99870,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96681,
+    "price": 70,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96604,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84918,
+    "price": 900,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96605,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96575,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96575,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99872,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99872,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104798,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104797,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99874,
+    "price": 35,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99874,
+    "price": 175,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96576,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96576,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99876,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99876,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99878,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99878,
+    "price": 125,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95572,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101825,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101826,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101826,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101819,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101816,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101827,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101827,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101821,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101822,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101828,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101818,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101820,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101829,
+    "price": 70,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101862,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101862,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101830,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101830,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96675,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96655,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96656,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96657,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77961,
+    "price": 200,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96658,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96591,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96577,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96577,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99880,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99880,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 86113,
+    "price": 250,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96584,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 50810,
+    "price": 140,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 108328,
+    "price": 250,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 82116,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99882,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99882,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84077,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107112,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101899,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 82115,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 82115,
+    "price": 125,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99900,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99900,
+    "price": 125,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104799,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104800,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81951,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95219,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95218,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101263,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96606,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96608,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 102582,
+    "price": 375,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 50811,
+    "price": 17,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 23883,
+    "price": 10,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96571,
+    "price": 250,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77949,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77950,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104802,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104801,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99807,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99808,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84102,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104803,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104804,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84967,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104805,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81952,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 82152,
+    "price": 150,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78902,
+    "price": 35,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78902,
+    "price": 175,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77962,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77962,
+    "price": 125,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84488,
+    "price": 35,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84488,
+    "price": 175,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84485,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84485,
+    "price": 125,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78900,
+    "price": 35,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78900,
+    "price": 175,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84486,
+    "price": 35,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84486,
+    "price": 175,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84492,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84492,
+    "price": 125,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78903,
+    "price": 35,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78903,
+    "price": 175,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84487,
+    "price": 35,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84487,
+    "price": 175,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84491,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84491,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 82113,
+    "price": 35,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 82113,
+    "price": 175,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84493,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84493,
+    "price": 125,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101860,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101860,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84490,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84490,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 82151,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 82151,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84494,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84494,
+    "price": 125,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84489,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84489,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 82112,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 82112,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84484,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84484,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77963,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77963,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77964,
+    "price": 35,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77964,
+    "price": 175,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96578,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96578,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99884,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99884,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96659,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78890,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78886,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78888,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78892,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96596,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96660,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96662,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96663,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 100941,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96664,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96443,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96597,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95569,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101725,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101724,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101711,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101717,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101718,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101719,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101710,
+    "price": 70,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101720,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101722,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101712,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 108315,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99886,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99886,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84922,
+    "price": 200,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96609,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101715,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95214,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107834,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107898,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 108243,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 103769,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84961,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84958,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84960,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84959,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96607,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104816,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96479,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107326,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 109372,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 108317,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107324,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107823,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107322,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107826,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 50804,
+    "price": 9,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81958,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104817,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104806,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107290,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96665,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99888,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99888,
+    "price": 125,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 50812,
+    "price": 7,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99890,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99890,
+    "price": 125,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99892,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99892,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81642,
+    "price": 11,
+    "amount": 1,
+    "currency": "Transferrable Tibia Coin"
+  },
+  {
+    "item_id": 20056,
+    "price": 10,
+    "amount": 100,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 20056,
+    "price": 21,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81647,
+    "price": 9,
+    "amount": 1,
+    "currency": "Transferrable Tibia Coin"
+  },
+  {
+    "item_id": 20044,
+    "price": 7,
+    "amount": 100,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 20044,
+    "price": 17,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 86093,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 86094,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95213,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 88322,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 88322,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 2216,
+    "price": 28,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 88467,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 88468,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81645,
+    "price": 59,
+    "amount": 1,
+    "currency": "Transferrable Tibia Coin"
+  },
+  {
+    "item_id": 77898,
+    "price": 47,
+    "amount": 100,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77898,
+    "price": 113,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78898,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 78898,
+    "price": 300,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107292,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 102666,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 102650,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 102665,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99797,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101721,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101713,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84931,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 50806,
+    "price": 9,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84107,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104794,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96666,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 84096,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 88323,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 88323,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101262,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99811,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99812,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 60417,
+    "price": 35,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81644,
+    "price": 36,
+    "amount": 1,
+    "currency": "Transferrable Tibia Coin"
+  },
+  {
+    "item_id": 23924,
+    "price": 29,
+    "amount": 100,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 23924,
+    "price": 68,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81649,
+    "price": 42,
+    "amount": 1,
+    "currency": "Transferrable Tibia Coin"
+  },
+  {
+    "item_id": 77899,
+    "price": 33,
+    "amount": 100,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77899,
+    "price": 79,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81650,
+    "price": 42,
+    "amount": 1,
+    "currency": "Transferrable Tibia Coin"
+  },
+  {
+    "item_id": 77900,
+    "price": 33,
+    "amount": 100,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 77900,
+    "price": 79,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107291,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104808,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107294,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96592,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96676,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81945,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81943,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81944,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81947,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81946,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 82104,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96679,
+    "price": 150,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 82107,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99894,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99894,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 82103,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 82150,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 82149,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96619,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96620,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 93664,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 100992,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 93663,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 100994,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 93662,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 93661,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 93660,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 100996,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 93657,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101004,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 93655,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 100998,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 93653,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101000,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 93651,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 101002,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 104809,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99793,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99795,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107295,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107295,
+    "price": 250,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99802,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96593,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96585,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99815,
+    "price": 180,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 97151,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99896,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99896,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99898,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99898,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96610,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 107361,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 50813,
+    "price": 32,
+    "amount": 250,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 102646,
+    "price": 150,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 102645,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 102647,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 102644,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 102648,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 102643,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 102642,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 102639,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 102637,
+    "price": 120,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 102641,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 102640,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 102638,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96667,
+    "price": 80,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96668,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 109215,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99902,
+    "price": 25,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99902,
+    "price": 125,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96438,
+    "price": 40,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96669,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96670,
+    "price": 90,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96677,
+    "price": 150,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99904,
+    "price": 35,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99904,
+    "price": 175,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 81953,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95217,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 95216,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99906,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99906,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99908,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99908,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99909,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99909,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99911,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99911,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99913,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99913,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99914,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99914,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99918,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99918,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99920,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99920,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99925,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99925,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99926,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99926,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99927,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99927,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99928,
+    "price": 30,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 99928,
+    "price": 150,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96435,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96432,
+    "price": 100,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96444,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96437,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96431,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96429,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96429,
+    "price": 250,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96428,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96428,
+    "price": 250,
+    "amount": 5,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96433,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96436,
+    "price": 50,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96439,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96441,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 100909,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 96442,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  },
+  {
+    "item_id": 100910,
+    "price": 60,
+    "amount": 1,
+    "currency": "Tibia Coin"
+  }
+]

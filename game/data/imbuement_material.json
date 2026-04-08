@@ -1,0 +1,722 @@
+[
+  {
+    "imbuement_id": 80351,
+    "item_id": 42018,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80357,
+    "item_id": 41924,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80339,
+    "item_id": 41706,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80327,
+    "item_id": 41955,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80330,
+    "item_id": 41902,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80319,
+    "item_id": 8517,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80294,
+    "item_id": 64365,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80360,
+    "item_id": 41906,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 83094,
+    "item_id": 81402,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80291,
+    "item_id": 41908,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80312,
+    "item_id": 46215,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80354,
+    "item_id": 46214,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 108214,
+    "item_id": 41817,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80323,
+    "item_id": 41951,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80297,
+    "item_id": 46245,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80101,
+    "item_id": 41907,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80348,
+    "item_id": 41920,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80316,
+    "item_id": 61749,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80308,
+    "item_id": 46247,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80335,
+    "item_id": 61745,
+    "amount": 15
+  },
+  {
+    "imbuement_id": 80301,
+    "item_id": 41933,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80286,
+    "item_id": 41940,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 86666,
+    "item_id": 75080,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80304,
+    "item_id": 46259,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80350,
+    "item_id": 42018,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80350,
+    "item_id": 76957,
+    "amount": 15
+  },
+  {
+    "imbuement_id": 80356,
+    "item_id": 41924,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80356,
+    "item_id": 46531,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80338,
+    "item_id": 41706,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80338,
+    "item_id": 46199,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80326,
+    "item_id": 41955,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80326,
+    "item_id": 56927,
+    "amount": 15
+  },
+  {
+    "imbuement_id": 80329,
+    "item_id": 41902,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80329,
+    "item_id": 41901,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80318,
+    "item_id": 8517,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80318,
+    "item_id": 59819,
+    "amount": 10
+  },
+  {
+    "imbuement_id": 80295,
+    "item_id": 64365,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80295,
+    "item_id": 75041,
+    "amount": 5
+  },
+  {
+    "imbuement_id": 80359,
+    "item_id": 41906,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80359,
+    "item_id": 46207,
+    "amount": 15
+  },
+  {
+    "imbuement_id": 83095,
+    "item_id": 81402,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 83095,
+    "item_id": 81695,
+    "amount": 10
+  },
+  {
+    "imbuement_id": 80292,
+    "item_id": 41908,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80292,
+    "item_id": 69450,
+    "amount": 10
+  },
+  {
+    "imbuement_id": 80311,
+    "item_id": 46215,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80311,
+    "item_id": 75046,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80353,
+    "item_id": 46214,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80353,
+    "item_id": 64366,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 108216,
+    "item_id": 41817,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 108216,
+    "item_id": 46234,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80322,
+    "item_id": 41951,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80322,
+    "item_id": 41938,
+    "amount": 15
+  },
+  {
+    "imbuement_id": 80298,
+    "item_id": 46245,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80298,
+    "item_id": 41903,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80289,
+    "item_id": 41907,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80289,
+    "item_id": 8524,
+    "amount": 5
+  },
+  {
+    "imbuement_id": 80347,
+    "item_id": 41920,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80347,
+    "item_id": 67899,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80315,
+    "item_id": 61749,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80315,
+    "item_id": 41826,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80307,
+    "item_id": 46247,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80307,
+    "item_id": 42021,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80334,
+    "item_id": 61745,
+    "amount": 15
+  },
+  {
+    "imbuement_id": 80334,
+    "item_id": 41867,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80300,
+    "item_id": 41933,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80300,
+    "item_id": 42017,
+    "amount": 15
+  },
+  {
+    "imbuement_id": 80287,
+    "item_id": 41940,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80287,
+    "item_id": 41927,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 86667,
+    "item_id": 75080,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 86667,
+    "item_id": 78175,
+    "amount": 15
+  },
+  {
+    "imbuement_id": 80303,
+    "item_id": 46259,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80303,
+    "item_id": 65936,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80349,
+    "item_id": 42018,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80349,
+    "item_id": 76957,
+    "amount": 15
+  },
+  {
+    "imbuement_id": 80349,
+    "item_id": 42615,
+    "amount": 10
+  },
+  {
+    "imbuement_id": 80355,
+    "item_id": 41924,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80355,
+    "item_id": 46531,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80355,
+    "item_id": 65934,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80337,
+    "item_id": 41706,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80337,
+    "item_id": 46199,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80337,
+    "item_id": 67895,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80325,
+    "item_id": 41955,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80325,
+    "item_id": 56927,
+    "amount": 15
+  },
+  {
+    "imbuement_id": 80325,
+    "item_id": 41954,
+    "amount": 10
+  },
+  {
+    "imbuement_id": 80328,
+    "item_id": 41902,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80328,
+    "item_id": 41901,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80328,
+    "item_id": 41811,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80317,
+    "item_id": 8517,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80317,
+    "item_id": 59819,
+    "amount": 10
+  },
+  {
+    "imbuement_id": 80317,
+    "item_id": 46567,
+    "amount": 5
+  },
+  {
+    "imbuement_id": 80296,
+    "item_id": 64365,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80296,
+    "item_id": 75041,
+    "amount": 5
+  },
+  {
+    "imbuement_id": 80296,
+    "item_id": 78180,
+    "amount": 1
+  },
+  {
+    "imbuement_id": 80358,
+    "item_id": 41906,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80358,
+    "item_id": 46207,
+    "amount": 15
+  },
+  {
+    "imbuement_id": 80358,
+    "item_id": 41942,
+    "amount": 15
+  },
+  {
+    "imbuement_id": 83096,
+    "item_id": 81402,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 83096,
+    "item_id": 81695,
+    "amount": 10
+  },
+  {
+    "imbuement_id": 83096,
+    "item_id": 65946,
+    "amount": 5
+  },
+  {
+    "imbuement_id": 80293,
+    "item_id": 41908,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80293,
+    "item_id": 69450,
+    "amount": 10
+  },
+  {
+    "imbuement_id": 80293,
+    "item_id": 41928,
+    "amount": 5
+  },
+  {
+    "imbuement_id": 80310,
+    "item_id": 46215,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80310,
+    "item_id": 75046,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80310,
+    "item_id": 41917,
+    "amount": 5
+  },
+  {
+    "imbuement_id": 80352,
+    "item_id": 46214,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80352,
+    "item_id": 64366,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80352,
+    "item_id": 41919,
+    "amount": 10
+  },
+  {
+    "imbuement_id": 108215,
+    "item_id": 41817,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 108215,
+    "item_id": 46234,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 108215,
+    "item_id": 101163,
+    "amount": 15
+  },
+  {
+    "imbuement_id": 80321,
+    "item_id": 41951,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80321,
+    "item_id": 41938,
+    "amount": 15
+  },
+  {
+    "imbuement_id": 80321,
+    "item_id": 56932,
+    "amount": 10
+  },
+  {
+    "imbuement_id": 80224,
+    "item_id": 46245,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80224,
+    "item_id": 41903,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80224,
+    "item_id": 41915,
+    "amount": 5
+  },
+  {
+    "imbuement_id": 80290,
+    "item_id": 41907,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80290,
+    "item_id": 8524,
+    "amount": 5
+  },
+  {
+    "imbuement_id": 80290,
+    "item_id": 8640,
+    "amount": 5
+  },
+  {
+    "imbuement_id": 80346,
+    "item_id": 41920,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80346,
+    "item_id": 67899,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80346,
+    "item_id": 41947,
+    "amount": 5
+  },
+  {
+    "imbuement_id": 80314,
+    "item_id": 61749,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80314,
+    "item_id": 41826,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80314,
+    "item_id": 46565,
+    "amount": 10
+  },
+  {
+    "imbuement_id": 80306,
+    "item_id": 46247,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80306,
+    "item_id": 42021,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80306,
+    "item_id": 76962,
+    "amount": 5
+  },
+  {
+    "imbuement_id": 80333,
+    "item_id": 61745,
+    "amount": 15
+  },
+  {
+    "imbuement_id": 80333,
+    "item_id": 41867,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80333,
+    "item_id": 56938,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80299,
+    "item_id": 41933,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80299,
+    "item_id": 42017,
+    "amount": 15
+  },
+  {
+    "imbuement_id": 80299,
+    "item_id": 41922,
+    "amount": 5
+  },
+  {
+    "imbuement_id": 80288,
+    "item_id": 41940,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80288,
+    "item_id": 41927,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 80288,
+    "item_id": 67869,
+    "amount": 2
+  },
+  {
+    "imbuement_id": 86668,
+    "item_id": 75080,
+    "amount": 20
+  },
+  {
+    "imbuement_id": 86668,
+    "item_id": 78175,
+    "amount": 15
+  },
+  {
+    "imbuement_id": 86668,
+    "item_id": 85258,
+    "amount": 5
+  },
+  {
+    "imbuement_id": 80302,
+    "item_id": 46259,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80302,
+    "item_id": 65936,
+    "amount": 25
+  },
+  {
+    "imbuement_id": 80302,
+    "item_id": 76961,
+    "amount": 5
+  }
+]

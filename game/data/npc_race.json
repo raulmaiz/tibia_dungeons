@@ -1,0 +1,4554 @@
+[
+  {
+    "npc_id": 37851,
+    "name": "Human"
+  },
+  {
+    "npc_id": 48770,
+    "name": "Human"
+  },
+  {
+    "npc_id": 67979,
+    "name": "Human"
+  },
+  {
+    "npc_id": 69737,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 106921,
+    "name": "Forest Fury"
+  },
+  {
+    "npc_id": 37574,
+    "name": "Frog"
+  },
+  {
+    "npc_id": 37574,
+    "name": "Human"
+  },
+  {
+    "npc_id": 55611,
+    "name": "Human"
+  },
+  {
+    "npc_id": 14498,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 65563,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 79595,
+    "name": "Dragon"
+  },
+  {
+    "npc_id": 69736,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 20372,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 20372,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 31328,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 41732,
+    "name": "Squirrels"
+  },
+  {
+    "npc_id": 37083,
+    "name": "Frog"
+  },
+  {
+    "npc_id": 37083,
+    "name": "Human"
+  },
+  {
+    "npc_id": 14497,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 25030,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 30565,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 11911,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 12401,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 77013,
+    "name": "Goblin"
+  },
+  {
+    "npc_id": 30905,
+    "name": "Cyclops"
+  },
+  {
+    "npc_id": 65561,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 69738,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 17440,
+    "name": "Ghost"
+  },
+  {
+    "npc_id": 65562,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 10048,
+    "name": "Wolf"
+  },
+  {
+    "npc_id": 65560,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 5361,
+    "name": "Human"
+  },
+  {
+    "npc_id": 17156,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 77371,
+    "name": "Goblin"
+  },
+  {
+    "npc_id": 91717,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 46813,
+    "name": "Dragon"
+  },
+  {
+    "npc_id": 17078,
+    "name": "Dog"
+  },
+  {
+    "npc_id": 79534,
+    "name": "Animate Object"
+  },
+  {
+    "npc_id": 4675,
+    "name": "Human"
+  },
+  {
+    "npc_id": 81373,
+    "name": "Fae"
+  },
+  {
+    "npc_id": 5341,
+    "name": "Cyclops"
+  },
+  {
+    "npc_id": 12418,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 17442,
+    "name": "Ghost"
+  },
+  {
+    "npc_id": 65559,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 31790,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 5331,
+    "name": "Bonelord"
+  },
+  {
+    "npc_id": 69739,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 5303,
+    "name": "Human"
+  },
+  {
+    "npc_id": 86966,
+    "name": "Goblin"
+  },
+  {
+    "npc_id": 9121,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5349,
+    "name": "Human"
+  },
+  {
+    "npc_id": 78475,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5241,
+    "name": "Human"
+  },
+  {
+    "npc_id": 9496,
+    "name": "Human"
+  },
+  {
+    "npc_id": 57845,
+    "name": "Human"
+  },
+  {
+    "npc_id": 1224,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68014,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4896,
+    "name": "Human"
+  },
+  {
+    "npc_id": 78471,
+    "name": "Human"
+  },
+  {
+    "npc_id": 79440,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3433,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5429,
+    "name": "Djinn"
+  },
+  {
+    "npc_id": 4894,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4514,
+    "name": "Human"
+  },
+  {
+    "npc_id": 36669,
+    "name": "Human"
+  },
+  {
+    "npc_id": 81324,
+    "name": "Fae"
+  },
+  {
+    "npc_id": 5259,
+    "name": "Human"
+  },
+  {
+    "npc_id": 56714,
+    "name": "Rockboy"
+  },
+  {
+    "npc_id": 5054,
+    "name": "Human"
+  },
+  {
+    "npc_id": 89022,
+    "name": "Geo-Elemental"
+  },
+  {
+    "npc_id": 4877,
+    "name": "Human"
+  },
+  {
+    "npc_id": 37021,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 89104,
+    "name": "Human"
+  },
+  {
+    "npc_id": 1680,
+    "name": "Human"
+  },
+  {
+    "npc_id": 98781,
+    "name": "Naga"
+  },
+  {
+    "npc_id": 53940,
+    "name": "Human"
+  },
+  {
+    "npc_id": 11912,
+    "name": "Ghost"
+  },
+  {
+    "npc_id": 94872,
+    "name": "Deepling"
+  },
+  {
+    "npc_id": 77368,
+    "name": "Goblin"
+  },
+  {
+    "npc_id": 5332,
+    "name": "Dragon"
+  },
+  {
+    "npc_id": 53950,
+    "name": "Orc"
+  },
+  {
+    "npc_id": 4884,
+    "name": "Human"
+  },
+  {
+    "npc_id": 86688,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 5330,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 4618,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5345,
+    "name": "Human"
+  },
+  {
+    "npc_id": 81424,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5228,
+    "name": "Human"
+  },
+  {
+    "npc_id": 109307,
+    "name": "Human"
+  },
+  {
+    "npc_id": 53941,
+    "name": "Human"
+  },
+  {
+    "npc_id": 9049,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5189,
+    "name": "Human"
+  },
+  {
+    "npc_id": 52425,
+    "name": "Stampor"
+  },
+  {
+    "npc_id": 14605,
+    "name": "Human"
+  },
+  {
+    "npc_id": 26107,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30841,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 5053,
+    "name": "Human"
+  },
+  {
+    "npc_id": 78465,
+    "name": "Human"
+  },
+  {
+    "npc_id": 2050,
+    "name": "Human"
+  },
+  {
+    "npc_id": 64734,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 5094,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5038,
+    "name": "Human"
+  },
+  {
+    "npc_id": 65984,
+    "name": "Djinn"
+  },
+  {
+    "npc_id": 98787,
+    "name": "Naga"
+  },
+  {
+    "npc_id": 5302,
+    "name": "Human"
+  },
+  {
+    "npc_id": 53942,
+    "name": "Human"
+  },
+  {
+    "npc_id": 9861,
+    "name": "Human"
+  },
+  {
+    "npc_id": 89097,
+    "name": "Human"
+  },
+  {
+    "npc_id": 110150,
+    "name": "Human"
+  },
+  {
+    "npc_id": 81431,
+    "name": "Mermaid"
+  },
+  {
+    "npc_id": 65986,
+    "name": "Machine"
+  },
+  {
+    "npc_id": 1718,
+    "name": "Human"
+  },
+  {
+    "npc_id": 109308,
+    "name": "Human"
+  },
+  {
+    "npc_id": 46903,
+    "name": "Dragon"
+  },
+  {
+    "npc_id": 46903,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 68004,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3423,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5488,
+    "name": "Djinn"
+  },
+  {
+    "npc_id": 58323,
+    "name": "Human"
+  },
+  {
+    "npc_id": 17106,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4517,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68177,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4626,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68020,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8545,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30906,
+    "name": "Human"
+  },
+  {
+    "npc_id": 94548,
+    "name": "Orc"
+  },
+  {
+    "npc_id": 4515,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 4485,
+    "name": "Snake"
+  },
+  {
+    "npc_id": 4686,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3146,
+    "name": "Human"
+  },
+  {
+    "npc_id": 37260,
+    "name": "Bear"
+  },
+  {
+    "npc_id": 53943,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3056,
+    "name": "Human"
+  },
+  {
+    "npc_id": 58356,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8563,
+    "name": "Human"
+  },
+  {
+    "npc_id": 17122,
+    "name": "Human"
+  },
+  {
+    "npc_id": 26149,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4487,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 52438,
+    "name": "Human"
+  },
+  {
+    "npc_id": 59970,
+    "name": "Human"
+  },
+  {
+    "npc_id": 62405,
+    "name": "Human"
+  },
+  {
+    "npc_id": 1685,
+    "name": "Human"
+  },
+  {
+    "npc_id": 58357,
+    "name": "Human"
+  },
+  {
+    "npc_id": 25559,
+    "name": "Human"
+  },
+  {
+    "npc_id": 1218,
+    "name": "Orc"
+  },
+  {
+    "npc_id": 4518,
+    "name": "Human"
+  },
+  {
+    "npc_id": 86992,
+    "name": "Deepling"
+  },
+  {
+    "npc_id": 5485,
+    "name": "Djinn"
+  },
+  {
+    "npc_id": 86965,
+    "name": "Human"
+  },
+  {
+    "npc_id": 62406,
+    "name": "Human"
+  },
+  {
+    "npc_id": 108057,
+    "name": "Merudri"
+  },
+  {
+    "npc_id": 31310,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 4883,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5310,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5260,
+    "name": "Human"
+  },
+  {
+    "npc_id": 37022,
+    "name": "Human"
+  },
+  {
+    "npc_id": 76890,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5087,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8804,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8928,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5333,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 4976,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5263,
+    "name": "Human"
+  },
+  {
+    "npc_id": 58312,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4661,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 4959,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 58277,
+    "name": "Machine"
+  },
+  {
+    "npc_id": 77098,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 9495,
+    "name": "Human"
+  },
+  {
+    "npc_id": 34083,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5362,
+    "name": "Human"
+  },
+  {
+    "npc_id": 63275,
+    "name": "Human"
+  },
+  {
+    "npc_id": 63264,
+    "name": "Human"
+  },
+  {
+    "npc_id": 17110,
+    "name": "Human"
+  },
+  {
+    "npc_id": 6658,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 86988,
+    "name": "Minotaur"
+  },
+  {
+    "npc_id": 4519,
+    "name": "Human"
+  },
+  {
+    "npc_id": 78470,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4520,
+    "name": "Human"
+  },
+  {
+    "npc_id": 41711,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 8667,
+    "name": "Human"
+  },
+  {
+    "npc_id": 110147,
+    "name": "Human"
+  },
+  {
+    "npc_id": 98768,
+    "name": "Naga"
+  },
+  {
+    "npc_id": 4857,
+    "name": "Human"
+  },
+  {
+    "npc_id": 17120,
+    "name": "Human"
+  },
+  {
+    "npc_id": 65988,
+    "name": "Human"
+  },
+  {
+    "npc_id": 92804,
+    "name": "Rascoohan"
+  },
+  {
+    "npc_id": 30720,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68624,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4856,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4624,
+    "name": "Human"
+  },
+  {
+    "npc_id": 67946,
+    "name": "Human"
+  },
+  {
+    "npc_id": 25509,
+    "name": "Human"
+  },
+  {
+    "npc_id": 88953,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5348,
+    "name": "Human"
+  },
+  {
+    "npc_id": 96503,
+    "name": "Rascoohan"
+  },
+  {
+    "npc_id": 25222,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8982,
+    "name": "Human"
+  },
+  {
+    "npc_id": 77054,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4853,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4876,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3108,
+    "name": "Human"
+  },
+  {
+    "npc_id": 41007,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8554,
+    "name": "Human"
+  },
+  {
+    "npc_id": 20331,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5270,
+    "name": "Human"
+  },
+  {
+    "npc_id": 25208,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5153,
+    "name": "Human"
+  },
+  {
+    "npc_id": 51217,
+    "name": "Human"
+  },
+  {
+    "npc_id": 9026,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8689,
+    "name": "Human"
+  },
+  {
+    "npc_id": 37023,
+    "name": "Human"
+  },
+  {
+    "npc_id": 85838,
+    "name": "Book"
+  },
+  {
+    "npc_id": 8988,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5155,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8670,
+    "name": "Human"
+  },
+  {
+    "npc_id": 61792,
+    "name": "Human"
+  },
+  {
+    "npc_id": 46708,
+    "name": "Lizard"
+  },
+  {
+    "npc_id": 5089,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 67984,
+    "name": "Human"
+  },
+  {
+    "npc_id": 86967,
+    "name": "Corym"
+  },
+  {
+    "npc_id": 4687,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4983,
+    "name": "Human"
+  },
+  {
+    "npc_id": 108055,
+    "name": "Merudri"
+  },
+  {
+    "npc_id": 5111,
+    "name": "Human"
+  },
+  {
+    "npc_id": 25907,
+    "name": "Troll"
+  },
+  {
+    "npc_id": 57161,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8973,
+    "name": "Human"
+  },
+  {
+    "npc_id": 41726,
+    "name": "Lizard"
+  },
+  {
+    "npc_id": 68005,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5213,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3070,
+    "name": "Human"
+  },
+  {
+    "npc_id": 62408,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30842,
+    "name": "Lich"
+  },
+  {
+    "npc_id": 37020,
+    "name": "Human"
+  },
+  {
+    "npc_id": 1217,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5364,
+    "name": "Human"
+  },
+  {
+    "npc_id": 77048,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5365,
+    "name": "Human"
+  },
+  {
+    "npc_id": 29170,
+    "name": "Animate Object"
+  },
+  {
+    "npc_id": 105198,
+    "name": "Fae"
+  },
+  {
+    "npc_id": 68593,
+    "name": "Human"
+  },
+  {
+    "npc_id": 59969,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3087,
+    "name": "Human"
+  },
+  {
+    "npc_id": 75233,
+    "name": "Human"
+  },
+  {
+    "npc_id": 83312,
+    "name": "Corym"
+  },
+  {
+    "npc_id": 83311,
+    "name": "Corym"
+  },
+  {
+    "npc_id": 83307,
+    "name": "Corym"
+  },
+  {
+    "npc_id": 83308,
+    "name": "Corym"
+  },
+  {
+    "npc_id": 83310,
+    "name": "Corym"
+  },
+  {
+    "npc_id": 83309,
+    "name": "Corym"
+  },
+  {
+    "npc_id": 4633,
+    "name": "Human"
+  },
+  {
+    "npc_id": 46777,
+    "name": "Lizard"
+  },
+  {
+    "npc_id": 46777,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 85906,
+    "name": "Tree"
+  },
+  {
+    "npc_id": 53944,
+    "name": "Human"
+  },
+  {
+    "npc_id": 41725,
+    "name": "Minotaur"
+  },
+  {
+    "npc_id": 4785,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5147,
+    "name": "Human"
+  },
+  {
+    "npc_id": 1376,
+    "name": "Human"
+  },
+  {
+    "npc_id": 2779,
+    "name": "Human"
+  },
+  {
+    "npc_id": 81432,
+    "name": "Pixie"
+  },
+  {
+    "npc_id": 4629,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4880,
+    "name": "Human"
+  },
+  {
+    "npc_id": 17124,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8547,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3095,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 85348,
+    "name": "Human"
+  },
+  {
+    "npc_id": 52878,
+    "name": "Demon"
+  },
+  {
+    "npc_id": 65568,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 12634,
+    "name": "Human"
+  },
+  {
+    "npc_id": 77415,
+    "name": "Demon"
+  },
+  {
+    "npc_id": 81922,
+    "name": "Animate Object"
+  },
+  {
+    "npc_id": 4671,
+    "name": "Human"
+  },
+  {
+    "npc_id": 78035,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5091,
+    "name": "Human"
+  },
+  {
+    "npc_id": 80192,
+    "name": "Human"
+  },
+  {
+    "npc_id": 1681,
+    "name": "Human"
+  },
+  {
+    "npc_id": 17339,
+    "name": "Human"
+  },
+  {
+    "npc_id": 59981,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 57160,
+    "name": "Dog"
+  },
+  {
+    "npc_id": 91829,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4676,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30843,
+    "name": "Human"
+  },
+  {
+    "npc_id": 25560,
+    "name": "Human"
+  },
+  {
+    "npc_id": 67986,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8805,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4523,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68378,
+    "name": "Human"
+  },
+  {
+    "npc_id": 59967,
+    "name": "Animate Object"
+  },
+  {
+    "npc_id": 36752,
+    "name": "Bonelord"
+  },
+  {
+    "npc_id": 65979,
+    "name": "Butterfly"
+  },
+  {
+    "npc_id": 69692,
+    "name": "Human"
+  },
+  {
+    "npc_id": 31309,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 53946,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 25225,
+    "name": "Human"
+  },
+  {
+    "npc_id": 69440,
+    "name": "Human"
+  },
+  {
+    "npc_id": 61980,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 105196,
+    "name": "Fae"
+  },
+  {
+    "npc_id": 9056,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5353,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 5315,
+    "name": "Dog"
+  },
+  {
+    "npc_id": 83501,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 83499,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 83502,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 83561,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 83500,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 83564,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 61742,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 69685,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4878,
+    "name": "Human"
+  },
+  {
+    "npc_id": 36682,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4544,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 5107,
+    "name": "Human"
+  },
+  {
+    "npc_id": 80745,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68026,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4684,
+    "name": "Human"
+  },
+  {
+    "npc_id": 7273,
+    "name": "Human"
+  },
+  {
+    "npc_id": 20534,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5212,
+    "name": "Human"
+  },
+  {
+    "npc_id": 57159,
+    "name": "Machine"
+  },
+  {
+    "npc_id": 17049,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5373,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5050,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 69437,
+    "name": "Human"
+  },
+  {
+    "npc_id": 109687,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8832,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4539,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 41008,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 89064,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30844,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68096,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5334,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 64594,
+    "name": "Human"
+  },
+  {
+    "npc_id": 98772,
+    "name": "Human"
+  },
+  {
+    "npc_id": 55770,
+    "name": "Human"
+  },
+  {
+    "npc_id": 78466,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68011,
+    "name": "Human"
+  },
+  {
+    "npc_id": 20253,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4574,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 31222,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 108054,
+    "name": "Merudri"
+  },
+  {
+    "npc_id": 108310,
+    "name": "Merudri"
+  },
+  {
+    "npc_id": 8548,
+    "name": "Human"
+  },
+  {
+    "npc_id": 9860,
+    "name": "Human"
+  },
+  {
+    "npc_id": 1410,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5335,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 65987,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 89098,
+    "name": "Human"
+  },
+  {
+    "npc_id": 41712,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 30845,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5354,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 92802,
+    "name": "Human"
+  },
+  {
+    "npc_id": 93056,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3085,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8976,
+    "name": "Human"
+  },
+  {
+    "npc_id": 91726,
+    "name": "Human"
+  },
+  {
+    "npc_id": 80194,
+    "name": "Human"
+  },
+  {
+    "npc_id": 52629,
+    "name": "Lizard"
+  },
+  {
+    "npc_id": 68094,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5484,
+    "name": "Djinn"
+  },
+  {
+    "npc_id": 78450,
+    "name": "Human"
+  },
+  {
+    "npc_id": 78446,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4897,
+    "name": "Human"
+  },
+  {
+    "npc_id": 64785,
+    "name": "Human"
+  },
+  {
+    "npc_id": 89063,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 5336,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 94549,
+    "name": "Dreamelf"
+  },
+  {
+    "npc_id": 68009,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5190,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4625,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5243,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8666,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4980,
+    "name": "Human"
+  },
+  {
+    "npc_id": 107445,
+    "name": "Human"
+  },
+  {
+    "npc_id": 36677,
+    "name": "Human"
+  },
+  {
+    "npc_id": 37024,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 96881,
+    "name": "Dragon"
+  },
+  {
+    "npc_id": 67982,
+    "name": "Human"
+  },
+  {
+    "npc_id": 37025,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 9266,
+    "name": "Human"
+  },
+  {
+    "npc_id": 109306,
+    "name": "Human"
+  },
+  {
+    "npc_id": 91716,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 68017,
+    "name": "Human"
+  },
+  {
+    "npc_id": 86466,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30568,
+    "name": "Human"
+  },
+  {
+    "npc_id": 31306,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 91740,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 61768,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5092,
+    "name": "Animate Object"
+  },
+  {
+    "npc_id": 8672,
+    "name": "Human"
+  },
+  {
+    "npc_id": 20973,
+    "name": "Human"
+  },
+  {
+    "npc_id": 52853,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4986,
+    "name": "Human"
+  },
+  {
+    "npc_id": 31234,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 87316,
+    "name": "Animate Object"
+  },
+  {
+    "npc_id": 17048,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68007,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5483,
+    "name": "Djinn"
+  },
+  {
+    "npc_id": 67642,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5161,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5423,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3437,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5083,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68619,
+    "name": "Human"
+  },
+  {
+    "npc_id": 81425,
+    "name": "Human"
+  },
+  {
+    "npc_id": 32574,
+    "name": "Human"
+  },
+  {
+    "npc_id": 46892,
+    "name": "Draken"
+  },
+  {
+    "npc_id": 65983,
+    "name": "Human"
+  },
+  {
+    "npc_id": 15792,
+    "name": "Human"
+  },
+  {
+    "npc_id": 80402,
+    "name": "Dragon"
+  },
+  {
+    "npc_id": 62402,
+    "name": "Human"
+  },
+  {
+    "npc_id": 69436,
+    "name": "Human"
+  },
+  {
+    "npc_id": 81104,
+    "name": "Human"
+  },
+  {
+    "npc_id": 61735,
+    "name": "Human"
+  },
+  {
+    "npc_id": 77301,
+    "name": "Ogre"
+  },
+  {
+    "npc_id": 50588,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 46812,
+    "name": "Human"
+  },
+  {
+    "npc_id": 81371,
+    "name": "Wolf"
+  },
+  {
+    "npc_id": 75244,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 98784,
+    "name": "Naga"
+  },
+  {
+    "npc_id": 75235,
+    "name": "Human"
+  },
+  {
+    "npc_id": 59994,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 59971,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 59977,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 65406,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 59983,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 65408,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 98762,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 83507,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 83506,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 83508,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 83566,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 83505,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 83503,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 83504,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 65412,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 60013,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 59973,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 59986,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 86991,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 94835,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 59991,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 59982,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 59989,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 60012,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 59979,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 59972,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 59980,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 59968,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 59985,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 98766,
+    "name": "Rascoohan"
+  },
+  {
+    "npc_id": 59976,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 65409,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 59987,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 98765,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 90436,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 59975,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 98888,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 98889,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 98890,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 94768,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 98891,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 98892,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 59992,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 65410,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 60011,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 94766,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 83497,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 65407,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 94638,
+    "name": "Gnome"
+  },
+  {
+    "npc_id": 31804,
+    "name": "Machine"
+  },
+  {
+    "npc_id": 54079,
+    "name": "Machine"
+  },
+  {
+    "npc_id": 8669,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3143,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68010,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5363,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30695,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5374,
+    "name": "Human"
+  },
+  {
+    "npc_id": 37026,
+    "name": "Human"
+  },
+  {
+    "npc_id": 37027,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 4788,
+    "name": "Human"
+  },
+  {
+    "npc_id": 31307,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 77012,
+    "name": "Ogre"
+  },
+  {
+    "npc_id": 55771,
+    "name": "Human"
+  },
+  {
+    "npc_id": 81423,
+    "name": "Fae"
+  },
+  {
+    "npc_id": 89161,
+    "name": "Human"
+  },
+  {
+    "npc_id": 89100,
+    "name": "Human"
+  },
+  {
+    "npc_id": 89101,
+    "name": "Minotaur"
+  },
+  {
+    "npc_id": 89160,
+    "name": "Human"
+  },
+  {
+    "npc_id": 69433,
+    "name": "Crustacean"
+  },
+  {
+    "npc_id": 69433,
+    "name": "Human"
+  },
+  {
+    "npc_id": 25892,
+    "name": "Human"
+  },
+  {
+    "npc_id": 25751,
+    "name": "Human"
+  },
+  {
+    "npc_id": 25885,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30719,
+    "name": "Human"
+  },
+  {
+    "npc_id": 25889,
+    "name": "Human"
+  },
+  {
+    "npc_id": 25886,
+    "name": "Human"
+  },
+  {
+    "npc_id": 67953,
+    "name": "Human"
+  },
+  {
+    "npc_id": 25750,
+    "name": "Human"
+  },
+  {
+    "npc_id": 89159,
+    "name": "Human"
+  },
+  {
+    "npc_id": 25888,
+    "name": "Human"
+  },
+  {
+    "npc_id": 25891,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 25890,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4889,
+    "name": "Human"
+  },
+  {
+    "npc_id": 105203,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4855,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 109327,
+    "name": "Human"
+  },
+  {
+    "npc_id": 2935,
+    "name": "Human"
+  },
+  {
+    "npc_id": 98779,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3429,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5350,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5366,
+    "name": "Ape"
+  },
+  {
+    "npc_id": 35150,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4677,
+    "name": "Human"
+  },
+  {
+    "npc_id": 17123,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8671,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68594,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5375,
+    "name": "Human"
+  },
+  {
+    "npc_id": 95130,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3425,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5110,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30907,
+    "name": "Human"
+  },
+  {
+    "npc_id": 31311,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 6103,
+    "name": "Djinn"
+  },
+  {
+    "npc_id": 5056,
+    "name": "Human"
+  },
+  {
+    "npc_id": 101087,
+    "name": "Human"
+  },
+  {
+    "npc_id": 17126,
+    "name": "Human"
+  },
+  {
+    "npc_id": 94552,
+    "name": "Ghosts"
+  },
+  {
+    "npc_id": 104580,
+    "name": "Human"
+  },
+  {
+    "npc_id": 91720,
+    "name": "Werelion"
+  },
+  {
+    "npc_id": 5367,
+    "name": "Human"
+  },
+  {
+    "npc_id": 78449,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30666,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 25873,
+    "name": "Human"
+  },
+  {
+    "npc_id": 9125,
+    "name": "Human"
+  },
+  {
+    "npc_id": 78474,
+    "name": "Human"
+  },
+  {
+    "npc_id": 69690,
+    "name": "Human"
+  },
+  {
+    "npc_id": 16979,
+    "name": "Human"
+  },
+  {
+    "npc_id": 23713,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4581,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5298,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5307,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5355,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 30548,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 3081,
+    "name": "Human"
+  },
+  {
+    "npc_id": 53947,
+    "name": "Human"
+  },
+  {
+    "npc_id": 1223,
+    "name": "Human"
+  },
+  {
+    "npc_id": 81355,
+    "name": "Fae"
+  },
+  {
+    "npc_id": 3088,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5156,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68595,
+    "name": "Human"
+  },
+  {
+    "npc_id": 92244,
+    "name": "Human"
+  },
+  {
+    "npc_id": 89023,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5337,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 30847,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8558,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8806,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4578,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4683,
+    "name": "Human"
+  },
+  {
+    "npc_id": 98783,
+    "name": "Naga"
+  },
+  {
+    "npc_id": 5048,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 17011,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8990,
+    "name": "Human"
+  },
+  {
+    "npc_id": 79439,
+    "name": "Human"
+  },
+  {
+    "npc_id": 101084,
+    "name": "Bird"
+  },
+  {
+    "npc_id": 4887,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5356,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 17132,
+    "name": "Human"
+  },
+  {
+    "npc_id": 49978,
+    "name": "Lizard"
+  },
+  {
+    "npc_id": 94551,
+    "name": "Lizard"
+  },
+  {
+    "npc_id": 50536,
+    "name": "Human"
+  },
+  {
+    "npc_id": 17715,
+    "name": "Human"
+  },
+  {
+    "npc_id": 88544,
+    "name": "Human"
+  },
+  {
+    "npc_id": 62407,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68095,
+    "name": "Human"
+  },
+  {
+    "npc_id": 61920,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 3073,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4895,
+    "name": "Human"
+  },
+  {
+    "npc_id": 81434,
+    "name": "Human"
+  },
+  {
+    "npc_id": 17125,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8549,
+    "name": "Human"
+  },
+  {
+    "npc_id": 98851,
+    "name": "Naga"
+  },
+  {
+    "npc_id": 5052,
+    "name": "Human"
+  },
+  {
+    "npc_id": 36956,
+    "name": "Djinn"
+  },
+  {
+    "npc_id": 9124,
+    "name": "Human"
+  },
+  {
+    "npc_id": 105200,
+    "name": "Fae"
+  },
+  {
+    "npc_id": 25558,
+    "name": "Human"
+  },
+  {
+    "npc_id": 17128,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5240,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4985,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 30848,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8552,
+    "name": "Human"
+  },
+  {
+    "npc_id": 94870,
+    "name": "Human"
+  },
+  {
+    "npc_id": 94871,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68178,
+    "name": "Human"
+  },
+  {
+    "npc_id": 64416,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 69687,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5309,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30276,
+    "name": "Human"
+  },
+  {
+    "npc_id": 53948,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 80829,
+    "name": "Djinn"
+  },
+  {
+    "npc_id": 86990,
+    "name": "Human"
+  },
+  {
+    "npc_id": 89099,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8553,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30606,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 6829,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5039,
+    "name": "Human"
+  },
+  {
+    "npc_id": 98786,
+    "name": "Naga"
+  },
+  {
+    "npc_id": 5357,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 77061,
+    "name": "Human"
+  },
+  {
+    "npc_id": 1717,
+    "name": "Human"
+  },
+  {
+    "npc_id": 80191,
+    "name": "Human"
+  },
+  {
+    "npc_id": 61793,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4331,
+    "name": "Human"
+  },
+  {
+    "npc_id": 89062,
+    "name": "Human"
+  },
+  {
+    "npc_id": 31235,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 2849,
+    "name": "Human"
+  },
+  {
+    "npc_id": 41720,
+    "name": "Human"
+  },
+  {
+    "npc_id": 80804,
+    "name": "Human"
+  },
+  {
+    "npc_id": 17127,
+    "name": "Human"
+  },
+  {
+    "npc_id": 9802,
+    "name": "Human"
+  },
+  {
+    "npc_id": 69691,
+    "name": "Human"
+  },
+  {
+    "npc_id": 83498,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 25883,
+    "name": "Human"
+  },
+  {
+    "npc_id": 57736,
+    "name": "Human"
+  },
+  {
+    "npc_id": 69686,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3133,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 5057,
+    "name": "Human"
+  },
+  {
+    "npc_id": 25519,
+    "name": "Human"
+  },
+  {
+    "npc_id": 83496,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 77063,
+    "name": "Human"
+  },
+  {
+    "npc_id": 64735,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 95726,
+    "name": "Bird"
+  },
+  {
+    "npc_id": 64508,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 41719,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4623,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3090,
+    "name": "Human"
+  },
+  {
+    "npc_id": 1226,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5308,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3082,
+    "name": "Human"
+  },
+  {
+    "npc_id": 58007,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 94873,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3084,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5316,
+    "name": "Dog"
+  },
+  {
+    "npc_id": 2396,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30849,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4988,
+    "name": "Human"
+  },
+  {
+    "npc_id": 58667,
+    "name": "Lizard"
+  },
+  {
+    "npc_id": 46894,
+    "name": "Lizard"
+  },
+  {
+    "npc_id": 36960,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 4609,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 80133,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5143,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5158,
+    "name": "Human"
+  },
+  {
+    "npc_id": 78036,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5146,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30721,
+    "name": "Human"
+  },
+  {
+    "npc_id": 96549,
+    "name": "Human"
+  },
+  {
+    "npc_id": 50314,
+    "name": "Human"
+  },
+  {
+    "npc_id": 51047,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4524,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5217,
+    "name": "Human"
+  },
+  {
+    "npc_id": 36957,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5376,
+    "name": "Human"
+  },
+  {
+    "npc_id": 61979,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 4891,
+    "name": "Human"
+  },
+  {
+    "npc_id": 53949,
+    "name": "Goblin"
+  },
+  {
+    "npc_id": 7670,
+    "name": "Human"
+  },
+  {
+    "npc_id": 17111,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5377,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8992,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5264,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 81427,
+    "name": "Fae"
+  },
+  {
+    "npc_id": 75234,
+    "name": "Human"
+  },
+  {
+    "npc_id": 41721,
+    "name": "Human"
+  },
+  {
+    "npc_id": 61741,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 5435,
+    "name": "Djinn"
+  },
+  {
+    "npc_id": 8991,
+    "name": "Human"
+  },
+  {
+    "npc_id": 86964,
+    "name": "Human"
+  },
+  {
+    "npc_id": 10017,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5313,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8557,
+    "name": "Mermaid"
+  },
+  {
+    "npc_id": 30761,
+    "name": "Human"
+  },
+  {
+    "npc_id": 31947,
+    "name": "Mermaid"
+  },
+  {
+    "npc_id": 4672,
+    "name": "Minotaur"
+  },
+  {
+    "npc_id": 4620,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68012,
+    "name": "Minotaur"
+  },
+  {
+    "npc_id": 4792,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68176,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4522,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 65981,
+    "name": "Human"
+  },
+  {
+    "npc_id": 76903,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5244,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5242,
+    "name": "Human"
+  },
+  {
+    "npc_id": 41729,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 41713,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5238,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30908,
+    "name": "Human"
+  },
+  {
+    "npc_id": 66612,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8550,
+    "name": "Human"
+  },
+  {
+    "npc_id": 58189,
+    "name": "Animate Object"
+  },
+  {
+    "npc_id": 58190,
+    "name": "Animate Object"
+  },
+  {
+    "npc_id": 58185,
+    "name": "Animate Object"
+  },
+  {
+    "npc_id": 62185,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 25992,
+    "name": "Human"
+  },
+  {
+    "npc_id": 37028,
+    "name": "Human"
+  },
+  {
+    "npc_id": 51620,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4886,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4984,
+    "name": "Human"
+  },
+  {
+    "npc_id": 89025,
+    "name": "Ape"
+  },
+  {
+    "npc_id": 65978,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68013,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8941,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30909,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 6946,
+    "name": "Human"
+  },
+  {
+    "npc_id": 65982,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5047,
+    "name": "Human"
+  },
+  {
+    "npc_id": 50586,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30873,
+    "name": "Human"
+  },
+  {
+    "npc_id": 69190,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 68625,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4681,
+    "name": "Human"
+  },
+  {
+    "npc_id": 77264,
+    "name": "Ogre"
+  },
+  {
+    "npc_id": 19584,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5378,
+    "name": "Human"
+  },
+  {
+    "npc_id": 41714,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 4962,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5368,
+    "name": "Human"
+  },
+  {
+    "npc_id": 79591,
+    "name": "Animate Object"
+  },
+  {
+    "npc_id": 65046,
+    "name": "Animate Object"
+  },
+  {
+    "npc_id": 86670,
+    "name": "Fae"
+  },
+  {
+    "npc_id": 5820,
+    "name": "Djinn"
+  },
+  {
+    "npc_id": 37029,
+    "name": "Human"
+  },
+  {
+    "npc_id": 41722,
+    "name": "Human"
+  },
+  {
+    "npc_id": 89157,
+    "name": "Human"
+  },
+  {
+    "npc_id": 52854,
+    "name": "Human"
+  },
+  {
+    "npc_id": 59399,
+    "name": "Human"
+  },
+  {
+    "npc_id": 13153,
+    "name": "Human"
+  },
+  {
+    "npc_id": 61807,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4982,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 17131,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5351,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4630,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 77365,
+    "name": "Goblin"
+  },
+  {
+    "npc_id": 68008,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4621,
+    "name": "Human"
+  },
+  {
+    "npc_id": 36670,
+    "name": "Human"
+  },
+  {
+    "npc_id": 98774,
+    "name": "Naga"
+  },
+  {
+    "npc_id": 17088,
+    "name": "Human"
+  },
+  {
+    "npc_id": 63750,
+    "name": "Human"
+  },
+  {
+    "npc_id": 89024,
+    "name": "Human"
+  },
+  {
+    "npc_id": 89026,
+    "name": "Human"
+  },
+  {
+    "npc_id": 98780,
+    "name": "Naga"
+  },
+  {
+    "npc_id": 102854,
+    "name": "Human"
+  },
+  {
+    "npc_id": 31308,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 80830,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5088,
+    "name": "Dog"
+  },
+  {
+    "npc_id": 81426,
+    "name": "Human"
+  },
+  {
+    "npc_id": 17138,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3435,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5379,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4516,
+    "name": "Human"
+  },
+  {
+    "npc_id": 61788,
+    "name": "Human"
+  },
+  {
+    "npc_id": 69688,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8807,
+    "name": "Human"
+  },
+  {
+    "npc_id": 26156,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4628,
+    "name": "Human"
+  },
+  {
+    "npc_id": 1111,
+    "name": "Human"
+  },
+  {
+    "npc_id": 64595,
+    "name": "Human"
+  },
+  {
+    "npc_id": 109304,
+    "name": "Human"
+  },
+  {
+    "npc_id": 9057,
+    "name": "Djinn"
+  },
+  {
+    "npc_id": 5269,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30694,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 5157,
+    "name": "Human"
+  },
+  {
+    "npc_id": 56715,
+    "name": "Rockboy"
+  },
+  {
+    "npc_id": 4674,
+    "name": "Human"
+  },
+  {
+    "npc_id": 86993,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30910,
+    "name": "Human"
+  },
+  {
+    "npc_id": 67951,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3067,
+    "name": "Human"
+  },
+  {
+    "npc_id": 92803,
+    "name": "Rascoohan"
+  },
+  {
+    "npc_id": 64333,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 4682,
+    "name": "Human"
+  },
+  {
+    "npc_id": 69432,
+    "name": "Human"
+  },
+  {
+    "npc_id": 91745,
+    "name": "Human"
+  },
+  {
+    "npc_id": 41385,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 65696,
+    "name": "Animate Object"
+  },
+  {
+    "npc_id": 31755,
+    "name": "Orc"
+  },
+  {
+    "npc_id": 68596,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5342,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 56716,
+    "name": "Rockboy"
+  },
+  {
+    "npc_id": 107441,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30850,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5144,
+    "name": "Human"
+  },
+  {
+    "npc_id": 53951,
+    "name": "Human"
+  },
+  {
+    "npc_id": 75279,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4513,
+    "name": "Human"
+  },
+  {
+    "npc_id": 25226,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30852,
+    "name": "Human"
+  },
+  {
+    "npc_id": 53952,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8551,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 89727,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8668,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5145,
+    "name": "Human"
+  },
+  {
+    "npc_id": 62404,
+    "name": "Human"
+  },
+  {
+    "npc_id": 52857,
+    "name": "Human"
+  },
+  {
+    "npc_id": 12374,
+    "name": "Human"
+  },
+  {
+    "npc_id": 81433,
+    "name": "Pooka"
+  },
+  {
+    "npc_id": 9163,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4854,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8321,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3083,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8662,
+    "name": "Human"
+  },
+  {
+    "npc_id": 25913,
+    "name": "Human"
+  },
+  {
+    "npc_id": 69689,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5160,
+    "name": "Human"
+  },
+  {
+    "npc_id": 105194,
+    "name": "Rootthing"
+  },
+  {
+    "npc_id": 30911,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4852,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4627,
+    "name": "Human"
+  },
+  {
+    "npc_id": 20289,
+    "name": "Pig"
+  },
+  {
+    "npc_id": 20289,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4673,
+    "name": "Human"
+  },
+  {
+    "npc_id": 81142,
+    "name": "Human"
+  },
+  {
+    "npc_id": 81143,
+    "name": "Human"
+  },
+  {
+    "npc_id": 81144,
+    "name": "Human"
+  },
+  {
+    "npc_id": 81866,
+    "name": "Human"
+  },
+  {
+    "npc_id": 81867,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68618,
+    "name": "Human"
+  },
+  {
+    "npc_id": 37082,
+    "name": "Parrot"
+  },
+  {
+    "npc_id": 41715,
+    "name": "Human"
+  },
+  {
+    "npc_id": 41716,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 27332,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4670,
+    "name": "Rat"
+  },
+  {
+    "npc_id": 30724,
+    "name": "Dworc"
+  },
+  {
+    "npc_id": 61975,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 6502,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 53953,
+    "name": "Human"
+  },
+  {
+    "npc_id": 38127,
+    "name": "Pyro-Elemental"
+  },
+  {
+    "npc_id": 38127,
+    "name": "Elemental"
+  },
+  {
+    "npc_id": 31558,
+    "name": "Dragon"
+  },
+  {
+    "npc_id": 31558,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 88552,
+    "name": "Human"
+  },
+  {
+    "npc_id": 2867,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5265,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3238,
+    "name": "Human"
+  },
+  {
+    "npc_id": 96533,
+    "name": "Corym"
+  },
+  {
+    "npc_id": 41717,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3091,
+    "name": "Human"
+  },
+  {
+    "npc_id": 26187,
+    "name": "Human"
+  },
+  {
+    "npc_id": 61802,
+    "name": "Goblin"
+  },
+  {
+    "npc_id": 5343,
+    "name": "Human"
+  },
+  {
+    "npc_id": 89027,
+    "name": "Human"
+  },
+  {
+    "npc_id": 36733,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 103950,
+    "name": "Rascoohan"
+  },
+  {
+    "npc_id": 20103,
+    "name": "Human"
+  },
+  {
+    "npc_id": 6964,
+    "name": "Djinn"
+  },
+  {
+    "npc_id": 5162,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8556,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4580,
+    "name": "Human"
+  },
+  {
+    "npc_id": 63257,
+    "name": "Lizard"
+  },
+  {
+    "npc_id": 9175,
+    "name": "Human"
+  },
+  {
+    "npc_id": 80193,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30853,
+    "name": "Demon"
+  },
+  {
+    "npc_id": 35154,
+    "name": "Human"
+  },
+  {
+    "npc_id": 37081,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 81139,
+    "name": "Human"
+  },
+  {
+    "npc_id": 64830,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 64346,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5358,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 17042,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5380,
+    "name": "Human"
+  },
+  {
+    "npc_id": 53954,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 56603,
+    "name": "Rockboy"
+  },
+  {
+    "npc_id": 56718,
+    "name": "Rockboy"
+  },
+  {
+    "npc_id": 57059,
+    "name": "Rockboy"
+  },
+  {
+    "npc_id": 5338,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4989,
+    "name": "Human"
+  },
+  {
+    "npc_id": 62403,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5268,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 3427,
+    "name": "Human"
+  },
+  {
+    "npc_id": 17129,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5266,
+    "name": "Human"
+  },
+  {
+    "npc_id": 24916,
+    "name": "Dryad"
+  },
+  {
+    "npc_id": 109328,
+    "name": "Human"
+  },
+  {
+    "npc_id": 17397,
+    "name": "Human"
+  },
+  {
+    "npc_id": 67980,
+    "name": "Human"
+  },
+  {
+    "npc_id": 61791,
+    "name": "Human"
+  },
+  {
+    "npc_id": 50312,
+    "name": "Human"
+  },
+  {
+    "npc_id": 77095,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3086,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3136,
+    "name": "Human"
+  },
+  {
+    "npc_id": 12350,
+    "name": "Human"
+  },
+  {
+    "npc_id": 93018,
+    "name": "Human"
+  },
+  {
+    "npc_id": 108056,
+    "name": "Merudri"
+  },
+  {
+    "npc_id": 61809,
+    "name": "Human"
+  },
+  {
+    "npc_id": 2339,
+    "name": "Human"
+  },
+  {
+    "npc_id": 9464,
+    "name": "Human"
+  },
+  {
+    "npc_id": 65980,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4660,
+    "name": "Human"
+  },
+  {
+    "npc_id": 65707,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4372,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 25206,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3089,
+    "name": "Human"
+  },
+  {
+    "npc_id": 36672,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5152,
+    "name": "Human"
+  },
+  {
+    "npc_id": 61769,
+    "name": "Human"
+  },
+  {
+    "npc_id": 56563,
+    "name": "Animate Object"
+  },
+  {
+    "npc_id": 37030,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 9052,
+    "name": "Human"
+  },
+  {
+    "npc_id": 110180,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68620,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30854,
+    "name": "Human"
+  },
+  {
+    "npc_id": 53957,
+    "name": "Machine"
+  },
+  {
+    "npc_id": 98791,
+    "name": "Lizard"
+  },
+  {
+    "npc_id": 1683,
+    "name": "Human"
+  },
+  {
+    "npc_id": 77091,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3371,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3053,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 61810,
+    "name": "Human"
+  },
+  {
+    "npc_id": 41009,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4622,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5381,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4981,
+    "name": "Human"
+  },
+  {
+    "npc_id": 93541,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5339,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 5340,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 94550,
+    "name": "Dreamelf"
+  },
+  {
+    "npc_id": 41731,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68179,
+    "name": "Human"
+  },
+  {
+    "npc_id": 61743,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 65985,
+    "name": "Human"
+  },
+  {
+    "npc_id": 17087,
+    "name": "Human"
+  },
+  {
+    "npc_id": 6856,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 68018,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4699,
+    "name": "Human"
+  },
+  {
+    "npc_id": 17121,
+    "name": "Chakoya"
+  },
+  {
+    "npc_id": 50313,
+    "name": "Human"
+  },
+  {
+    "npc_id": 17050,
+    "name": "Human"
+  },
+  {
+    "npc_id": 98782,
+    "name": "Lizard"
+  },
+  {
+    "npc_id": 50585,
+    "name": "Human"
+  },
+  {
+    "npc_id": 37080,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 37079,
+    "name": "Parrot"
+  },
+  {
+    "npc_id": 4392,
+    "name": "Human"
+  },
+  {
+    "npc_id": 50587,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5090,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 6303,
+    "name": "Human"
+  },
+  {
+    "npc_id": 96531,
+    "name": "Corym"
+  },
+  {
+    "npc_id": 30682,
+    "name": "Human"
+  },
+  {
+    "npc_id": 58004,
+    "name": "Human"
+  },
+  {
+    "npc_id": 25227,
+    "name": "Human"
+  },
+  {
+    "npc_id": 41730,
+    "name": "Human"
+  },
+  {
+    "npc_id": 64240,
+    "name": "Human"
+  },
+  {
+    "npc_id": 105193,
+    "name": "Rootthing"
+  },
+  {
+    "npc_id": 75783,
+    "name": "Corym"
+  },
+  {
+    "npc_id": 22433,
+    "name": "Human"
+  },
+  {
+    "npc_id": 57774,
+    "name": "Parrot"
+  },
+  {
+    "npc_id": 25931,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 69693,
+    "name": "Animate Object"
+  },
+  {
+    "npc_id": 81140,
+    "name": "Human"
+  },
+  {
+    "npc_id": 86687,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5055,
+    "name": "Human"
+  },
+  {
+    "npc_id": 105201,
+    "name": "Fae"
+  },
+  {
+    "npc_id": 98778,
+    "name": "Naga"
+  },
+  {
+    "npc_id": 4963,
+    "name": "Human"
+  },
+  {
+    "npc_id": 16989,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4885,
+    "name": "Human"
+  },
+  {
+    "npc_id": 41718,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 5215,
+    "name": "Human"
+  },
+  {
+    "npc_id": 81428,
+    "name": "Faun"
+  },
+  {
+    "npc_id": 5267,
+    "name": "Human"
+  },
+  {
+    "npc_id": 81430,
+    "name": "Fae"
+  },
+  {
+    "npc_id": 5359,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 30855,
+    "name": "Human"
+  },
+  {
+    "npc_id": 89102,
+    "name": "Lion"
+  },
+  {
+    "npc_id": 31134,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30856,
+    "name": "Dragon"
+  },
+  {
+    "npc_id": 36671,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4970,
+    "name": "Human"
+  },
+  {
+    "npc_id": 88957,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30857,
+    "name": "Human"
+  },
+  {
+    "npc_id": 98770,
+    "name": "Naga"
+  },
+  {
+    "npc_id": 75248,
+    "name": "Human"
+  },
+  {
+    "npc_id": 41723,
+    "name": "Human"
+  },
+  {
+    "npc_id": 96306,
+    "name": "Human"
+  },
+  {
+    "npc_id": 89164,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 37078,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 37031,
+    "name": "Human"
+  },
+  {
+    "npc_id": 38611,
+    "name": "Machine"
+  },
+  {
+    "npc_id": 46476,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68037,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5239,
+    "name": "Human"
+  },
+  {
+    "npc_id": 36864,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5360,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 5049,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68053,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5369,
+    "name": "Ape"
+  },
+  {
+    "npc_id": 13814,
+    "name": "Human"
+  },
+  {
+    "npc_id": 18812,
+    "name": "Human"
+  },
+  {
+    "npc_id": 86989,
+    "name": "Ogre"
+  },
+  {
+    "npc_id": 66827,
+    "name": "Animate Object"
+  },
+  {
+    "npc_id": 13813,
+    "name": "Human"
+  },
+  {
+    "npc_id": 89103,
+    "name": "Sphinx"
+  },
+  {
+    "npc_id": 80453,
+    "name": "Dragon"
+  },
+  {
+    "npc_id": 65299,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4655,
+    "name": "Animate Object"
+  },
+  {
+    "npc_id": 1215,
+    "name": "Animate Object"
+  },
+  {
+    "npc_id": 5384,
+    "name": "Orc"
+  },
+  {
+    "npc_id": 6379,
+    "name": "Human"
+  },
+  {
+    "npc_id": 89728,
+    "name": "Human"
+  },
+  {
+    "npc_id": 96924,
+    "name": "Human"
+  },
+  {
+    "npc_id": 10643,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4892,
+    "name": "Human"
+  },
+  {
+    "npc_id": 41415,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 17130,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3092,
+    "name": "Human"
+  },
+  {
+    "npc_id": 81435,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 92805,
+    "name": "Rascoohan"
+  },
+  {
+    "npc_id": 5109,
+    "name": "Human"
+  },
+  {
+    "npc_id": 99736,
+    "name": "Naga"
+  },
+  {
+    "npc_id": 30700,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4787,
+    "name": "Human"
+  },
+  {
+    "npc_id": 81422,
+    "name": "Fae"
+  },
+  {
+    "npc_id": 4329,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5347,
+    "name": "Human"
+  },
+  {
+    "npc_id": 1682,
+    "name": "Human"
+  },
+  {
+    "npc_id": 64598,
+    "name": "Human"
+  },
+  {
+    "npc_id": 102858,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30763,
+    "name": "Human"
+  },
+  {
+    "npc_id": 81421,
+    "name": "Fae"
+  },
+  {
+    "npc_id": 107037,
+    "name": "Fae"
+  },
+  {
+    "npc_id": 20037,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5084,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8808,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4579,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30608,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5382,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4521,
+    "name": "Human"
+  },
+  {
+    "npc_id": 9978,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5051,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 5085,
+    "name": "Human"
+  },
+  {
+    "npc_id": 105197,
+    "name": "Rootthing"
+  },
+  {
+    "npc_id": 61808,
+    "name": "Human"
+  },
+  {
+    "npc_id": 9310,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5487,
+    "name": "Djinn"
+  },
+  {
+    "npc_id": 98775,
+    "name": "Naga"
+  },
+  {
+    "npc_id": 5211,
+    "name": "Elf"
+  },
+  {
+    "npc_id": 66825,
+    "name": "Human"
+  },
+  {
+    "npc_id": 41724,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5346,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5486,
+    "name": "Djinn"
+  },
+  {
+    "npc_id": 20285,
+    "name": "Human"
+  },
+  {
+    "npc_id": 86907,
+    "name": "Dreamelf"
+  },
+  {
+    "npc_id": 4987,
+    "name": "Human"
+  },
+  {
+    "npc_id": 98763,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 4888,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5370,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 5371,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3420,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 4689,
+    "name": "Human"
+  },
+  {
+    "npc_id": 51046,
+    "name": "Human"
+  },
+  {
+    "npc_id": 22825,
+    "name": "Human"
+  },
+  {
+    "npc_id": 81429,
+    "name": "Human"
+  },
+  {
+    "npc_id": 86682,
+    "name": "Dreamelf"
+  },
+  {
+    "npc_id": 53958,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5095,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5372,
+    "name": "Human"
+  },
+  {
+    "npc_id": 8851,
+    "name": "Human"
+  },
+  {
+    "npc_id": 77051,
+    "name": "Human"
+  },
+  {
+    "npc_id": 80195,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30699,
+    "name": "Human"
+  },
+  {
+    "npc_id": 109305,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68006,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5093,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 98771,
+    "name": "Naga"
+  },
+  {
+    "npc_id": 9803,
+    "name": "Human"
+  },
+  {
+    "npc_id": 77266,
+    "name": "Ogre"
+  },
+  {
+    "npc_id": 83809,
+    "name": "Deepling"
+  },
+  {
+    "npc_id": 4585,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5108,
+    "name": "Human"
+  },
+  {
+    "npc_id": 89843,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5214,
+    "name": "Human"
+  },
+  {
+    "npc_id": 79652,
+    "name": "Forest Fury"
+  },
+  {
+    "npc_id": 60971,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68617,
+    "name": "Human"
+  },
+  {
+    "npc_id": 91743,
+    "name": "Human"
+  },
+  {
+    "npc_id": 69439,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3119,
+    "name": "Human"
+  },
+  {
+    "npc_id": 66819,
+    "name": "Human"
+  },
+  {
+    "npc_id": 6873,
+    "name": "Human"
+  },
+  {
+    "npc_id": 1684,
+    "name": "Human"
+  },
+  {
+    "npc_id": 67083,
+    "name": "Human"
+  },
+  {
+    "npc_id": 68614,
+    "name": "Goblin"
+  },
+  {
+    "npc_id": 5383,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5828,
+    "name": "Human"
+  },
+  {
+    "npc_id": 30609,
+    "name": "Human"
+  },
+  {
+    "npc_id": 107343,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5304,
+    "name": "Human"
+  },
+  {
+    "npc_id": 59549,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 4679,
+    "name": "Human"
+  },
+  {
+    "npc_id": 31300,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 31866,
+    "name": "Yalahari"
+  },
+  {
+    "npc_id": 5432,
+    "name": "Djinn"
+  },
+  {
+    "npc_id": 78032,
+    "name": "Human"
+  },
+  {
+    "npc_id": 3431,
+    "name": "Human"
+  },
+  {
+    "npc_id": 56612,
+    "name": "Human"
+  },
+  {
+    "npc_id": 53959,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5262,
+    "name": "Human"
+  },
+  {
+    "npc_id": 69435,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5344,
+    "name": "Human"
+  },
+  {
+    "npc_id": 89065,
+    "name": "Human"
+  },
+  {
+    "npc_id": 86968,
+    "name": "Dwarf"
+  },
+  {
+    "npc_id": 101086,
+    "name": "Human"
+  },
+  {
+    "npc_id": 94856,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5261,
+    "name": "Human"
+  },
+  {
+    "npc_id": 5159,
+    "name": "Human"
+  },
+  {
+    "npc_id": 41588,
+    "name": "Lizard"
+  },
+  {
+    "npc_id": 30762,
+    "name": "Lizard"
+  },
+  {
+    "npc_id": 64736,
+    "name": "Undead"
+  },
+  {
+    "npc_id": 5314,
+    "name": "Human"
+  },
+  {
+    "npc_id": 65989,
+    "name": "Human"
+  },
+  {
+    "npc_id": 4786,
+    "name": "Human"
+  },
+  {
+    "npc_id": 69438,
+    "name": "Human"
+  },
+  {
+    "npc_id": 61794,
+    "name": "Human"
+  },
+  {
+    "npc_id": 25207,
+    "name": "Human"
+  },
+  {
+    "npc_id": 38128,
+    "name": "Geo-Elemental"
+  },
+  {
+    "npc_id": 38128,
+    "name": "Elemental"
+  },
+  {
+    "npc_id": 98785,
+    "name": "Human"
+  },
+  {
+    "npc_id": 46930,
+    "name": "Lizard"
+  },
+  {
+    "npc_id": 46913,
+    "name": "Lizard"
+  },
+  {
+    "npc_id": 30858,
+    "name": "Goblin"
+  },
+  {
+    "npc_id": 4890,
+    "name": "Human"
+  },
+  {
+    "npc_id": 17143,
+    "name": "Human"
+  },
+  {
+    "npc_id": 41727,
+    "name": "Draken"
+  },
+  {
+    "npc_id": 46965,
+    "name": "Djinn"
+  },
+  {
+    "npc_id": 41728,
+    "name": "Lizard"
+  }
+]
