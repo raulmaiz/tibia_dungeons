@@ -117,6 +117,23 @@
         font-size: 11px;
         color: #94a3b8;
       }
+      .item-tooltip {
+        position: fixed;
+        z-index: 30;
+        max-width: 420px;
+        max-height: 60vh;
+        overflow: auto;
+        padding: 10px;
+        border: 1px solid #475569;
+        border-radius: 8px;
+        background: rgba(2, 6, 23, 0.96);
+        color: #e2e8f0;
+        font-size: 11px;
+        line-height: 1.35;
+        white-space: pre-wrap;
+        pointer-events: none;
+        display: none;
+      }
       @media (max-width: 1120px) {
         .equipment-panel { width: 210px; }
         .equipment-slot { height: 56px; }
@@ -173,21 +190,57 @@
     <aside class="equipment-panel" aria-label="Equipment panel">
       <h3 class="equipment-title">Equipment</h3>
       <div class="equipment-grid">
-        <div class="equipment-slot"><div class="icon">NECK</div><div class="label">Amulet</div></div>
-        <div class="equipment-slot"><div class="icon">HEAD</div><div class="label">Helmet</div></div>
+        <div class="equipment-slot" id="slotAmulet">
+          <img class="icon-img" id="slotAmuletImg" alt="Amulet item icon" />
+          <div class="icon" id="slotAmuletIcon">NECK</div>
+          <div class="label" id="slotAmuletLabel">Empty</div>
+        </div>
+        <div class="equipment-slot" id="slotHelmet">
+          <img class="icon-img" id="slotHelmetImg" alt="Helmet item icon" />
+          <div class="icon" id="slotHelmetIcon">HEAD</div>
+          <div class="label" id="slotHelmetLabel">Empty</div>
+        </div>
         <div class="equipment-slot" id="slotBag">
           <img class="icon-img" id="slotBagImg" alt="Bag item icon" />
           <div class="icon" id="slotBagIcon">BAG</div>
           <div class="label" id="slotBagLabel">Empty</div>
         </div>
-        <div class="equipment-slot"><div class="icon">HAND</div><div class="label">Weapon</div></div>
-        <div class="equipment-slot"><div class="icon">BODY</div><div class="label">Armor</div></div>
-        <div class="equipment-slot"><div class="icon">SHLD</div><div class="label">Shield</div></div>
-        <div class="equipment-slot"><div class="icon">RING</div><div class="label">Ring</div></div>
-        <div class="equipment-slot"><div class="icon">LEGS</div><div class="label">Legs</div></div>
-        <div class="equipment-slot"><div class="icon">AMMO</div><div class="label">Ammo</div></div>
+        <div class="equipment-slot" id="slotHand">
+          <img class="icon-img" id="slotHandImg" alt="Weapon item icon" />
+          <div class="icon" id="slotHandIcon">HAND</div>
+          <div class="label" id="slotHandLabel">Empty</div>
+        </div>
+        <div class="equipment-slot" id="slotArmor">
+          <img class="icon-img" id="slotArmorImg" alt="Armor item icon" />
+          <div class="icon" id="slotArmorIcon">BODY</div>
+          <div class="label" id="slotArmorLabel">Empty</div>
+        </div>
+        <div class="equipment-slot" id="slotShield">
+          <img class="icon-img" id="slotShieldImg" alt="Shield item icon" />
+          <div class="icon" id="slotShieldIcon">SHLD</div>
+          <div class="label" id="slotShieldLabel">Empty</div>
+        </div>
+        <div class="equipment-slot" id="slotRing">
+          <img class="icon-img" id="slotRingImg" alt="Ring item icon" />
+          <div class="icon" id="slotRingIcon">RING</div>
+          <div class="label" id="slotRingLabel">Empty</div>
+        </div>
+        <div class="equipment-slot" id="slotLegs">
+          <img class="icon-img" id="slotLegsImg" alt="Legs item icon" />
+          <div class="icon" id="slotLegsIcon">LEGS</div>
+          <div class="label" id="slotLegsLabel">Empty</div>
+        </div>
+        <div class="equipment-slot" id="slotAmmo">
+          <img class="icon-img" id="slotAmmoImg" alt="Ammunition item icon" />
+          <div class="icon" id="slotAmmoIcon">AMMO</div>
+          <div class="label" id="slotAmmoLabel">Empty</div>
+        </div>
         <div class="equipment-slot spacer" aria-hidden="true"></div>
-        <div class="equipment-slot"><div class="icon">FEET</div><div class="label">Boots</div></div>
+        <div class="equipment-slot" id="slotBoots">
+          <img class="icon-img" id="slotBootsImg" alt="Boots item icon" />
+          <div class="icon" id="slotBootsIcon">FEET</div>
+          <div class="label" id="slotBootsLabel">Empty</div>
+        </div>
         <div class="equipment-slot spacer" aria-hidden="true"></div>
       </div>
       <div class="equipment-foot" id="equipmentFoot">No item equipped</div>
@@ -197,6 +250,7 @@
       <div class="loot-grid" id="lootGrid"></div>
       <div class="loot-foot" id="lootFoot">Capacity: 0 slots</div>
     </aside>
+    <div id="itemTooltip" class="item-tooltip" aria-hidden="true"></div>
 
     <div class="overlay" id="startOverlay">
       <div class="panel">

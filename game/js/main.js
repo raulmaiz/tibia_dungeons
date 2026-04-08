@@ -75,7 +75,155 @@ function setupSelectorUI() {
   choiceFemale.addEventListener('click', () => setChoice('female'));
   let currentBagCapacity = 0;
   let currentBagItem = null;
+  const equippedSlots = {
+    armor: null,
+    shield: null,
+    legs: null,
+    boots: null,
+    ring: null,
+    ammunition: null,
+    helmet: null,
+    amulet: null,
+    hand: null,
+  };
   let bagLootItems = [];
+  const slotRules = {
+    armor: { id: 'Armor', iconDefault: 'BODY', requireType: 'Armors', footName: 'armor' },
+    shield: { id: 'Shield', iconDefault: 'SHLD', requireType: 'Shields', footName: 'shield' },
+    legs: { id: 'Legs', iconDefault: 'LEGS', requireType: 'Legs', footName: 'legs' },
+    boots: { id: 'Boots', iconDefault: 'FEET', requireType: 'Boots', footName: 'boots' },
+    ring: { id: 'Ring', iconDefault: 'RING', requireType: 'Rings', footName: 'ring' },
+    ammunition: { id: 'Ammo', iconDefault: 'AMMO', requireType: 'Ammunition', footName: 'ammunition' },
+    helmet: { id: 'Helmet', iconDefault: 'HEAD', requireType: 'Helmets', footName: 'helmet' },
+    amulet: { id: 'Amulet', iconDefault: 'NECK', requireType: 'Amulets and Necklaces', footName: 'amulet' },
+    hand: { id: 'Hand', iconDefault: 'HAND', requireClass: 'Weapons', footName: 'weapon' },
+  };
+  const armorAutoSlotByType = {
+    armors: 'armor',
+    helmets: 'helmet',
+    boots: 'boots',
+    legs: 'legs',
+    'amulets and necklaces': 'amulet',
+  };
+  const itemTooltip = document.getElementById('itemTooltip');
+
+  function formatItemTooltip(item) {
+    if (!item) return '';
+    const raw = item.raw && typeof item.raw === 'object' ? item.raw : {};
+    const attrs = Array.isArray(item.attributes) ? item.attributes : [];
+    const lines = [];
+    lines.push(`Name: ${item.title || raw.title || 'Unknown'}`);
+    if (item.id != null) lines.push(`Article ID: ${item.id}`);
+    if (item.item_class || raw.item_class) lines.push(`Class: ${item.item_class || raw.item_class}`);
+    if (item.item_type || raw.item_type) lines.push(`Type: ${item.item_type || raw.item_type}`);
+    if (Number(item.attack_value || 0) > 0) lines.push(`Attack: ${item.attack_value}`);
+    if (Number(item.shielding_value || 0) > 0) lines.push(`Shielding: ${item.shielding_value}`);
+    if (Number(item.armor_value || 0) > 0) lines.push(`Armor: ${item.armor_value}`);
+    if (raw.weight != null) lines.push(`Weight: ${raw.weight}`);
+    if (raw.value_buy != null) lines.push(`Buy: ${raw.value_buy}`);
+    if (raw.value_sell != null) lines.push(`Sell: ${raw.value_sell}`);
+    if (raw.is_stackable != null) lines.push(`Stackable: ${Number(raw.is_stackable) === 1 ? 'yes' : 'no'}`);
+    if (raw.is_pickupable != null) lines.push(`Pickupable: ${Number(raw.is_pickupable) === 1 ? 'yes' : 'no'}`);
+    if (item.count && item.count > 1) lines.push(`Amount: ${item.count}`);
+    lines.push('');
+    lines.push('Attributes (item_attribute.json):');
+    if (attrs.length === 0) {
+      lines.push('- none');
+    } else {
+      for (const a of attrs) lines.push(`- ${a.name}: ${a.value}`);
+    }
+    lines.push('');
+    lines.push(`Item JSON: ${JSON.stringify(raw)}`);
+    lines.push(`Attributes JSON: ${JSON.stringify(attrs)}`);
+    return lines.join('\n');
+  }
+
+  function bindTooltip(el, item) {
+    if (!el || !itemTooltip || !item) return;
+    const text = formatItemTooltip(item);
+    if (!text) return;
+    const show = (ev) => {
+      itemTooltip.textContent = text;
+      itemTooltip.style.display = 'block';
+      itemTooltip.style.left = `${Math.min(window.innerWidth - 440, (ev.clientX || 0) + 14)}px`;
+      itemTooltip.style.top = `${Math.min(window.innerHeight - 240, (ev.clientY || 0) + 14)}px`;
+    };
+    const move = (ev) => {
+      itemTooltip.style.left = `${Math.min(window.innerWidth - 440, (ev.clientX || 0) + 14)}px`;
+      itemTooltip.style.top = `${Math.min(window.innerHeight - 240, (ev.clientY || 0) + 14)}px`;
+    };
+    const hide = () => {
+      itemTooltip.style.display = 'none';
+      itemTooltip.textContent = '';
+    };
+    el.addEventListener('mouseenter', show);
+    el.addEventListener('mousemove', move);
+    el.addEventListener('mouseleave', hide);
+  }
+
+  function setEquippedSlotVisual(slotKey, item, equipmentFootText = null) {
+    const rule = slotRules[slotKey];
+    if (!rule) return false;
+    const slotImg = document.getElementById(`slot${rule.id}Img`);
+    const slotIcon = document.getElementById(`slot${rule.id}Icon`);
+    const slotLabel = document.getElementById(`slot${rule.id}Label`);
+    const equipmentFoot = document.getElementById('equipmentFoot');
+    if (!slotImg || !slotIcon || !slotLabel || !equipmentFoot) return false;
+    equippedSlots[slotKey] = item;
+    if (item.image) {
+      slotImg.src = `./data/images/${item.image}`;
+      slotImg.style.display = 'block';
+      slotIcon.textContent = '';
+    } else {
+      slotImg.style.display = 'none';
+      slotIcon.textContent = rule.iconDefault;
+    }
+    slotLabel.textContent = item.title || 'Equipped';
+    const slotRoot = document.getElementById(`slot${rule.id}`);
+    bindTooltip(slotRoot, item);
+    equipmentFoot.textContent = equipmentFootText || `Equipped ${rule.footName}: ${item.title}`;
+    return true;
+  }
+
+  function tryAutoEquipArmorUpgrade(item) {
+    const slotKey = armorAutoSlotByType[(item.item_type || '').toLowerCase()];
+    if (!slotKey) return false;
+    const nextArmor = Number(item.armor_value || 0);
+    if (!Number.isFinite(nextArmor) || nextArmor <= 0) return false;
+    const equippedArmor = Number((equippedSlots[slotKey] && equippedSlots[slotKey].armor_value) || 0);
+    if (nextArmor <= equippedArmor) return false;
+    return setEquippedSlotVisual(
+      slotKey,
+      item,
+      `Auto-equipped ${item.title} (${nextArmor}) > current (${equippedArmor}).`
+    );
+  }
+
+  function tryAutoEquipShieldUpgrade(item) {
+    if ((item.item_type || '').toLowerCase() !== 'shields') return false;
+    const nextShielding = Number(item.shielding_value || 0);
+    if (!Number.isFinite(nextShielding) || nextShielding <= 0) return false;
+    const equippedShielding = Number((equippedSlots.shield && equippedSlots.shield.shielding_value) || 0);
+    if (nextShielding <= equippedShielding) return false;
+    return setEquippedSlotVisual(
+      'shield',
+      item,
+      `Auto-equipped ${item.title} (shield ${nextShielding}) > current (${equippedShielding}).`
+    );
+  }
+
+  function tryAutoEquipWeaponUpgrade(item) {
+    if ((item.item_class || '').toLowerCase() !== 'weapons') return false;
+    const nextAttack = Number(item.attack_value || 0);
+    if (!Number.isFinite(nextAttack) || nextAttack <= 0) return false;
+    const equippedAttack = Number((equippedSlots.hand && equippedSlots.hand.attack_value) || 0);
+    if (nextAttack <= equippedAttack) return false;
+    return setEquippedSlotVisual(
+      'hand',
+      item,
+      `Auto-equipped ${item.title} (attack ${nextAttack}) > current (${equippedAttack}).`
+    );
+  }
 
   function renderLootSlots(slotCount) {
     const lootGrid = document.getElementById('lootGrid');
@@ -108,6 +256,7 @@ function setupSelectorUI() {
           countTag.style.textShadow = '0 1px 1px rgba(0,0,0,0.8)';
           cell.appendChild(countTag);
         }
+        bindTooltip(cell, lootItem);
       } else {
         cell.textContent = String(i);
       }
@@ -122,9 +271,19 @@ function setupSelectorUI() {
       id: itemData && itemData.id != null ? Number(itemData.id) : null,
       title: itemData && itemData.title ? itemData.title : 'Loot',
       image: itemData && itemData.image ? itemData.image : null,
+      item_type: itemData && itemData.item_type ? itemData.item_type : null,
+      item_class: itemData && itemData.item_class ? itemData.item_class : null,
+      armor_value: Number((itemData && itemData.armor_value) || 0),
+      shielding_value: Number((itemData && itemData.shielding_value) || 0),
+      attack_value: Number((itemData && itemData.attack_value) || 0),
+      attributes: Array.isArray(itemData && itemData.attributes) ? itemData.attributes : [],
+      raw: (itemData && itemData.raw && typeof itemData.raw === 'object') ? itemData.raw : {},
       isStackable: Boolean(itemData && itemData.isStackable),
       count: Math.max(1, Number((itemData && itemData.count) || 1)),
     };
+    tryAutoEquipArmorUpgrade(incoming);
+    tryAutoEquipShieldUpgrade(incoming);
+    tryAutoEquipWeaponUpgrade(incoming);
     if (incoming.isStackable) {
       const stackIdx = bagLootItems.findIndex((it) => (
         Boolean(it && it.isStackable)
@@ -149,8 +308,9 @@ function setupSelectorUI() {
     const bagImg = document.getElementById('slotBagImg');
     const bagIcon = document.getElementById('slotBagIcon');
     const bagLabel = document.getElementById('slotBagLabel');
+    const bagRoot = document.getElementById('slotBag');
     const equipmentFoot = document.getElementById('equipmentFoot');
-    if (!bagImg || !bagIcon || !bagLabel || !equipmentFoot) return;
+    if (!bagImg || !bagIcon || !bagLabel || !equipmentFoot || !bagRoot) return;
     try {
       const bag = await getItemByArticleId(articleId);
       if (!bag) {
@@ -189,6 +349,7 @@ function setupSelectorUI() {
       currentBagCapacity = nextCapacity;
       currentBagItem = bag;
       bagLabel.textContent = bag.title;
+      bindTooltip(bagRoot, bag);
       equipmentFoot.textContent = droppedCount > 0
         ? `Equipped: ${bag.title} | Dropped: ${droppedCount}`
         : `Equipped: ${bag.title}`;
@@ -205,10 +366,67 @@ function setupSelectorUI() {
     }
   }
 
+  async function equipItemInSlot(slotKey, articleId) {
+    const rule = slotRules[slotKey];
+    if (!rule) return false;
+    const slotImg = document.getElementById(`slot${rule.id}Img`);
+    const slotIcon = document.getElementById(`slot${rule.id}Icon`);
+    const slotLabel = document.getElementById(`slot${rule.id}Label`);
+    const equipmentFoot = document.getElementById('equipmentFoot');
+    if (!slotImg || !slotIcon || !slotLabel || !equipmentFoot) return false;
+    try {
+      const item = await getItemByArticleId(articleId);
+      if (!item) {
+        slotImg.style.display = 'none';
+        slotIcon.textContent = rule.iconDefault;
+        slotLabel.textContent = 'Empty';
+        equippedSlots[slotKey] = null;
+        return false;
+      }
+      const matchesType = !rule.requireType || (item.item_type || '').toLowerCase() === rule.requireType.toLowerCase();
+      const matchesClass = !rule.requireClass || (item.item_class || '').toLowerCase() === rule.requireClass.toLowerCase();
+      if (!matchesType || !matchesClass) {
+        const req = rule.requireType || `item_class ${rule.requireClass}`;
+        equipmentFoot.textContent = `Cannot equip ${item.title} in ${slotKey.toUpperCase()} slot (requires ${req}).`;
+        return false;
+      }
+      return setEquippedSlotVisual(slotKey, item, `Equipped ${rule.footName}: ${item.title}`);
+    } catch (_err) {
+      return false;
+    }
+  }
+
   // Debug helpers for runtime bag swaps while loot mechanics evolve.
   window.debugInventory = {
     async equipBag(articleId) {
       await equipBagByArticleId(articleId);
+    },
+    async equipArmor(articleId) {
+      return equipItemInSlot('armor', articleId);
+    },
+    async equipShield(articleId) {
+      return equipItemInSlot('shield', articleId);
+    },
+    async equipLegs(articleId) {
+      return equipItemInSlot('legs', articleId);
+    },
+    async equipBoots(articleId) {
+      return equipItemInSlot('boots', articleId);
+    },
+    async equipRing(articleId) {
+      return equipItemInSlot('ring', articleId);
+    },
+    async equipAmmo(articleId) {
+      return equipItemInSlot('ammunition', articleId);
+    },
+    async equipHelmet(articleId) {
+      return equipItemInSlot('helmet', articleId);
+    },
+    async equipAmulet(articleId) {
+      return equipItemInSlot('amulet', articleId);
+    },
+    async equipHand(articleId) {
+      return equipItemInSlot('hand', articleId);
     },
     addLoot(item = 'Loot') {
       if (typeof item === 'string') {
@@ -218,6 +436,13 @@ function setupSelectorUI() {
         id: (item && item.id != null) ? Number(item.id) : null,
         title: (item && item.title) ? item.title : 'Loot',
         image: (item && item.image) ? item.image : null,
+        item_type: (item && item.item_type) ? item.item_type : null,
+        item_class: (item && item.item_class) ? item.item_class : null,
+        armor_value: Number((item && item.armor_value) || 0),
+        shielding_value: Number((item && item.shielding_value) || 0),
+        attack_value: Number((item && item.attack_value) || 0),
+        attributes: Array.isArray(item && item.attributes) ? item.attributes : [],
+        raw: (item && item.raw && typeof item.raw === 'object') ? item.raw : {},
         isStackable: Boolean(item && item.isStackable),
         count: Math.max(1, Number((item && item.count) || 1)),
       });
@@ -225,6 +450,7 @@ function setupSelectorUI() {
     state() {
       return {
         bag: currentBagItem,
+        equipped: { ...equippedSlots },
         capacity: currentBagCapacity,
         used: bagLootItems.length,
         items: [...bagLootItems],
@@ -1193,6 +1419,13 @@ function startGame(configPlayer) {
                       id: d.itemId,
                       title: d.itemTitle,
                       image: d.itemImage || null,
+                      item_type: d.itemType || null,
+                      item_class: d.itemClass || null,
+                      armor_value: Number(d.armorValue || 0),
+                      shielding_value: Number(d.shieldingValue || 0),
+                      attack_value: Number(d.attackValue || 0),
+                      attributes: Array.isArray(d.attributes) ? d.attributes : [],
+                      raw: (d.raw && typeof d.raw === 'object') ? d.raw : {},
                       isStackable: Boolean(d.isStackable),
                       count: 1,
                     });

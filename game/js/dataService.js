@@ -9,14 +9,92 @@ async function getJSON(path) {
   return data;
 }
 
+let itemArmorValueByIdPromise = null;
+async function getItemArmorValueById() {
+  if (itemArmorValueByIdPromise) return itemArmorValueByIdPromise;
+  itemArmorValueByIdPromise = (async () => {
+    const rows = await getJSON('./data/item_attribute.json');
+    const out = new Map();
+    for (const row of rows || []) {
+      if ((row.name || '').toLowerCase() !== 'armor') continue;
+      const itemId = Number(row.item_id);
+      const value = Number(row.value);
+      if (!Number.isFinite(itemId) || !Number.isFinite(value)) continue;
+      out.set(itemId, value);
+    }
+    return out;
+  })();
+  return itemArmorValueByIdPromise;
+}
+
+let itemShieldingValueByIdPromise = null;
+async function getItemShieldingValueById() {
+  if (itemShieldingValueByIdPromise) return itemShieldingValueByIdPromise;
+  itemShieldingValueByIdPromise = (async () => {
+    const rows = await getJSON('./data/item_attribute.json');
+    const out = new Map();
+    for (const row of rows || []) {
+      if ((row.name || '').toLowerCase() !== 'shielding') continue;
+      const itemId = Number(row.item_id);
+      const value = Number(row.value);
+      if (!Number.isFinite(itemId) || !Number.isFinite(value)) continue;
+      out.set(itemId, value);
+    }
+    return out;
+  })();
+  return itemShieldingValueByIdPromise;
+}
+
+let itemAttackValueByIdPromise = null;
+async function getItemAttackValueById() {
+  if (itemAttackValueByIdPromise) return itemAttackValueByIdPromise;
+  itemAttackValueByIdPromise = (async () => {
+    const rows = await getJSON('./data/item_attribute.json');
+    const out = new Map();
+    for (const row of rows || []) {
+      if ((row.name || '').toLowerCase() !== 'attack') continue;
+      const itemId = Number(row.item_id);
+      const value = Number(row.value);
+      if (!Number.isFinite(itemId) || !Number.isFinite(value)) continue;
+      out.set(itemId, value);
+    }
+    return out;
+  })();
+  return itemAttackValueByIdPromise;
+}
+
+let itemAttributesByIdPromise = null;
+async function getItemAttributesById() {
+  if (itemAttributesByIdPromise) return itemAttributesByIdPromise;
+  itemAttributesByIdPromise = (async () => {
+    const rows = await getJSON('./data/item_attribute.json');
+    const out = new Map();
+    for (const row of rows || []) {
+      const itemId = Number(row.item_id);
+      if (!Number.isFinite(itemId)) continue;
+      if (!out.has(itemId)) out.set(itemId, []);
+      out.get(itemId).push({
+        name: row.name || null,
+        value: row.value == null ? null : String(row.value),
+      });
+    }
+    return out;
+  })();
+  return itemAttributesByIdPromise;
+}
+
 export async function getManifest() {
   return getJSON('./data/manifest.json');
 }
 
 export async function getItemByArticleId(articleId) {
-  const [items, manifest] = await Promise.all([
+  const [items, manifest, armorByItemId, shieldingByItemId, attackByItemId, attrsByItemId] = await Promise.all([
     getJSON('./data/item.json'),
     getManifest(),
+    getItemArmorValueById(),
+    getItemShieldingValueById(),
+    getItemAttackValueById(),
+    getItemAttributesById(),
   ]);
   const wantedId = Number(articleId);
   const item = (items || []).find((it) => Number(it.article_id) === wantedId);
@@ -28,9 +106,15 @@ export async function getItemByArticleId(articleId) {
   return {
     id: item.article_id,
     title: item.title || item.name || `Item ${item.article_id}`,
+    item_class: item.item_class || null,
     item_type: item.item_type || null,
+    armor_value: Number(armorByItemId.get(Number(item.article_id)) || 0),
+    shielding_value: Number(shieldingByItemId.get(Number(item.article_id)) || 0),
+    attack_value: Number(attackByItemId.get(Number(item.article_id)) || 0),
     weight: Number(item.weight || 0),
     image: manifestItem ? manifestItem.image : null,
+    attributes: attrsByItemId.get(Number(item.article_id)) || [],
+    raw: { ...item },
   };
 }
 
@@ -56,10 +140,14 @@ export async function getLootDropPool(limit = 1200) {
 }
 
 export async function getCreatureDropTable() {
-  const [dropRows, items, manifest] = await Promise.all([
+  const [dropRows, items, manifest, armorByItemId, shieldingByItemId, attackByItemId, attrsByItemId] = await Promise.all([
     getJSON('./data/creature_drop.json'),
     getJSON('./data/item.json'),
     getManifest(),
+    getItemArmorValueById(),
+    getItemShieldingValueById(),
+    getItemAttackValueById(),
+    getItemAttributesById(),
   ]);
   const itemById = new Map();
   for (const item of items || []) {
@@ -90,6 +178,13 @@ export async function getCreatureDropTable() {
       chance,
       itemImage: manifestImageByTitle.get(title.toLowerCase()) || null,
       isStackable: Number(item.is_stackable || 0) === 1,
+      itemClass: item.item_class || null,
+      itemType: item.item_type || null,
+      armorValue: Number(armorByItemId.get(itemId) || 0),
+      shieldingValue: Number(shieldingByItemId.get(itemId) || 0),
+      attackValue: Number(attackByItemId.get(itemId) || 0),
+      attributes: attrsByItemId.get(itemId) || [],
+      raw: { ...item },
     };
     if (!dropsByCreatureId.has(creatureId)) dropsByCreatureId.set(creatureId, []);
     dropsByCreatureId.get(creatureId).push(drop);
