@@ -3,6 +3,7 @@ import {
   getItemByArticleId,
   getCreatureDropTable,
   getSpellsCatalogWithPrices,
+  getCreatureAbilitiesById,
 } from './dataService.js';
 
 let game;
@@ -17,6 +18,7 @@ let onPlayerLevelStatsUpdate = null;
 let onPanelLog = null;
 let lastLootRejectReason = '';
 let spellsCatalog = [];
+let creatureAbilitiesById = new Map();
 
 const BASE_PLAYER_HP = 150;
 const BASE_PLAYER_MANA = 10;
@@ -27,6 +29,173 @@ const CLASS_GROWTH = {
   sorcerer: { hp: 5, mana: 30, capacity: 10 },
   druid: { hp: 5, mana: 30, capacity: 10 },
 };
+const CREATURE_DAMAGE_MULTIPLIER_BY_ID = new Map([
+  [37051, 0.5],
+]);
+
+/** Per-spell VFX (shapes/timing modeled after tibia.fandom.com spell descriptions). Keys = spell.title.toLowerCase() */
+const SPELL_FX_OVERRIDES = {
+  // Beams (sequential tile flash along the line)
+  'energy beam': { kind: 'beam', depth: 5, fx: { delayStep: 40, duration: 200, order: 'beam' } },
+  'great energy beam': { kind: 'beam', depth: 8, fx: { delayStep: 36, duration: 210, order: 'beam' } },
+  'great death beam': { kind: 'beam', depth: 8, color: 0x9d7dd9, fx: { delayStep: 34, duration: 220, order: 'beam', glyph: '✢' } },
+  // Waves / cones in facing direction
+  'practise fire wave': { kind: 'cone', depth: 2, fx: { duration: 220, delayStep: 25, order: 'beam' } },
+  scorch: { kind: 'cone', depth: 2, fx: { duration: 230, delayStep: 28, order: 'beam' } },
+  'chill out': { kind: 'cone', depth: 2, fx: { duration: 230, delayStep: 28, order: 'beam' } },
+  'fire wave': { kind: 'cone', depth: 3, fx: { duration: 260, delayStep: 30, order: 'beam' } },
+  'ice wave': { kind: 'cone', depth: 3, fx: { duration: 260, delayStep: 30, order: 'beam' } },
+  'terra wave': { kind: 'cone', depth: 3, fx: { duration: 260, delayStep: 30, order: 'beam' } },
+  'energy wave': { kind: 'cone', depth: 3, fx: { duration: 280, delayStep: 32, order: 'beam' } },
+  'great fire wave': { kind: 'cone', depth: 4, fx: { duration: 300, delayStep: 34, order: 'beam' } },
+  'strong ice wave': { kind: 'cone', depth: 2, fx: { duration: 240, delayStep: 32, order: 'beam' } },
+  // Knight cleaves
+  'lesser front sweep': { kind: 'front_sweep', fx: { duration: 320, glyph: '✦' } },
+  'front sweep': { kind: 'front_sweep', fx: { duration: 360, glyph: '✦' } },
+  // Whirl hits around the caster
+  berserk: { kind: 'nova', radius: 1, fx: { duration: 280, delayStep: 20, order: 'beam' } },
+  groundshaker: { kind: 'nova', radius: 1, fx: { duration: 300, delayStep: 18, order: 'beam' } },
+  'fierce berserk': { kind: 'nova', radius: 1, fx: { duration: 340, delayStep: 16, order: 'beam' } },
+  // Large circular bursts (ultimate-style)
+  thunderstorm: { kind: 'nova', radius: 2, fx: { duration: 320, delayStep: 12, order: 'beam' } },
+  'stone shower': { kind: 'nova', radius: 2, fx: { duration: 340, delayStep: 14, order: 'beam' } },
+  'divine caldera': { kind: 'nova', radius: 2, color: 0xfde68a, fx: { duration: 360, delayStep: 12, glyph: '✦', order: 'beam' } },
+  'spiritual outburst': { kind: 'nova', radius: 2, fx: { duration: 380, delayStep: 10, order: 'beam' } },
+  'rage of the skies': { kind: 'nova', radius: 3, fx: { duration: 400, delayStep: 10, order: 'beam' } },
+  'hell\'s core': { kind: 'nova', radius: 3, fx: { duration: 420, delayStep: 10, order: 'beam' } },
+  'wrath of nature': { kind: 'nova', radius: 3, fx: { duration: 400, delayStep: 10, order: 'beam' } },
+  'eternal winter': { kind: 'nova', radius: 3, fx: { duration: 400, delayStep: 10, order: 'beam' } },
+  // Ring bursts around caster (Ice/Terra Burst)
+  'ice burst': { kind: 'ring', radius: 2, fx: { duration: 350, delayStep: 22, order: 'beam' } },
+  'terra burst': { kind: 'ring', radius: 2, fx: { duration: 350, delayStep: 22, order: 'beam' } },
+  // Cross-shaped explosion (rune-style)
+  explosion: { kind: 'plus', reach: 2, fx: { duration: 300, delayStep: 35, order: 'beam' } },
+  // Frontal boxes (monk / takedown style)
+  'flurry of blows': { kind: 'front_box', width: 3, depth: 1, fx: { duration: 260, delayStep: 24, order: 'beam' } },
+  'greater flurry of blows': { kind: 'front_box', width: 3, depth: 2, fx: { duration: 300, delayStep: 22, order: 'beam' } },
+  'sweeping takedown': { kind: 'front_box', width: 3, depth: 2, fx: { duration: 320, delayStep: 20, order: 'beam' } },
+  'balanced brawl': { kind: 'front_box', width: 3, depth: 2, fx: { duration: 280, delayStep: 22, order: 'beam' } },
+  // Single-target melee spells
+  'double jab': { kind: 'front_box', width: 1, depth: 1, fx: { duration: 220 } },
+  'swift jab': { kind: 'front_box', width: 1, depth: 1, fx: { duration: 220 } },
+  'tiger clash': { kind: 'front_box', width: 1, depth: 1, fx: { duration: 260 } },
+  'greater tiger clash': { kind: 'front_box', width: 1, depth: 1, fx: { duration: 280 } },
+  'forceful uppercut': { kind: 'front_box', width: 1, depth: 1, fx: { duration: 280 } },
+  'mystic repulse': { kind: 'projectile', depth: 7 },
+  'lesser mystic repulse': { kind: 'projectile', depth: 5 },
+  'devastating knockout': { kind: 'front_box', width: 1, depth: 1, fx: { duration: 300 } },
+  // Strike/missile family (single square target / front square)
+  'apprentice\'s strike': { kind: 'projectile', depth: 3 },
+  buzz: { kind: 'projectile', depth: 3 },
+  'mud attack': { kind: 'projectile', depth: 3 },
+  'death strike': { kind: 'projectile', depth: 3 },
+  'flame strike': { kind: 'projectile', depth: 3 },
+  'energy strike': { kind: 'projectile', depth: 3 },
+  'ice strike': { kind: 'projectile', depth: 3 },
+  'terra strike': { kind: 'projectile', depth: 3 },
+  'physical strike': { kind: 'projectile', depth: 3 },
+  'strong flame strike': { kind: 'projectile', depth: 3 },
+  'strong energy strike': { kind: 'projectile', depth: 3 },
+  'strong ice strike': { kind: 'projectile', depth: 3 },
+  'strong terra strike': { kind: 'projectile', depth: 3 },
+  'ultimate flame strike': { kind: 'projectile', depth: 3 },
+  'ultimate energy strike': { kind: 'projectile', depth: 3 },
+  'ultimate ice strike': { kind: 'projectile', depth: 3 },
+  'ultimate terra strike': { kind: 'projectile', depth: 3 },
+  lightning: { kind: 'projectile', depth: 5 },
+  'divine missile': { kind: 'projectile', depth: 4 },
+  'ethereal spear': { kind: 'projectile', depth: 4 },
+  'lesser ethereal spear': { kind: 'projectile', depth: 4 },
+  'strong ethereal spear': { kind: 'projectile', depth: 5 },
+  'whirlwind throw': { kind: 'projectile', depth: 4 },
+  annihilation: { kind: 'front_box', width: 1, depth: 1, fx: { duration: 300 } },
+};
+
+/**
+ * Área de efecto de habilidades de criaturas (casillas en el grid). Origen: nombre en creature_ability.json (tibiawiki).
+ * kind: player_cell | line_to_player | cone_to_player | nova_creature | nova_at_player | plus_on_player | ring_at_player | none
+ */
+const CREATURE_ABILITY_PATTERN_BY_NAME = {
+  'self-healing': { kind: 'none' },
+  'self healing': { kind: 'none' },
+  'frequent self-healing': { kind: 'none' },
+  melee: { kind: 'player_cell' },
+  'physical damage': { kind: 'player_cell' },
+  'area attack': { kind: 'nova_creature', radius: 1 },
+  'earth strike': { kind: 'player_cell' },
+  'death strike': { kind: 'player_cell' },
+  'energy strike': { kind: 'player_cell' },
+  'ice strike': { kind: 'player_cell' },
+  'fire strike': { kind: 'player_cell' },
+  'flame strike': { kind: 'player_cell' },
+  'poison strike': { kind: 'player_cell' },
+  'life drain strike': { kind: 'player_cell' },
+  'death hit': { kind: 'player_cell' },
+  'poison hit': { kind: 'player_cell' },
+  'fire beam': { kind: 'line_to_player', maxLen: 5 },
+  'death beam': { kind: 'line_to_player', maxLen: 5 },
+  'energy beam': { kind: 'line_to_player', maxLen: 5 },
+  'poison beam': { kind: 'line_to_player', maxLen: 5 },
+  'ice beam': { kind: 'line_to_player', maxLen: 5 },
+  'holy beam': { kind: 'line_to_player', maxLen: 5 },
+  'life drain beam': { kind: 'line_to_player', maxLen: 5 },
+  'great energy beam': { kind: 'line_to_player', maxLen: 8 },
+  'fire wave': { kind: 'cone_to_player', depth: 3 },
+  'poison wave': { kind: 'cone_to_player', depth: 3 },
+  'earth wave': { kind: 'cone_to_player', depth: 3 },
+  'ice wave': { kind: 'cone_to_player', depth: 3 },
+  'energy wave': { kind: 'cone_to_player', depth: 3 },
+  'death wave': { kind: 'cone_to_player', depth: 3 },
+  'life drain wave': { kind: 'cone_to_player', depth: 3 },
+  'explosion wave': { kind: 'cone_to_player', depth: 3 },
+  'smoke wave': { kind: 'cone_to_player', depth: 3 },
+  'sudden death': { kind: 'player_cell' },
+  'fire missile': { kind: 'player_cell' },
+  'energy missile': { kind: 'player_cell' },
+  'earth missile': { kind: 'player_cell' },
+  'ice missile': { kind: 'player_cell' },
+  'death missile': { kind: 'player_cell' },
+  'heavy magic missile': { kind: 'player_cell' },
+  fireball: { kind: 'player_cell' },
+  'fire ball': { kind: 'player_cell' },
+  'poison ball': { kind: 'player_cell' },
+  'death ball': { kind: 'player_cell' },
+  'energy ball': { kind: 'player_cell' },
+  'earth ball': { kind: 'player_cell' },
+  'blood ball': { kind: 'player_cell' },
+  'holy ball': { kind: 'player_cell' },
+  'paralyze ball': { kind: 'player_cell' },
+  stalagmite: { kind: 'player_cell' },
+  'great fireball': { kind: 'nova_at_player', radius: 1 },
+  'fire bomb': { kind: 'nova_at_player', radius: 1 },
+  'poison bomb': { kind: 'nova_at_player', radius: 1 },
+  'death bomb': { kind: 'nova_at_player', radius: 1 },
+  'fire explosion': { kind: 'nova_at_player', radius: 1 },
+  'death explosion': { kind: 'nova_at_player', radius: 1 },
+  'poison explosion': { kind: 'nova_at_player', radius: 1 },
+  explosion: { kind: 'plus_on_player' },
+  berserk: { kind: 'nova_creature', radius: 1 },
+  'life drain berserk': { kind: 'nova_creature', radius: 1 },
+  'poison berserk': { kind: 'nova_creature', radius: 1 },
+  'energy berserk': { kind: 'nova_creature', radius: 1 },
+  'whirlwind throw': { kind: 'line_to_player', maxLen: 4 },
+  'throws spears': { kind: 'player_cell' },
+  'poison spit': { kind: 'player_cell' },
+  sparkles: { kind: 'nova_creature', radius: 1 },
+  'cloud explosion': { kind: 'nova_at_player', radius: 1 },
+  'red sparkles bomb': { kind: 'nova_at_player', radius: 1 },
+  'green sparkles bomb': { kind: 'nova_at_player', radius: 1 },
+  envenom: { kind: 'player_cell' },
+  paralyze: { kind: 'player_cell' },
+  paralysis: { kind: 'player_cell' },
+  'distance paralyze': { kind: 'player_cell' },
+  'mana drain exori': { kind: 'nova_creature', radius: 1 },
+  'mana drain': { kind: 'player_cell' },
+  'life drain': { kind: 'player_cell' },
+  'distance life drain': { kind: 'player_cell' },
+  'biting cold': { kind: 'cone_to_player', depth: 3 },
+};
+
 const MAX_FOOD_SECONDS = 900;
 
 function progressionStatsForLevel(level, playerClass = selectedClass) {
@@ -1023,6 +1192,7 @@ function setupSelectorUI() {
       loadProgressionDatabase(),
       equipBagByArticleId(START_BAG_ARTICLE_ID),
       (async () => { creatureDropTable = await getCreatureDropTable(); })(),
+      (async () => { creatureAbilitiesById = await getCreatureAbilitiesById(); })(),
       ensureCoinTemplatesLoaded(),
       (async () => { spellsCatalog = await getSpellsCatalogWithPrices(); })(),
     ]);
@@ -1141,7 +1311,8 @@ function startGame(configPlayer) {
           bar.fill.setPosition(x - bar.width / 2, y);
         };
         const setHealthBarRatio = (bar, ratio) => {
-          const clamped = Phaser.Math.Clamp(ratio, 0, 1);
+          const r = Number.isFinite(ratio) ? ratio : 0;
+          const clamped = Phaser.Math.Clamp(r, 0, 1);
           bar.fill.width = Math.max(0, bar.width * clamped);
         };
         const playerBar = makeHealthBar(0x22c55e);
@@ -1342,7 +1513,9 @@ function startGame(configPlayer) {
           });
         };
         const grantPlayerXp = (amount) => {
-          playerXp += Math.max(0, Number(amount || 0));
+          const raw = Number(amount);
+          const add = Number.isFinite(raw) ? Math.max(0, raw) : 0;
+          playerXp = (Number.isFinite(playerXp) ? playerXp : 0) + add;
           let leveled = false;
           while (playerXp >= xpToNextLevel(playerLevel)) {
             playerXp -= xpToNextLevel(playerLevel);
@@ -1364,9 +1537,10 @@ function startGame(configPlayer) {
         };
         const effectiveXpFromCreature = (creature) => {
           const xp = Number((creature && creature.experience) || 0);
-          if (Number.isFinite(xp) && xp > 0) return Math.floor(xp);
+          if (Number.isFinite(xp) && xp > 0) return Math.max(1, Math.floor(xp));
           // Fallback: monsters with 0 XP grant scaling XP based on player level.
-          return Math.max(1, Math.floor((5 + (playerLevel * 3)) * 2));
+          const lv = Number.isFinite(playerLevel) ? playerLevel : 1;
+          return Math.max(1, Math.floor((5 + (lv * 3)) * 2));
         };
         const fallbackGoldFromLevel = () => {
           // Baseline gold reward when a monster drops no items.
@@ -1730,7 +1904,7 @@ function startGame(configPlayer) {
           if (creature.nameTag) {
             creature.nameTag.setPosition(creature.sprite.x, creature.sprite.y - tileSize * 0.8);
           }
-          const ratio = creature.hp / creature.maxHp;
+          const ratio = creature.maxHp > 0 ? creature.hp / creature.maxHp : 0;
           setHealthBarRatio(creature.hpBar, ratio);
           if (creature.nameTag) creature.nameTag.setColor(nameColorByHpRatio(ratio));
           creature.hpBar.fill.setFillStyle(barColorByHpRatio(ratio), 1);
@@ -1922,14 +2096,18 @@ function startGame(configPlayer) {
             const sprite = this.add.sprite(centerX(spawn.gx), centerY(spawn.gy), creatureKey(template));
             sprite.setOrigin(0.5, 0.5);
             sprite.setDisplaySize(tileSize * 0.9, tileSize * 0.9);
+            const creatureId = Number(template.id);
+            const damageMul = Number(CREATURE_DAMAGE_MULTIPLIER_BY_ID.get(creatureId) || 1);
+            const baseMaxDamage = Math.max(1, Number(template.maxDamage || 1));
+            const adjustedMaxDamage = Math.max(1, Math.floor(baseMaxDamage * damageMul));
             creatures.push({
-              id: Number(template.id),
+              id: creatureId,
               sprite,
               gx: spawn.gx,
               gy: spawn.gy,
               hp: Math.max(1, Number(template.hitpoints || 1)),
               maxHp: Math.max(1, Number(template.hitpoints || 1)),
-              maxDamage: Math.max(1, Number(template.maxDamage || 1)),
+              maxDamage: adjustedMaxDamage,
               runsAt: Math.max(0, Number(template.runs_at || 0)),
               title: template.title,
               experience: Number(template.experience || 0),
@@ -1938,6 +2116,7 @@ function startGame(configPlayer) {
               nextWanderAt: 0,
               nextActionAt: 0,
               aggroLocked: false,
+              abilities: (creatureAbilitiesById.get(creatureId) || []).slice(0, 16),
               hpBar: makeHealthBar(0xef4444),
               nameTag: makeNameLabel(template.title, '#f3f4f6'),
             });
@@ -2077,6 +2256,10 @@ function startGame(configPlayer) {
           spellsAccordionEl.addEventListener('toggle', syncLearnedPanelPosition);
         }
         window.addEventListener('resize', syncLearnedPanelPosition);
+        const isBlockedSpellTitle = (titleRaw) => {
+          const title = String(titleRaw || '').trim().toLowerCase();
+          return title === 'find person' || title === 'magic rope';
+        };
         const renderLearnedSpells = () => {
           const learnedGrid = document.getElementById('learnedSpellsGrid');
           const learnedFoot = document.getElementById('learnedSpellsFoot');
@@ -2084,6 +2267,7 @@ function startGame(configPlayer) {
           learnedGrid.innerHTML = '';
           const learned = (spellsCatalog || [])
             .filter((s) => learnedSpellIds.has(Number(s.article_id)))
+            .filter((s) => !isBlockedSpellTitle(s.title))
             .sort((a, b) => {
               if (a.level !== b.level) return a.level - b.level;
               return String(a.title || '').localeCompare(String(b.title || ''));
@@ -2125,7 +2309,7 @@ function startGame(configPlayer) {
             const classAllowed = Number((s.raw && s.raw[playerClassKey]) || 0) === 1;
             if (!classAllowed) return false;
             const title = String(s.title || '').trim().toLowerCase();
-            if (title === 'find person') return false;
+            if (isBlockedSpellTitle(title)) return false;
             const words = String(s.words || '').trim().toLowerCase();
             const effect = String((s.raw && s.raw.effect) || '').trim().toLowerCase();
             const isLightSpell = (
@@ -2193,7 +2377,7 @@ function startGame(configPlayer) {
                   addCombatLog(`No free hotkey slot (1-9) for ${spell.title}.`);
                 }
                 addCombatLog(`Bought spell: ${spell.title} for ${price} gp.`);
-                renderLootSlots(currentBagCapacity);
+                // El inventario ya se redibuja dentro de spendGoldFromInventory (debugInventory.spendGold).
                 updateHud();
                 renderSpellShop();
                 renderLearnedSpells();
@@ -2228,15 +2412,31 @@ function startGame(configPlayer) {
           levelHud.setText(`Floor ${currentLevel} | ${typeName} ${aliveCreatures().length}/${creaturesTargetCount}`);
           combatHud.setText(`HP ${playerHp}/${playerMaxHp} MP ${playerMana}/${playerMaxMana} CAP ${capCurrentText}/${capTotalText}`);
           const xpNeeded = xpToNextLevel(playerLevel);
-          const progress = xpNeeded > 0 ? playerXp / xpNeeded : 0;
+          const safeXp = Number.isFinite(playerXp) ? playerXp : 0;
+          const progress = xpNeeded > 0 && Number.isFinite(safeXp) ? safeXp / xpNeeded : 0;
           const totalWidth = this.scale.width - 18;
-          levelProgressFill.width = Math.max(2, totalWidth * progress);
-          levelProgressText.setText(`XP ${playerXp} / ${xpNeeded}`);
+          const safeProgress = Number.isFinite(progress) ? Phaser.Math.Clamp(progress, 0, 1) : 0;
+          levelProgressFill.width = Math.max(2, totalWidth * safeProgress);
+          levelProgressText.setText(`XP ${Math.floor(safeXp)} / ${xpNeeded}`);
           renderSpellShop();
         };
         const pickCreatureDamage = () => {
           const max = Math.max(1, Number(this._activeAttackerMaxDamage || 1));
-          return Phaser.Math.Between(1, max);
+          const floorMultiplier = Phaser.Math.Clamp(1 + ((currentLevel - 1) * 0.12), 1, 3.5);
+          const rolled = Phaser.Math.Between(1, max);
+          return Math.max(1, Math.floor(rolled * floorMultiplier));
+        };
+        const maxIncomingHitByFloor = () => {
+          // Hard cap anti-spikes: grows with floor but avoids unfair one-shots.
+          const floorFactor = Phaser.Math.Clamp(0.34 + ((currentLevel - 1) * 0.02), 0.34, 0.55);
+          return Math.max(18, Math.floor(playerMaxHp * floorFactor));
+        };
+        const clampIncomingCreatureDamage = (damage, creatureMaxDamage = 1) => {
+          const raw = Math.max(1, Math.floor(Number(damage) || 1));
+          const byCreature = Math.max(12, Math.floor(Math.max(1, Number(creatureMaxDamage || 1)) * 2.2));
+          const byFloor = maxIncomingHitByFloor();
+          const hardCap = Math.min(byCreature, byFloor);
+          return Phaser.Math.Clamp(raw, 1, hardCap);
         };
         const getEquippedHandWeapon = () => {
           const state = window.debugInventory && typeof window.debugInventory.state === 'function'
@@ -2335,35 +2535,113 @@ function startGame(configPlayer) {
           const manaCost = Math.max(0, Number((spell && spell.mana) || 0));
           return Math.max(8, Math.floor(6 + playerLevel * 1.5 + manaCost * 0.35));
         };
-        const showSpellTileEffect = (tiles, color = 0xf59e0b) => {
-          for (const t of tiles || []) {
-            if (!isWalkableTile(t.gx, t.gy)) continue;
-            const fx = this.add.rectangle(centerX(t.gx), centerY(t.gy), tileSize * 0.95, tileSize * 0.95, color, 0.42);
-            fx.setStrokeStyle(2, color, 0.85);
-            const slash = this.add.text(centerX(t.gx), centerY(t.gy), '✦', {
-              color: '#fde68a',
-              fontSize: '16px',
-              fontStyle: 'bold',
-            });
-            slash.setOrigin(0.5, 0.5);
-            this.tweens.add({
-              targets: fx,
-              alpha: 0,
-              scaleX: 1.18,
-              scaleY: 1.18,
-              duration: 300,
-              ease: 'Sine.easeOut',
-              onComplete: () => fx.destroy(),
-            });
-            this.tweens.add({
-              targets: slash,
-              alpha: 0,
-              y: slash.y - 10,
-              duration: 320,
-              ease: 'Sine.easeOut',
-              onComplete: () => slash.destroy(),
-            });
+        const showSpellTileEffect = (tiles, color = 0xf59e0b, opts = {}) => {
+          const duration = opts.duration != null ? opts.duration : 300;
+          const delayStep = opts.delayStep != null ? opts.delayStep : 0;
+          const order = opts.order || null;
+          const glyphChar = opts.glyph != null ? opts.glyph : '✦';
+          const glyphColor = opts.glyphColor != null ? opts.glyphColor : '#fde68a';
+          let list = (tiles || []).filter((t) => isWalkableTile(t.gx, t.gy));
+          if (order === 'beam') {
+            list = list.slice().sort((a, b) => (
+              (Math.abs(a.gx - gridX) + Math.abs(a.gy - gridY))
+              - (Math.abs(b.gx - gridX) + Math.abs(b.gy - gridY))
+            ));
           }
+          list.forEach((t, i) => {
+            const delay = i * delayStep;
+            const spawnFx = () => {
+              const fx = this.add.rectangle(centerX(t.gx), centerY(t.gy), tileSize * 0.95, tileSize * 0.95, color, 0.42);
+              fx.setStrokeStyle(2, color, 0.85);
+              const slash = this.add.text(centerX(t.gx), centerY(t.gy), glyphChar, {
+                color: glyphColor,
+                fontSize: '16px',
+                fontStyle: 'bold',
+              });
+              slash.setOrigin(0.5, 0.5);
+              this.tweens.add({
+                targets: fx,
+                alpha: 0,
+                scaleX: 1.18,
+                scaleY: 1.18,
+                duration,
+                ease: 'Sine.easeOut',
+                onComplete: () => fx.destroy(),
+              });
+              this.tweens.add({
+                targets: slash,
+                alpha: 0,
+                y: slash.y - 10,
+                duration: duration + 20,
+                ease: 'Sine.easeOut',
+                onComplete: () => slash.destroy(),
+              });
+            };
+            if (delay > 0) this.time.delayedCall(delay, spawnFx);
+            else spawnFx();
+          });
+        };
+        const spellFxProfile = (spell) => {
+          const element = String((spell && spell.raw && spell.raw.element) || '').toLowerCase();
+          const title = String((spell && spell.title) || '').toLowerCase();
+          if (element.includes('fire') || title.includes('flame') || title.includes('fire')) return { color: 0xfb7185, glyph: '✹' };
+          if (element.includes('ice') || title.includes('ice') || title.includes('frigo')) return { color: 0x93c5fd, glyph: '❄' };
+          if (element.includes('energy') || title.includes('energy') || title.includes('vis')) return { color: 0xa78bfa, glyph: '✧' };
+          if (element.includes('earth') || title.includes('terra')) return { color: 0x86efac, glyph: '✶' };
+          if (element.includes('holy') || title.includes('divine') || title.includes('san')) return { color: 0xfde68a, glyph: '✦' };
+          if (element.includes('death') || title.includes('mort')) return { color: 0xc4b5fd, glyph: '✢' };
+          if (title.includes('heal') || title.includes('exura')) return { color: 0x60a5fa, glyph: '✚' };
+          return { color: 0x7dd3fc, glyph: '✧' };
+        };
+        const showSpellAuraEffect = (x, y, spell, scale = 1) => {
+          const fx = spellFxProfile(spell);
+          const ring = this.add.circle(x, y, Math.max(8, tileSize * 0.24 * scale), fx.color, 0.35);
+          ring.setStrokeStyle(2, fx.color, 0.85);
+          const glyph = this.add.text(x, y, fx.glyph, {
+            color: '#f8fafc',
+            fontSize: `${Math.floor(14 * scale)}px`,
+            fontStyle: 'bold',
+          });
+          glyph.setOrigin(0.5, 0.5);
+          this.tweens.add({
+            targets: ring,
+            alpha: 0,
+            scaleX: 1.45,
+            scaleY: 1.45,
+            duration: 300,
+            ease: 'Sine.easeOut',
+            onComplete: () => ring.destroy(),
+          });
+          this.tweens.add({
+            targets: glyph,
+            alpha: 0,
+            y: glyph.y - 8,
+            duration: 320,
+            ease: 'Sine.easeOut',
+            onComplete: () => glyph.destroy(),
+          });
+        };
+        const showSpellProjectileEffect = (spell, target) => {
+          if (!spell || !target || !target.sprite) return;
+          const fx = spellFxProfile(spell);
+          const shot = this.add.text(player.x, player.y - 4, fx.glyph, {
+            color: `#${fx.color.toString(16).padStart(6, '0')}`,
+            fontSize: '16px',
+            fontStyle: 'bold',
+          });
+          shot.setOrigin(0.5, 0.5);
+          shot.setDepth(55);
+          this.tweens.add({
+            targets: shot,
+            x: target.sprite.x,
+            y: target.sprite.y - 4,
+            duration: 170,
+            ease: 'Linear',
+            onComplete: () => {
+              shot.destroy();
+              showSpellAuraEffect(target.sprite.x, target.sprite.y, spell, 0.9);
+            },
+          });
         };
         const frontSweepTiles = () => {
           // 3 impacted tiles in the row directly in front of player.
@@ -2378,11 +2656,189 @@ function startGame(configPlayer) {
           }
           return [{ gx: gridX - 1, gy: gridY - 1 }, { gx: gridX - 1, gy: gridY }, { gx: gridX - 1, gy: gridY + 1 }];
         };
+        const frontSingleTile = () => {
+          if (playerFacingFrame === 0) return { gx: gridX, gy: gridY + 1 };
+          if (playerFacingFrame === 2) return { gx: gridX, gy: gridY - 1 };
+          if (playerFacingFrame === 1) return { gx: gridX + 1, gy: gridY };
+          return { gx: gridX - 1, gy: gridY };
+        };
+        const frontConeTiles = (depth = 3) => {
+          const tiles = [];
+          for (let i = 1; i <= depth; i += 1) {
+            const spread = Math.min(2, i - 1);
+            for (let s = -spread; s <= spread; s += 1) {
+              let gx = gridX;
+              let gy = gridY;
+              if (playerFacingFrame === 0) { gx += s; gy += i; } // south
+              else if (playerFacingFrame === 2) { gx += s; gy -= i; } // north
+              else if (playerFacingFrame === 1) { gx += i; gy += s; } // east
+              else { gx -= i; gy += s; } // west
+              tiles.push({ gx, gy });
+            }
+          }
+          return tiles;
+        };
+        const frontBeamTiles = (len = 5) => {
+          const tiles = [];
+          for (let i = 1; i <= len; i += 1) {
+            let gx = gridX;
+            let gy = gridY;
+            if (playerFacingFrame === 0) gy += i;
+            else if (playerFacingFrame === 2) gy -= i;
+            else if (playerFacingFrame === 1) gx += i;
+            else gx -= i;
+            tiles.push({ gx, gy });
+          }
+          return tiles;
+        };
+        const aroundCasterTiles = (radius = 1) => {
+          const tiles = [];
+          for (let dy = -radius; dy <= radius; dy += 1) {
+            for (let dx = -radius; dx <= radius; dx += 1) {
+              if (dx === 0 && dy === 0) continue;
+              tiles.push({ gx: gridX + dx, gy: gridY + dy });
+            }
+          }
+          return tiles;
+        };
+        const ringAroundCasterTiles = (radius) => {
+          const tiles = [];
+          const r = Math.max(1, Math.floor(Number(radius) || 1));
+          for (let dy = -r; dy <= r; dy += 1) {
+            for (let dx = -r; dx <= r; dx += 1) {
+              if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+              tiles.push({ gx: gridX + dx, gy: gridY + dy });
+            }
+          }
+          return tiles;
+        };
+        const frontPlusTiles = (reach = 2) => {
+          let cx = gridX;
+          let cy = gridY;
+          const rk = Math.max(1, Math.floor(Number(reach) || 1));
+          if (playerFacingFrame === 0) cy += rk;
+          else if (playerFacingFrame === 2) cy -= rk;
+          else if (playerFacingFrame === 1) cx += rk;
+          else cx -= rk;
+          return [
+            { gx: cx, gy: cy },
+            { gx: cx - 1, gy: cy },
+            { gx: cx + 1, gy: cy },
+            { gx: cx, gy: cy - 1 },
+            { gx: cx, gy: cy + 1 },
+          ];
+        };
+        const frontBoxTiles = (width, depth) => {
+          const tiles = [];
+          const w = Math.max(1, Math.floor(Number(width) || 3));
+          const d = Math.max(1, Math.floor(Number(depth) || 1));
+          const half = Math.floor(w / 2);
+          for (let row = 1; row <= d; row += 1) {
+            for (let c = -half; c <= half; c += 1) {
+              let gx = gridX;
+              let gy = gridY;
+              if (playerFacingFrame === 0) { gx += c; gy += row; }
+              else if (playerFacingFrame === 2) { gx += c; gy -= row; }
+              else if (playerFacingFrame === 1) { gx += row; gy += c; }
+              else { gx -= row; gy += c; }
+              tiles.push({ gx, gy });
+            }
+          }
+          return tiles;
+        };
+        const resolvePatternTiles = (pattern) => {
+          if (!pattern || pattern.kind === 'projectile') return null;
+          switch (pattern.kind) {
+            case 'front_sweep':
+              return frontSweepTiles();
+            case 'beam':
+              return frontBeamTiles(pattern.depth ?? 5);
+            case 'cone':
+              return frontConeTiles(pattern.depth ?? 3);
+            case 'nova':
+              return aroundCasterTiles(pattern.radius ?? 1);
+            case 'ring':
+              return ringAroundCasterTiles(pattern.radius ?? 2);
+            case 'plus':
+              return frontPlusTiles(pattern.reach ?? 2);
+            case 'front_box':
+              return frontBoxTiles(pattern.width ?? 3, pattern.depth ?? 2);
+            default:
+              return null;
+          }
+        };
+        const spellAttackPattern = (spell) => {
+          const title = String((spell && spell.title) || '').toLowerCase();
+          const wikiOverride = SPELL_FX_OVERRIDES[title];
+          if (wikiOverride) return { ...wikiOverride };
+          const effect = String((spell && spell.raw && spell.raw.effect) || '').toLowerCase();
+          if (title.includes('front sweep')) return { kind: 'front_sweep', depth: 1 };
+          if (title.includes('beam')) return { kind: 'beam', depth: title.includes('great') ? 8 : 5 };
+          if (title.includes('wave') || effect.includes('directly in front')) {
+            return { kind: 'cone', depth: title.includes('strong') || title.includes('great') ? 4 : 3 };
+          }
+          if (title.includes('berserk') || title.includes('groundshaker')) return { kind: 'nova', radius: 1 };
+          if (
+            title.includes('caldera')
+            || title.includes('core')
+            || title.includes('winter')
+            || title.includes('wrath')
+            || title.includes('skies')
+            || title.includes('storm')
+            || title.includes('shower')
+            || (title.includes('burst') && !title.includes('ice burst') && !title.includes('terra burst'))
+            || effect.includes('around the caster')
+          ) return { kind: 'nova', radius: 2 };
+          if (title.includes('ice burst') || title.includes('terra burst')) return { kind: 'ring', radius: 2 };
+          return { kind: 'projectile', depth: inferSpellRange(spell) };
+        };
+        const castPatternAttackSpell = (spell, slotNumber) => {
+          const pattern = spellAttackPattern(spell);
+          if (!pattern || pattern.kind === 'projectile') return false;
+          const tilesRaw = resolvePatternTiles(pattern);
+          if (!tilesRaw || tilesRaw.length === 0) return false;
+          const tiles = tilesRaw.filter((t) => isWalkableTile(t.gx, t.gy));
+          if (tiles.length === 0) return false;
+          const prof = spellFxProfile(spell);
+          const color = pattern.color != null ? pattern.color : prof.color;
+          const po = pattern.fx && typeof pattern.fx === 'object' ? pattern.fx : {};
+          const fxOpts = {
+            ...po,
+            glyph: po.glyph != null ? po.glyph : prof.glyph,
+          };
+          showSpellTileEffect(tiles, color, fxOpts);
+          const impacted = [];
+          for (const t of tiles) {
+            const target = creatureAt(t.gx, t.gy);
+            if (!target) continue;
+            const crit = didAttackCrit();
+            const base = inferAttackDamage(spell);
+            const dmg = crit ? applyCriticalDamage(base) : base;
+            target.hp = Math.max(0, target.hp - dmg);
+            showCreatureHitEffect(target, dmg);
+            if (crit) showCritText(target.sprite.x, target.sprite.y);
+            impacted.push({ target, dmg });
+            if (target.hp <= 0) {
+              target.alive = false;
+              target.sprite.setVisible(false);
+              updateCreatureBar(target);
+              grantPlayerXp(effectiveXpFromCreature(target));
+            }
+          }
+          if (impacted.length === 0) {
+            addCombatLog(`Cast [${slotNumber}] ${spell.title}, but it hits nothing.`, LOG_COLORS.SPELL);
+          } else {
+            const detail = impacted.map((x) => `${x.target.title}(${x.dmg})`).join(', ');
+            addCombatLog(`Cast [${slotNumber}] ${spell.title}: ${detail}.`, LOG_COLORS.SPELL);
+          }
+          return true;
+        };
         const castLearnedSpell = (slotNumber, now) => {
           const articleId = learnedSpellSlots[slotNumber - 1];
           if (!articleId) return false;
           const spell = (spellsCatalog || []).find((s) => Number(s.article_id) === Number(articleId));
           if (!spell) return false;
+          if (isBlockedSpellTitle(spell.title)) return false;
           const manaCost = Math.max(0, Number(spell.mana || 0));
           if (playerMana < manaCost) {
             addCombatLog(`Not enough mana for ${spell.title}.`);
@@ -2404,53 +2860,52 @@ function startGame(configPlayer) {
             playerHp = Math.min(playerMaxHp, playerHp + heal);
             const gained = Math.max(0, playerHp - prev);
             addCombatLog(`Cast [${slotNumber}] ${spell.title}: +${gained} HP.`, LOG_COLORS.SPELL);
+            showSpellAuraEffect(player.x, player.y, spell, 1.1);
             showDrinkEffect(`+${gained} HP`, 0x60a5fa);
           } else if (group === 'attack') {
-            if (title.includes('lesser front sweep')) {
-              const tiles = frontSweepTiles().filter((t) => isWalkableTile(t.gx, t.gy));
-              showSpellTileEffect(tiles, 0xfbbf24);
-              const impacted = [];
-              for (const t of tiles) {
-                const target = creatureAt(t.gx, t.gy);
-                if (!target) continue;
-                const crit = didAttackCrit();
-                const base = inferAttackDamage(spell);
-                const dmg = crit ? applyCriticalDamage(base) : base;
-                target.hp = Math.max(0, target.hp - dmg);
-                showCreatureHitEffect(target, dmg);
-                if (crit) showCritText(target.sprite.x, target.sprite.y);
-                impacted.push({ target, dmg });
-                if (target.hp <= 0) {
-                  target.alive = false;
-                  target.sprite.setVisible(false);
-                  updateCreatureBar(target);
-                  grantPlayerXp(effectiveXpFromCreature(target));
-                }
-              }
-              if (impacted.length === 0) {
-                addCombatLog(`Cast [${slotNumber}] ${spell.title}, but it hits nothing.`, LOG_COLORS.SPELL);
-              } else {
-                const detail = impacted
-                  .map((x) => `${x.target.title}(${x.dmg})`)
-                  .join(', ');
-                addCombatLog(`Cast [${slotNumber}] ${spell.title}: ${detail}.`, LOG_COLORS.SPELL);
-              }
+            if (castPatternAttackSpell(spell, slotNumber)) {
               updatePlayerBar();
               updateHud();
               return true;
             }
             const target = findNearestRangedTarget(inferSpellRange(spell));
             if (!target) {
-              addCombatLog(`Cast [${slotNumber}] ${spell.title}, but no target in range.`, LOG_COLORS.SPELL);
+              const front = frontSingleTile();
+              const frontTarget = isWalkableTile(front.gx, front.gy) ? creatureAt(front.gx, front.gy) : null;
+              if (!frontTarget) {
+                showSpellAuraEffect(player.x, player.y, spell, 0.8);
+                addCombatLog(`Cast [${slotNumber}] ${spell.title}, but no target in range.`, LOG_COLORS.SPELL);
+              } else {
+                showSpellTileEffect([front], spellFxProfile(spell).color, { duration: 220 });
+                const crit = didAttackCrit();
+                const base = inferAttackDamage(spell);
+                const dmg = crit ? applyCriticalDamage(base) : base;
+                frontTarget.hp = Math.max(0, frontTarget.hp - dmg);
+                showCreatureHitEffect(frontTarget, dmg);
+                if (crit) showCritText(frontTarget.sprite.x, frontTarget.sprite.y);
+                addCombatLog(`${spell.title} hits ${frontTarget.title} for ${dmg}.`, LOG_COLORS.SPELL);
+                if (frontTarget.hp <= 0) {
+                  frontTarget.alive = false;
+                  frontTarget.sprite.setVisible(false);
+                  updateCreatureBar(frontTarget);
+                  grantPlayerXp(effectiveXpFromCreature(frontTarget));
+                  addCombatLog(`${frontTarget.title} dies from ${spell.title}.`);
+                }
+              }
             } else if (didAttackMiss()) {
               if (title.includes('ethereal spear')) {
                 showRangedProjectileEffect({ title: 'Ethereal Spear', type_secondary: 'Throwing Weapons' }, target);
+              } else {
+                showSpellProjectileEffect(spell, target);
               }
               showMissSmoke(target.sprite.x, target.sprite.y);
               addCombatLog(`Your ${spell.title} misses ${target.title}.`, LOG_COLORS.SPELL);
             } else {
               if (title.includes('ethereal spear')) {
                 showRangedProjectileEffect({ title: 'Ethereal Spear', type_secondary: 'Throwing Weapons' }, target);
+                showSpellAuraEffect(target.sprite.x, target.sprite.y, spell, 0.9);
+              } else {
+                showSpellProjectileEffect(spell, target);
               }
               const crit = didAttackCrit();
               const base = inferAttackDamage(spell);
@@ -2469,6 +2924,7 @@ function startGame(configPlayer) {
             }
           } else {
             const effect = String((spell.raw && spell.raw.effect) || '').toLowerCase();
+            showSpellAuraEffect(player.x, player.y, spell, 1.0);
             if (effect.includes('speed')) {
               playerMoveDurationMs = Math.max(90, playerMoveDurationMs - 20);
               playerActionDelayMs = Math.max(150, playerActionDelayMs - 30);
@@ -2726,6 +3182,7 @@ function startGame(configPlayer) {
           });
         };
         const showCreatureHitEffect = (creature, dmg) => {
+          if (!creature || !creature.sprite || !creature.sprite.scene) return;
           creature.sprite.setTint(0xff4d4d);
           this.tweens.add({
             targets: creature.sprite,
@@ -2754,6 +3211,315 @@ function startGame(configPlayer) {
             ease: 'Sine.easeOut',
             onComplete: () => pop.destroy(),
           });
+        };
+        const parseAbilityDamage = (ability, fallbackMax) => {
+          const raw = String((ability && ability.effect) || '');
+          const nums = raw.match(/\d+/g) || [];
+          const baseMax = Math.max(1, Number(fallbackMax || 1));
+          const safeCap = Math.max(8, Math.floor(baseMax * 1.6));
+          if (nums.length === 0) return Phaser.Math.Between(1, safeCap);
+          if (nums.length === 1) return Phaser.Math.Clamp(Math.max(1, Number(nums[0])), 1, safeCap);
+          const a = Math.max(1, Number(nums[0]));
+          const b = Math.max(1, Number(nums[1]));
+          const lo = Phaser.Math.Clamp(Math.min(a, b), 1, safeCap);
+          const hi = Phaser.Math.Clamp(Math.max(a, b), lo, safeCap);
+          return Phaser.Math.Between(lo, hi);
+        };
+        const inferCreatureAbilityPattern = (ability) => {
+          const name = String((ability && ability.name) || '').toLowerCase().trim();
+          if (CREATURE_ABILITY_PATTERN_BY_NAME[name]) {
+            return { ...CREATURE_ABILITY_PATTERN_BY_NAME[name] };
+          }
+          if (name === 'none' || name.includes('probably other') || name.includes('and more')) {
+            return { kind: 'none' };
+          }
+          if (name.includes('invisib')) return { kind: 'none' };
+          if (name.includes('bomb')) return { kind: 'nova_at_player', radius: 1 };
+          if (name.includes('great fireball')) return { kind: 'nova_at_player', radius: 1 };
+          if (name.includes('beam')) {
+            return { kind: 'line_to_player', maxLen: name.includes('great') ? 8 : 5 };
+          }
+          if (name.includes('wave')) return { kind: 'cone_to_player', depth: 3 };
+          if (name.includes('berserk')) return { kind: 'nova_creature', radius: 1 };
+          if (name.includes('explosion')) {
+            return name.includes('wave') ? { kind: 'cone_to_player', depth: 3 } : { kind: 'nova_at_player', radius: 1 };
+          }
+          if (
+            name.includes('missile')
+            || name.includes('strike')
+            || name.includes('ball')
+            || name.includes('spit')
+            || name.includes('stalagmite')
+            || name.includes('throw')
+            || name.includes('hit')
+            || name.includes('harvest')
+          ) return { kind: 'player_cell' };
+          if (name.includes('area')) return { kind: 'nova_creature', radius: 1 };
+          return { kind: 'player_cell' };
+        };
+        const bresenhamLineTiles = (x0, y0, x1, y1) => {
+          const pts = [];
+          let x = x0;
+          let y = y0;
+          const dx = Math.abs(x1 - x0);
+          const dy = Math.abs(y1 - y0);
+          const sx = x0 < x1 ? 1 : -1;
+          const sy = y0 < y1 ? 1 : -1;
+          let err = dx - dy;
+          let guard = 0;
+          while (true) {
+            guard += 1;
+            if (guard > 256) {
+              pts.push({ gx: x1, gy: y1 });
+              break;
+            }
+            pts.push({ gx: x, gy: y });
+            if (x === x1 && y === y1) break;
+            const e2 = 2 * err;
+            if (e2 > -dy) {
+              err -= dy;
+              x += sx;
+            }
+            if (e2 < dx) {
+              err += dx;
+              y += sy;
+            }
+          }
+          return pts;
+        };
+        const lineToPlayerFromCreature = (creature, maxLen) => {
+          const lim = Math.max(1, Math.floor(Number(maxLen) || 6));
+          const line = bresenhamLineTiles(creature.gx, creature.gy, gridX, gridY);
+          if (line.length <= 1) return [{ gx: gridX, gy: gridY }];
+          const out = [];
+          for (let i = 1; i < line.length && out.length < lim; i += 1) {
+            const p = line[i];
+            if (!isWalkableTile(p.gx, p.gy)) break;
+            out.push(p);
+            if (p.gx === gridX && p.gy === gridY) break;
+          }
+          return out;
+        };
+        const creatureConeTowardPlayer = (creature, depth) => {
+          const d = Math.max(1, Math.floor(Number(depth) || 3));
+          const cx = creature.gx;
+          const cy = creature.gy;
+          const px = gridX - cx;
+          const py = gridY - cy;
+          if (px === 0 && py === 0) return [];
+          let sx = 0;
+          let sy = 0;
+          const ax = Math.abs(px);
+          const ay = Math.abs(py);
+          if (ax >= ay) sx = Math.sign(px);
+          else sy = Math.sign(py);
+          const tiles = [];
+          for (let i = 1; i <= d; i += 1) {
+            const spread = Math.min(2, i - 1);
+            for (let k = -spread; k <= spread; k += 1) {
+              let gx = cx + sx * i;
+              let gy = cy + sy * i;
+              if (sx !== 0) gy += k;
+              else gx += k;
+              tiles.push({ gx, gy });
+            }
+          }
+          return tiles;
+        };
+        const tilesNovaAroundCreature = (creature, radius, excludeCenter = true) => {
+          const r = Math.max(0, Math.floor(Number(radius) || 1));
+          const cx = creature.gx;
+          const cy = creature.gy;
+          const tiles = [];
+          for (let dy = -r; dy <= r; dy += 1) {
+            for (let dx = -r; dx <= r; dx += 1) {
+              if (Math.max(Math.abs(dx), Math.abs(dy)) > r) continue;
+              if (excludeCenter && dx === 0 && dy === 0) continue;
+              tiles.push({ gx: cx + dx, gy: cy + dy });
+            }
+          }
+          return tiles;
+        };
+        const tilesNovaAtPoint = (px, py, radius) => {
+          const r = Math.max(0, Math.floor(Number(radius) || 1));
+          const tiles = [];
+          for (let dy = -r; dy <= r; dy += 1) {
+            for (let dx = -r; dx <= r; dx += 1) {
+              if (Math.max(Math.abs(dx), Math.abs(dy)) > r) continue;
+              tiles.push({ gx: px + dx, gy: py + dy });
+            }
+          }
+          return tiles;
+        };
+        const plusTilesAt = (px, py) => [
+          { gx: px, gy: py },
+          { gx: px - 1, gy: py },
+          { gx: px + 1, gy: py },
+          { gx: px, gy: py - 1 },
+          { gx: px, gy: py + 1 },
+        ];
+        const ringTilesAt = (px, py, radius) => {
+          const r = Math.max(1, Math.floor(Number(radius) || 2));
+          const tiles = [];
+          for (let dy = -r; dy <= r; dy += 1) {
+            for (let dx = -r; dx <= r; dx += 1) {
+              if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+              tiles.push({ gx: px + dx, gy: py + dy });
+            }
+          }
+          return tiles;
+        };
+        const resolveCreatureAbilityTiles = (creature, pattern) => {
+          if (!pattern || pattern.kind === 'none') return [];
+          switch (pattern.kind) {
+            case 'player_cell': {
+              if (!hasRangedLineOfSight(creature.gx, creature.gy, gridX, gridY)) return [];
+              return [{ gx: gridX, gy: gridY }];
+            }
+            case 'line_to_player':
+              return lineToPlayerFromCreature(creature, pattern.maxLen ?? 8);
+            case 'cone_to_player':
+              return creatureConeTowardPlayer(creature, pattern.depth ?? 3);
+            case 'nova_creature':
+              return tilesNovaAroundCreature(creature, pattern.radius ?? 1, true);
+            case 'nova_at_player':
+              return tilesNovaAtPoint(gridX, gridY, pattern.radius ?? 1);
+            case 'plus_on_player':
+              return plusTilesAt(gridX, gridY);
+            case 'ring_at_player':
+              return ringTilesAt(gridX, gridY, pattern.radius ?? 2);
+            default:
+              if (!hasRangedLineOfSight(creature.gx, creature.gy, gridX, gridY)) return [];
+              return [{ gx: gridX, gy: gridY }];
+          }
+        };
+        const playerInAbilityTiles = (tiles) => (tiles || []).some((t) => t.gx === gridX && t.gy === gridY);
+        const abilityStyle = (ability) => {
+          const n = String((ability && ability.name) || '').toLowerCase();
+          const el = String((ability && ability.element) || '').toLowerCase();
+          if (el.includes('fire') || n.includes('fire')) return { color: 0xfb7185, glyph: '✹' };
+          if (el.includes('ice') || n.includes('ice') || n.includes('frost')) return { color: 0x93c5fd, glyph: '❄' };
+          if (el.includes('death') || n.includes('death') || n.includes('mort')) return { color: 0xc4b5fd, glyph: '✢' };
+          if (el.includes('energy') || n.includes('energy') || n.includes('vis')) return { color: 0xa78bfa, glyph: '✧' };
+          if (el.includes('earth') || n.includes('earth') || n.includes('poison')) return { color: 0x86efac, glyph: '✶' };
+          if (el.includes('holy') || n.includes('holy')) return { color: 0xfde68a, glyph: '✦' };
+          if (el.includes('healing') || n.includes('heal')) return { color: 0x60a5fa, glyph: '✚' };
+          return { color: 0xe2e8f0, glyph: '✦' };
+        };
+        const showCreatureAbilityEffect = (creature, ability, affectedTiles = null) => {
+          const style = abilityStyle(ability);
+          void affectedTiles; // reservado: dibujar highlight por casilla cuando definamos estilos
+          const dist = Math.max(Math.abs(creature.gx - gridX), Math.abs(creature.gy - gridY));
+          const ranged = dist > 1 && !String((ability && ability.name) || '').toLowerCase().includes('melee');
+          if (ranged) {
+            const shot = this.add.text(creature.sprite.x, creature.sprite.y - 4, style.glyph, {
+              color: `#${style.color.toString(16).padStart(6, '0')}`,
+              fontSize: '16px',
+              fontStyle: 'bold',
+            });
+            shot.setOrigin(0.5, 0.5);
+            this.tweens.add({
+              targets: shot,
+              x: player.x,
+              y: player.y - 4,
+              duration: 190,
+              ease: 'Linear',
+              onComplete: () => {
+                shot.destroy();
+                const hit = this.add.circle(player.x, player.y, tileSize * 0.22, style.color, 0.35);
+                hit.setStrokeStyle(2, style.color, 0.8);
+                this.tweens.add({
+                  targets: hit,
+                  alpha: 0,
+                  scaleX: 1.35,
+                  scaleY: 1.35,
+                  duration: 240,
+                  ease: 'Sine.easeOut',
+                  onComplete: () => hit.destroy(),
+                });
+              },
+            });
+          } else {
+            const aura = this.add.circle(player.x, player.y, tileSize * 0.25, style.color, 0.28);
+            aura.setStrokeStyle(2, style.color, 0.8);
+            this.tweens.add({
+              targets: aura,
+              alpha: 0,
+              scaleX: 1.3,
+              scaleY: 1.3,
+              duration: 220,
+              ease: 'Sine.easeOut',
+              onComplete: () => aura.destroy(),
+            });
+          }
+        };
+        const abilityType = (ability) => {
+          const n = String((ability && ability.name) || '').toLowerCase();
+          const el = String((ability && ability.element) || '').toLowerCase();
+          if (n === 'none' || n.includes('probably other') || n.includes('and more')) return 'utility';
+          if (el.includes('healing') || n.includes('self-heal') || n.includes('self healing') || (n.includes('self') && n.includes('heal'))) {
+            return 'heal';
+          }
+          if (inferCreatureAbilityPattern(ability).kind === 'none') return 'utility';
+          if (el.includes('summon') || n.includes('summon')) return 'utility';
+          if (n.includes('invisib')) return 'utility';
+          if (n.includes('melee')) return 'melee';
+          return 'offensive';
+        };
+        const tryUseCreatureAbility = (creature) => {
+          const abilities = Array.isArray(creature && creature.abilities) ? creature.abilities : [];
+          if (abilities.length === 0) return false;
+          const dist = Math.max(Math.abs(creature.gx - gridX), Math.abs(creature.gy - gridY));
+          const options = abilities.filter((ab) => {
+            const t = abilityType(ab);
+            if (t === 'utility') return false;
+            if (t === 'heal') return creature.hp < creature.maxHp && Math.random() < 0.5;
+            if (t === 'melee') return dist <= 1;
+            if (dist > 4) return false;
+            try {
+              const pattern = inferCreatureAbilityPattern(ab);
+              const tiles = resolveCreatureAbilityTiles(creature, pattern);
+              return playerInAbilityTiles(tiles);
+            } catch {
+              return false;
+            }
+          });
+          if (options.length === 0) return false;
+          const ability = options[Math.floor(Math.random() * options.length)];
+          const t = abilityType(ability);
+          const pattern = inferCreatureAbilityPattern(ability);
+          const abilityTiles = resolveCreatureAbilityTiles(creature, pattern);
+          if (t === 'heal') {
+            const heal = Math.max(5, Math.floor(parseAbilityDamage(ability, creature.maxDamage) * 0.35));
+            creature.hp = Math.min(creature.maxHp, creature.hp + heal);
+            showCreatureAbilityEffect(creature, ability, abilityTiles);
+            updateCreatureBar(creature);
+            addCombatLog(`${creature.title} uses ${ability.name} (+${heal} HP).`);
+            return true;
+          }
+          if (!playerInAbilityTiles(abilityTiles)) {
+            return false;
+          }
+          showCreatureAbilityEffect(creature, ability, abilityTiles);
+          if (didAttackMiss()) {
+            showMissSmoke(player.x, player.y);
+            addCombatLog(`${creature.title} uses ${ability.name}, but misses.`);
+            return true;
+          }
+          const base = parseAbilityDamage(ability, creature.maxDamage);
+          const floorMultiplier = Phaser.Math.Clamp(1 + ((currentLevel - 1) * 0.12), 1, 3.5);
+          const crit = didAttackCrit();
+          const scaledBase = Math.max(1, Math.floor(base * floorMultiplier));
+          const rawDamage = crit ? applyCriticalDamage(scaledBase) : scaledBase;
+          const dmg = clampIncomingCreatureDamage(rawDamage, creature.maxDamage);
+          playerHp = Math.max(0, playerHp - dmg);
+          showPlayerHitEffect(dmg);
+          addCombatLog(
+            crit
+              ? `${creature.title} CRITICAL ${ability.name} for ${dmg}.`
+              : `${creature.title} uses ${ability.name} for ${dmg}.`
+          );
+          return true;
         };
         const tileKey = (x, y) => `${x},${y}`;
         const findNextStepToPlayer = (fromX, fromY) => {
@@ -2888,10 +3654,14 @@ function startGame(configPlayer) {
               creature.nextActionAt = now + (acted ? actionDelayFromSpeed(creature.speed) : 120);
               continue;
             }
+            const distToPlayer = Math.max(Math.abs(creature.gx - gridX), Math.abs(creature.gy - gridY));
+            if (distToPlayer <= 4 && Math.random() < 0.5) {
+              acted = tryUseCreatureAbility(creature) || acted;
+            }
             if (!isAdjacent(creature.gx, creature.gy, gridX, gridY)) {
               acted = tryMoveCreature(creature) || acted;
             }
-            if (isAdjacent(creature.gx, creature.gy, gridX, gridY)) {
+            if (!acted && isAdjacent(creature.gx, creature.gy, gridX, gridY)) {
               orientCreatureSprite(creature, gridX - creature.gx, gridY - creature.gy);
               if (didAttackMiss()) {
                 showMissSmoke(player.x, player.y);
@@ -2901,7 +3671,8 @@ function startGame(configPlayer) {
                 this._activeAttackerMaxDamage = creature.maxDamage;
                 const baseDamage = pickCreatureDamage();
                 const isCrit = didAttackCrit();
-                const dmg = isCrit ? applyCriticalDamage(baseDamage) : baseDamage;
+                const rawDamage = isCrit ? applyCriticalDamage(baseDamage) : baseDamage;
+                const dmg = clampIncomingCreatureDamage(rawDamage, creature.maxDamage);
                 playerHp = Math.max(0, playerHp - dmg);
                 showPlayerHitEffect(dmg);
                 if (isCrit) {

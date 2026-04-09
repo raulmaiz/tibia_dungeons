@@ -519,6 +519,27 @@ export async function getCreatureTypeProgressionGroups() {
   return groups;
 }
 
+let creatureAbilitiesByIdPromise = null;
+export async function getCreatureAbilitiesById() {
+  if (creatureAbilitiesByIdPromise) return creatureAbilitiesByIdPromise;
+  creatureAbilitiesByIdPromise = (async () => {
+    const rows = await getJSON('./data/creature_ability.json');
+    const out = new Map();
+    for (const row of rows || []) {
+      const creatureId = Number(row.creature_id);
+      if (!Number.isFinite(creatureId)) continue;
+      if (!out.has(creatureId)) out.set(creatureId, []);
+      out.get(creatureId).push({
+        name: row.name || 'Ability',
+        effect: row.effect == null ? '' : String(row.effect),
+        element: row.element || null,
+      });
+    }
+    return out;
+  })();
+  return creatureAbilitiesByIdPromise;
+}
+
 export function imageUrl(relPath) {
   if (!relPath) return null;
   return `./data/images/${relPath}`;
