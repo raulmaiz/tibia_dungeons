@@ -9,7 +9,7 @@
       #phaser { width: 100vw; height: 100vh; }
       .equipment-panel {
         position: fixed;
-        right: 14px;
+        right: 206px;
         top: 14px;
         width: 250px;
         padding: 10px;
@@ -21,7 +21,7 @@
       }
       .loot-panel {
         position: fixed;
-        right: 14px;
+        right: 206px;
         top: 340px;
         width: 250px;
         padding: 10px;
@@ -31,17 +31,54 @@
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
         z-index: 6;
       }
+      .spells-panel {
+        position: fixed;
+        right: -8px;
+        top: 14px;
+        width: 198px;
+        padding: 8px;
+        border: 1px solid #3c4857;
+        border-radius: 10px;
+        background: linear-gradient(180deg, rgba(19, 29, 42, 0.92) 0%, rgba(10, 17, 28, 0.92) 100%);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+        z-index: 6;
+      }
       .equipment-title {
-        margin: 0 0 8px;
+        margin: 0;
         color: #cbd5e1;
         font-size: 14px;
         letter-spacing: 0.3px;
       }
       .loot-title {
-        margin: 0 0 8px;
+        margin: 0;
         color: #cbd5e1;
         font-size: 13px;
         letter-spacing: 0.3px;
+      }
+      .equipment-accordion summary,
+      .loot-accordion summary {
+        list-style: none;
+        cursor: pointer;
+        user-select: none;
+      }
+      .equipment-accordion summary::-webkit-details-marker,
+      .loot-accordion summary::-webkit-details-marker {
+        display: none;
+      }
+      .equipment-accordion summary::after,
+      .loot-accordion summary::after {
+        content: '▸';
+        float: right;
+        color: #94a3b8;
+        transition: transform 120ms ease;
+      }
+      .equipment-accordion[open] summary::after,
+      .loot-accordion[open] summary::after {
+        transform: rotate(90deg);
+      }
+      .equipment-content,
+      .loot-content {
+        margin-top: 8px;
       }
       .equipment-grid {
         display: grid;
@@ -52,6 +89,14 @@
         border: none;
         background: transparent;
         box-shadow: none;
+      }
+      .equipment-slot.hungry-indicator {
+        border: 1px solid #7f1d1d;
+        background: linear-gradient(180deg, #3f1d1d 0%, #1f1111 100%);
+      }
+      .equipment-slot.hungry-indicator.sated {
+        border: 1px solid #14532d;
+        background: linear-gradient(180deg, #14532d 0%, #0f2a1b 100%);
       }
       .equipment-slot {
         height: 62px;
@@ -86,6 +131,7 @@
         margin-top: 8px;
         font-size: 11px;
         color: #94a3b8;
+        display: none;
       }
       .loot-grid {
         display: grid;
@@ -117,27 +163,188 @@
         font-size: 11px;
         color: #94a3b8;
       }
+      .spells-title {
+        margin: 0;
+        color: #cbd5e1;
+        font-size: 12px;
+        letter-spacing: 0.3px;
+      }
+      .spells-accordion summary {
+        list-style: none;
+        cursor: pointer;
+        user-select: none;
+      }
+      .spells-accordion summary::-webkit-details-marker {
+        display: none;
+      }
+      .spells-accordion summary::after {
+        content: '▸';
+        float: right;
+        color: #94a3b8;
+        transition: transform 120ms ease;
+      }
+      .spells-accordion[open] summary::after {
+        transform: rotate(90deg);
+      }
+      .spells-content {
+        margin-top: 8px;
+        display: flex;
+        flex-direction: column;
+        height: auto;
+        max-height: 62vh;
+      }
+      .spells-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 3px;
+        max-height: 56vh;
+        flex: 0 1 auto;
+        min-height: 0;
+        overflow: auto;
+        padding-right: 2px;
+      }
+      .spell-row {
+        border: 1px solid #445469;
+        border-radius: 6px;
+        background: linear-gradient(180deg, #334155 0%, #1f2937 100%);
+        padding: 3px 4px;
+        line-height: 1.05;
+      }
+      .spell-row .head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 4px;
+        color: #e2e8f0;
+        font-size: 9px;
+      }
+      .spell-row .meta {
+        margin-top: 2px;
+        font-size: 8px;
+        color: #93a4ba;
+      }
+      .spell-row button {
+        margin-top: 3px;
+        width: 100%;
+        font-size: 9px;
+        padding: 2px 4px;
+        border-radius: 5px;
+        line-height: 1.05;
+      }
+      .spells-foot {
+        margin-top: 8px;
+        font-size: 10px;
+        color: #94a3b8;
+      }
+      .learned-spells-panel {
+        position: fixed;
+        right: -8px;
+        top: 484px;
+        width: 198px;
+        padding: 8px;
+        border: 1px solid #3c4857;
+        border-radius: 10px;
+        background: linear-gradient(180deg, rgba(19, 29, 42, 0.92) 0%, rgba(10, 17, 28, 0.92) 100%);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+        z-index: 6;
+      }
+      .learned-spells-title {
+        margin: 0;
+        color: #cbd5e1;
+        font-size: 12px;
+        letter-spacing: 0.3px;
+      }
+      .learned-spells-accordion summary {
+        list-style: none;
+        cursor: pointer;
+        user-select: none;
+      }
+      .learned-spells-accordion summary::-webkit-details-marker {
+        display: none;
+      }
+      .learned-spells-accordion summary::after {
+        content: '▸';
+        float: right;
+        color: #94a3b8;
+        transition: transform 120ms ease;
+      }
+      .learned-spells-accordion[open] summary::after {
+        transform: rotate(90deg);
+      }
+      .learned-spells-content {
+        margin-top: 8px;
+      }
+      .learned-spells-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 4px;
+        max-height: 120px;
+        overflow: auto;
+        padding-right: 2px;
+      }
+      .learned-spell-row {
+        border: 1px solid #445469;
+        border-radius: 6px;
+        background: linear-gradient(180deg, #334155 0%, #1f2937 100%);
+        padding: 4px;
+        color: #dbeafe;
+        font-size: 10px;
+      }
+      .learned-spells-foot {
+        margin-top: 8px;
+        font-size: 10px;
+        color: #94a3b8;
+      }
       .item-tooltip {
         position: fixed;
         z-index: 30;
-        max-width: 420px;
-        max-height: 60vh;
+        max-width: 300px;
+        max-height: 42vh;
         overflow: auto;
-        padding: 10px;
-        border: 1px solid #475569;
-        border-radius: 8px;
-        background: rgba(2, 6, 23, 0.96);
-        color: #e2e8f0;
-        font-size: 11px;
-        line-height: 1.35;
+        padding: 8px;
+        border: 1px solid #3b4b64;
+        border-radius: 7px;
+        background: rgba(4, 10, 22, 0.97);
+        color: #dbe7f5;
+        font-size: 10px;
+        line-height: 1.25;
         white-space: pre-wrap;
         pointer-events: none;
         display: none;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
+      }
+      .loot-context-menu {
+        position: fixed;
+        z-index: 40;
+        min-width: 120px;
+        background: rgba(15, 23, 42, 0.98);
+        border: 1px solid #475569;
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+        padding: 6px;
+        display: none;
+      }
+      .loot-context-menu button {
+        width: 100%;
+        text-align: left;
+        border: 1px solid #7f1d1d;
+        background: #3f1d1d;
+        color: #fecaca;
+        border-radius: 6px;
+        padding: 6px 8px;
+        cursor: pointer;
+      }
+      .loot-context-menu button:hover {
+        background: #7f1d1d;
       }
       @media (max-width: 1120px) {
         .equipment-panel { width: 210px; }
         .equipment-slot { height: 56px; }
-        .loot-panel { width: 210px; top: 330px; }
+        .equipment-panel { right: 182px; }
+        .loot-panel { width: 210px; top: 330px; right: 182px; }
+        .spells-panel { width: 176px; top: 14px; right: -8px; }
+        .spells-content { height: auto; max-height: 62vh; }
+        .learned-spells-panel { width: 176px; top: 484px; right: -8px; }
       }
       .overlay {
         position: fixed;
@@ -181,6 +388,26 @@
       }
       .choice.active { outline: 2px solid #60a5fa; }
       .choice img { width: 92px; height: 92px; image-rendering: pixelated; display: block; margin: 0 auto 6px; }
+      .class-choices {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .class-choice {
+        border: 1px solid #374151;
+        border-radius: 8px;
+        padding: 8px;
+        background: #0f172a;
+        cursor: pointer;
+        text-align: center;
+        color: #cbd5e1;
+        font-size: 12px;
+      }
+      .class-choice.active {
+        outline: 2px solid #60a5fa;
+        color: #e2e8f0;
+      }
       .hint { margin-top: 10px; color: #9ca3af; font-size: 13px; }
     </style>
     <script src="https://unpkg.com/phaser@3/dist/phaser.min.js"></script>
@@ -188,69 +415,101 @@
   <body>
     <div id="phaser"></div>
     <aside class="equipment-panel" aria-label="Equipment panel">
-      <h3 class="equipment-title">Equipment</h3>
-      <div class="equipment-grid">
-        <div class="equipment-slot" id="slotAmulet">
-          <img class="icon-img" id="slotAmuletImg" alt="Amulet item icon" />
-          <div class="icon" id="slotAmuletIcon">NECK</div>
-          <div class="label" id="slotAmuletLabel">Empty</div>
+      <details class="equipment-accordion" id="equipmentAccordion" open>
+        <summary class="equipment-title">Equipment</summary>
+        <div class="equipment-content">
+          <div class="equipment-grid">
+            <div class="equipment-slot" id="slotAmulet">
+              <img class="icon-img" id="slotAmuletImg" alt="Amulet item icon" />
+              <div class="icon" id="slotAmuletIcon">NECK</div>
+              <div class="label" id="slotAmuletLabel">Empty</div>
+            </div>
+            <div class="equipment-slot" id="slotHelmet">
+              <img class="icon-img" id="slotHelmetImg" alt="Helmet item icon" />
+              <div class="icon" id="slotHelmetIcon">HEAD</div>
+              <div class="label" id="slotHelmetLabel">Empty</div>
+            </div>
+            <div class="equipment-slot" id="slotBag">
+              <img class="icon-img" id="slotBagImg" alt="Bag item icon" />
+              <div class="icon" id="slotBagIcon">BAG</div>
+              <div class="label" id="slotBagLabel">Empty</div>
+            </div>
+            <div class="equipment-slot" id="slotHand">
+              <img class="icon-img" id="slotHandImg" alt="Weapon item icon" />
+              <div class="icon" id="slotHandIcon">HAND</div>
+              <div class="label" id="slotHandLabel">Empty</div>
+            </div>
+            <div class="equipment-slot" id="slotArmor">
+              <img class="icon-img" id="slotArmorImg" alt="Armor item icon" />
+              <div class="icon" id="slotArmorIcon">BODY</div>
+              <div class="label" id="slotArmorLabel">Empty</div>
+            </div>
+            <div class="equipment-slot" id="slotShield">
+              <img class="icon-img" id="slotShieldImg" alt="Shield item icon" />
+              <div class="icon" id="slotShieldIcon">SHLD</div>
+              <div class="label" id="slotShieldLabel">Empty</div>
+            </div>
+            <div class="equipment-slot" id="slotRing">
+              <img class="icon-img" id="slotRingImg" alt="Ring item icon" />
+              <div class="icon" id="slotRingIcon">RING</div>
+              <div class="label" id="slotRingLabel">Empty</div>
+            </div>
+            <div class="equipment-slot" id="slotLegs">
+              <img class="icon-img" id="slotLegsImg" alt="Legs item icon" />
+              <div class="icon" id="slotLegsIcon">LEGS</div>
+              <div class="label" id="slotLegsLabel">Empty</div>
+            </div>
+            <div class="equipment-slot" id="slotAmmo">
+              <img class="icon-img" id="slotAmmoImg" alt="Ammunition item icon" />
+              <div class="icon" id="slotAmmoIcon">AMMO</div>
+              <div class="label" id="slotAmmoLabel">Empty</div>
+            </div>
+            <div class="equipment-slot hungry-indicator" id="hungryIndicator">
+              <div class="icon" id="hungryIcon">🍖</div>
+              <div class="label" id="hungryLabel">Hungry</div>
+            </div>
+            <div class="equipment-slot" id="slotBoots">
+              <img class="icon-img" id="slotBootsImg" alt="Boots item icon" />
+              <div class="icon" id="slotBootsIcon">FEET</div>
+              <div class="label" id="slotBootsLabel">Empty</div>
+            </div>
+            <div class="equipment-slot spacer" aria-hidden="true"></div>
+          </div>
+          <div class="equipment-foot" id="equipmentFoot"></div>
         </div>
-        <div class="equipment-slot" id="slotHelmet">
-          <img class="icon-img" id="slotHelmetImg" alt="Helmet item icon" />
-          <div class="icon" id="slotHelmetIcon">HEAD</div>
-          <div class="label" id="slotHelmetLabel">Empty</div>
-        </div>
-        <div class="equipment-slot" id="slotBag">
-          <img class="icon-img" id="slotBagImg" alt="Bag item icon" />
-          <div class="icon" id="slotBagIcon">BAG</div>
-          <div class="label" id="slotBagLabel">Empty</div>
-        </div>
-        <div class="equipment-slot" id="slotHand">
-          <img class="icon-img" id="slotHandImg" alt="Weapon item icon" />
-          <div class="icon" id="slotHandIcon">HAND</div>
-          <div class="label" id="slotHandLabel">Empty</div>
-        </div>
-        <div class="equipment-slot" id="slotArmor">
-          <img class="icon-img" id="slotArmorImg" alt="Armor item icon" />
-          <div class="icon" id="slotArmorIcon">BODY</div>
-          <div class="label" id="slotArmorLabel">Empty</div>
-        </div>
-        <div class="equipment-slot" id="slotShield">
-          <img class="icon-img" id="slotShieldImg" alt="Shield item icon" />
-          <div class="icon" id="slotShieldIcon">SHLD</div>
-          <div class="label" id="slotShieldLabel">Empty</div>
-        </div>
-        <div class="equipment-slot" id="slotRing">
-          <img class="icon-img" id="slotRingImg" alt="Ring item icon" />
-          <div class="icon" id="slotRingIcon">RING</div>
-          <div class="label" id="slotRingLabel">Empty</div>
-        </div>
-        <div class="equipment-slot" id="slotLegs">
-          <img class="icon-img" id="slotLegsImg" alt="Legs item icon" />
-          <div class="icon" id="slotLegsIcon">LEGS</div>
-          <div class="label" id="slotLegsLabel">Empty</div>
-        </div>
-        <div class="equipment-slot" id="slotAmmo">
-          <img class="icon-img" id="slotAmmoImg" alt="Ammunition item icon" />
-          <div class="icon" id="slotAmmoIcon">AMMO</div>
-          <div class="label" id="slotAmmoLabel">Empty</div>
-        </div>
-        <div class="equipment-slot spacer" aria-hidden="true"></div>
-        <div class="equipment-slot" id="slotBoots">
-          <img class="icon-img" id="slotBootsImg" alt="Boots item icon" />
-          <div class="icon" id="slotBootsIcon">FEET</div>
-          <div class="label" id="slotBootsLabel">Empty</div>
-        </div>
-        <div class="equipment-slot spacer" aria-hidden="true"></div>
-      </div>
-      <div class="equipment-foot" id="equipmentFoot">No item equipped</div>
+      </details>
     </aside>
     <aside class="loot-panel" aria-label="Loot panel">
-      <h3 class="loot-title">Loot Bag</h3>
-      <div class="loot-grid" id="lootGrid"></div>
-      <div class="loot-foot" id="lootFoot">Capacity: 0 slots</div>
+      <details class="loot-accordion" id="lootAccordion" open>
+        <summary class="loot-title">Loot Bag</summary>
+        <div class="loot-content">
+          <div class="loot-grid" id="lootGrid"></div>
+          <div class="loot-foot" id="lootFoot">Capacity: 0 slots</div>
+        </div>
+      </details>
+    </aside>
+    <aside class="spells-panel" aria-label="Spells panel">
+      <details class="spells-accordion" id="spellsAccordion">
+        <summary class="spells-title">Spells Shop</summary>
+        <div class="spells-content">
+          <div class="spells-grid" id="spellsGrid"></div>
+          <div class="spells-foot" id="spellsFoot">Gold: 0</div>
+        </div>
+      </details>
+    </aside>
+    <aside class="learned-spells-panel" id="learnedSpellsPanel" aria-label="Learned spells panel">
+      <details class="learned-spells-accordion" id="learnedSpellsAccordion">
+        <summary class="learned-spells-title">Learned Spells</summary>
+        <div class="learned-spells-content">
+          <div class="learned-spells-grid" id="learnedSpellsGrid"></div>
+          <div class="learned-spells-foot" id="learnedSpellsFoot">Total: 0</div>
+        </div>
+      </details>
     </aside>
     <div id="itemTooltip" class="item-tooltip" aria-hidden="true"></div>
+    <div id="lootContextMenu" class="loot-context-menu" aria-hidden="true">
+      <button id="discardLootBtn" type="button">Discard</button>
+    </div>
 
     <div class="overlay" id="startOverlay">
       <div class="panel">
@@ -270,6 +529,15 @@
             <strong>Female</strong>
             <div>Outfit Citizen Female Addon 1</div>
           </div>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <strong>Class:</strong>
+        </div>
+        <div class="class-choices">
+          <div class="class-choice active" data-class="knight" id="classKnight">⚔️ Elite Knight</div>
+          <div class="class-choice" data-class="paladin" id="classPaladin">🏹 Royal Paladin</div>
+          <div class="class-choice" data-class="sorcerer" id="classSorcerer">🔥 Master Sorcerer</div>
+          <div class="class-choice" data-class="druid" id="classDruid">🌿 Elder Druid</div>
         </div>
         <div class="row">
           <button id="startBtn">Enter Dungeon</button>

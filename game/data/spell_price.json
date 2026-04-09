@@ -1,0 +1,68 @@
+{
+  "currency": "gold",
+  "version": 1,
+  "generated_at": "2026-04-08",
+  "notes": [
+    "This file mixes internet-sourced prices and estimated prices.",
+    "Use internet_overrides first. If a spell is not present, compute the price using fallback_pricing_rules."
+  ],
+  "internet_sources": [
+    "https://tibia.fandom.com/wiki/Spells",
+    "https://www.tibia-wiki.net/wiki/Find_Person"
+  ],
+  "internet_overrides": {
+    "795": {
+      "title": "Find Person",
+      "price": 80,
+      "source": "internet"
+    },
+    "50392": {
+      "title": "Annihilation",
+      "price": 20000,
+      "source": "internet"
+    },
+    "815": {
+      "title": "Berserk",
+      "price": 2500,
+      "source": "internet"
+    },
+    "50514": {
+      "title": "Brutal Strike",
+      "price": 1000,
+      "source": "internet"
+    },
+    "30160": {
+      "title": "Blood Rage",
+      "price": 8000,
+      "source": "internet"
+    },
+    "1917": {
+      "title": "Animate Dead",
+      "price": 1200,
+      "source": "internet"
+    },
+    "19931": {
+      "title": "Avalanche",
+      "price": 1200,
+      "source": "internet"
+    }
+  },
+  "fallback_pricing_rules": {
+    "description": "Estimated price when no internet override exists.",
+    "formula": "round_to_50(max(100, level*40 + mana*8 + soul*120 + premium_bonus + rune_bonus + support_bonus))",
+    "premium_bonus": {
+      "if_is_premium_1": 500,
+      "if_is_premium_0": 0
+    },
+    "rune_bonus": {
+      "if_spell_type_is_Rune": 300,
+      "otherwise": 0
+    },
+    "support_bonus": {
+      "if_group_spell_is_Support": 200,
+      "otherwise": 0
+    },
+    "rounding": "nearest 50",
+    "minimum_price": 100
+  }
+}

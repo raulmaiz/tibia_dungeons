@@ -63,6 +63,25 @@ async function getItemAttackValueById() {
   return itemAttackValueByIdPromise;
 }
 
+let itemRangeValueByIdPromise = null;
+async function getItemRangeValueById() {
+  if (itemRangeValueByIdPromise) return itemRangeValueByIdPromise;
+  itemRangeValueByIdPromise = (async () => {
+    const rows = await getJSON('./data/item_attribute.json');
+    const out = new Map();
+    for (const row of rows || []) {
+      if ((row.name || '').toLowerCase() !== 'range') continue;
+      const itemId = Number(row.item_id);
+      const raw = row.value == null ? '' : String(row.value).trim();
+      const value = Number(raw);
+      if (!Number.isFinite(itemId) || !Number.isFinite(value)) continue;
+      out.set(itemId, value);
+    }
+    return out;
+  })();
+  return itemRangeValueByIdPromise;
+}
+
 let itemAttributesByIdPromise = null;
 async function getItemAttributesById() {
   if (itemAttributesByIdPromise) return itemAttributesByIdPromise;
@@ -83,37 +102,172 @@ async function getItemAttributesById() {
   return itemAttributesByIdPromise;
 }
 
+let spellPriceConfigPromise = null;
+async function getSpellPriceConfig() {
+  if (spellPriceConfigPromise) return spellPriceConfigPromise;
+  spellPriceConfigPromise = getJSON('./data/spell_price.json');
+  return spellPriceConfigPromise;
+}
+
+let spellByArticleIdPromise = null;
+async function getSpellByArticleId() {
+  if (spellByArticleIdPromise) return spellByArticleIdPromise;
+  spellByArticleIdPromise = (async () => {
+    const rows = await getJSON('./data/spell.json');
+    const out = new Map();
+    for (const row of rows || []) {
+      const id = Number(row.article_id);
+      if (!Number.isFinite(id)) continue;
+      out.set(id, row);
+    }
+    return out;
+  })();
+  return spellByArticleIdPromise;
+}
+
+function roundToStep(value, step) {
+  const n = Number(value);
+  const s = Math.max(1, Number(step) || 1);
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(n / s) * s;
+}
+
+function estimateSpellPrice(spellRow, cfg) {
+  const rules = (cfg && cfg.fallback_pricing_rules) || {};
+  const minPrice = Math.max(0, Number(rules.minimum_price || 100));
+  const roundingStep = Math.max(1, Number((rules.rounding || '').replace(/\D/g, '')) || 50);
+  const premiumBonusRules = rules.premium_bonus || {};
+  const runeBonusRules = rules.rune_bonus || {};
+  const supportBonusRules = rules.support_bonus || {};
+  const level = Math.max(0, Number((spellRow && spellRow.level) || 0));
+  const mana = Math.max(0, Number((spellRow && spellRow.mana) || 0));
+  const soul = Math.max(0, Number((spellRow && spellRow.soul) || 0));
+  const isPremium = Number((spellRow && spellRow.is_premium) || 0) === 1;
+  const isRune = String((spellRow && spellRow.spell_type) || '').toLowerCase() === 'rune';
+  const isSupport = String((spellRow && spellRow.group_spell) || '').toLowerCase() === 'support';
+  const premiumBonus = isPremium
+    ? Number(premiumBonusRules.if_is_premium_1 || 0)
+    : Number(premiumBonusRules.if_is_premium_0 || 0);
+  const runeBonus = isRune
+    ? Number(runeBonusRules.if_spell_type_is_Rune || 0)
+    : Number(runeBonusRules.otherwise || 0);
+  const supportBonus = isSupport
+    ? Number(supportBonusRules.if_group_spell_is_Support || 0)
+    : Number(supportBonusRules.otherwise || 0);
+  const raw = (level * 40) + (mana * 8) + (soul * 120) + premiumBonus + runeBonus + supportBonus;
+  return Math.max(minPrice, roundToStep(raw, roundingStep));
+}
+
 export async function getManifest() {
   return getJSON('./data/manifest.json');
 }
 
+export async function getSpellPriceByArticleId(articleId) {
+  const wantedId = Number(articleId);
+  if (!Number.isFinite(wantedId)) return null;
+  const [cfg, spellMap] = await Promise.all([
+    getSpellPriceConfig(),
+    getSpellByArticleId(),
+  ]);
+  const spell = spellMap.get(wantedId);
+  if (!spell) return null;
+  const overrides = (cfg && cfg.internet_overrides) || {};
+  const override = overrides[String(wantedId)];
+  if (override && Number.isFinite(Number(override.price))) {
+    return {
+      article_id: wantedId,
+      title: spell.title || spell.name || `Spell ${wantedId}`,
+      price: Math.max(0, Math.floor(Number(override.price))),
+      source: override.source || 'internet',
+    };
+  }
+  const estimated = estimateSpellPrice(spell, cfg);
+  return {
+    article_id: wantedId,
+    title: spell.title || spell.name || `Spell ${wantedId}`,
+    price: Math.max(0, Math.floor(estimated)),
+    source: 'estimated',
+  };
+}
+
+export async function getSpellsCatalogWithPrices() {
+  const [spells, cfg] = await Promise.all([
+    getJSON('./data/spell.json'),
+    getSpellPriceConfig(),
+  ]);
+  const overrides = (cfg && cfg.internet_overrides) || {};
+  const out = [];
+  for (const s of spells || []) {
+    const id = Number(s.article_id);
+    if (!Number.isFinite(id)) continue;
+    const override = overrides[String(id)];
+    const overridePrice = override ? Number(override.price) : NaN;
+    const useOverride = Number.isFinite(overridePrice);
+    const price = useOverride
+      ? Math.max(0, Math.floor(overridePrice))
+      : Math.max(0, Math.floor(estimateSpellPrice(s, cfg)));
+    out.push({
+      article_id: id,
+      title: s.title || s.name || `Spell ${id}`,
+      words: s.words || '',
+      level: Math.max(0, Number(s.level || 0)),
+      mana: Math.max(0, Number(s.mana || 0)),
+      soul: Math.max(0, Number(s.soul || 0)),
+      spell_type: s.spell_type || null,
+      group_spell: s.group_spell || null,
+      is_premium: Number(s.is_premium || 0) === 1,
+      status: s.status || null,
+      price,
+      price_source: useOverride ? (override.source || 'internet') : 'estimated',
+      raw: { ...s },
+    });
+  }
+  out.sort((a, b) => {
+    if (a.level !== b.level) return a.level - b.level;
+    if (a.price !== b.price) return a.price - b.price;
+    return String(a.title).localeCompare(String(b.title));
+  });
+  return out;
+}
+
 export async function getItemByArticleId(articleId) {
-  const [items, manifest, armorByItemId, shieldingByItemId, attackByItemId, attrsByItemId] = await Promise.all([
+  const [items, manifest, armorByItemId, shieldingByItemId, attackByItemId, rangeByItemId, attrsByItemId] = await Promise.all([
     getJSON('./data/item.json'),
     getManifest(),
     getItemArmorValueById(),
     getItemShieldingValueById(),
     getItemAttackValueById(),
+    getItemRangeValueById(),
     getItemAttributesById(),
   ]);
   const wantedId = Number(articleId);
   const item = (items || []).find((it) => Number(it.article_id) === wantedId);
   if (!item) return null;
+  const itemId = Number(item.article_id);
   const titleKey = (item.title || '').trim().toLowerCase();
   const manifestItem = (manifest.items || []).find((it) => (
     ((it.title || '').trim().toLowerCase() === titleKey) && it.image
   ));
+  let resolvedRange = Number(rangeByItemId.get(itemId) || 1);
+  if (!Number.isFinite(resolvedRange) || resolvedRange <= 0) {
+    const secondary = String(item.type_secondary || '').toLowerCase();
+    const isDistance = String(item.item_type || '').toLowerCase() === 'distance weapons';
+    resolvedRange = isDistance ? (secondary === 'throwing weapons' ? 4 : 5) : 1;
+  }
   return {
-    id: item.article_id,
+    id: itemId,
     title: item.title || item.name || `Item ${item.article_id}`,
     item_class: item.item_class || null,
     item_type: item.item_type || null,
-    armor_value: Number(armorByItemId.get(Number(item.article_id)) || 0),
-    shielding_value: Number(shieldingByItemId.get(Number(item.article_id)) || 0),
-    attack_value: Number(attackByItemId.get(Number(item.article_id)) || 0),
+    type_secondary: item.type_secondary || null,
+    armor_value: Number(armorByItemId.get(itemId) || 0),
+    shielding_value: Number(shieldingByItemId.get(itemId) || 0),
+    attack_value: Number(attackByItemId.get(itemId) || 0),
+    range_value: resolvedRange,
+    throwable: String(item.type_secondary || '').toLowerCase() === 'throwing weapons',
     weight: Number(item.weight || 0),
     image: manifestItem ? manifestItem.image : null,
-    attributes: attrsByItemId.get(Number(item.article_id)) || [],
+    attributes: attrsByItemId.get(itemId) || [],
     raw: { ...item },
   };
 }
@@ -140,13 +294,14 @@ export async function getLootDropPool(limit = 1200) {
 }
 
 export async function getCreatureDropTable() {
-  const [dropRows, items, manifest, armorByItemId, shieldingByItemId, attackByItemId, attrsByItemId] = await Promise.all([
+  const [dropRows, items, manifest, armorByItemId, shieldingByItemId, attackByItemId, rangeByItemId, attrsByItemId] = await Promise.all([
     getJSON('./data/creature_drop.json'),
     getJSON('./data/item.json'),
     getManifest(),
     getItemArmorValueById(),
     getItemShieldingValueById(),
     getItemAttackValueById(),
+    getItemRangeValueById(),
     getItemAttributesById(),
   ]);
   const itemById = new Map();
@@ -170,6 +325,9 @@ export async function getCreatureDropTable() {
     const item = itemById.get(itemId);
     if (!item) continue;
     if ((item.status || '').toLowerCase() !== 'active') continue;
+    const itemType = (item.item_type || '').toLowerCase();
+    if (itemType === 'quest items') continue;
+    if (itemType === 'rubish' || itemType === 'rubbish') continue;
     const title = (item.title || item.name || '').trim();
     if (!title) continue;
     const drop = {
@@ -180,13 +338,21 @@ export async function getCreatureDropTable() {
       isStackable: Number(item.is_stackable || 0) === 1,
       itemClass: item.item_class || null,
       itemType: item.item_type || null,
+      itemSecondary: item.type_secondary || null,
       armorValue: Number(armorByItemId.get(itemId) || 0),
       shieldingValue: Number(shieldingByItemId.get(itemId) || 0),
       attackValue: Number(attackByItemId.get(itemId) || 0),
+      rangeValue: Number(rangeByItemId.get(itemId) || 1),
+      throwable: String(item.type_secondary || '').toLowerCase() === 'throwing weapons',
       attributes: attrsByItemId.get(itemId) || [],
       raw: { ...item },
     };
     if (!dropsByCreatureId.has(creatureId)) dropsByCreatureId.set(creatureId, []);
+    if (!Number.isFinite(drop.rangeValue) || drop.rangeValue <= 0) {
+      const secondary = String(item.type_secondary || '').toLowerCase();
+      const isDistance = String(item.item_type || '').toLowerCase() === 'distance weapons';
+      drop.rangeValue = isDistance ? (secondary === 'throwing weapons' ? 4 : 5) : 1;
+    }
     dropsByCreatureId.get(creatureId).push(drop);
   }
 
@@ -301,7 +467,8 @@ export async function getCreatureTypeProgressionGroups() {
     if (!m) continue;
     if ((c.status || '').toLowerCase() !== 'active') continue;
     const exp = Number(c.experience || 0);
-    if (!Number.isFinite(exp) || exp <= 0) continue;
+    const hp = Math.max(1, Number(c.hitpoints || 1));
+    if (!Number.isFinite(hp) || hp <= 0) continue;
     const typePrimary = (c.type_primary || '').trim();
     if (!typePrimary) continue;
 
@@ -313,7 +480,7 @@ export async function getCreatureTypeProgressionGroups() {
       id: c.article_id,
       title: c.title,
       experience: exp,
-      hitpoints: Math.max(1, Number(c.hitpoints || 1)),
+      hitpoints: hp,
       maxDamage: Math.max(1, Number((damage && (damage.total || damage.physical)) || 1)),
       speed: normalizedSpeed,
       runs_at: runsAt,
@@ -336,15 +503,19 @@ export async function getCreatureTypeProgressionGroups() {
     }
     const creaturesOfType = Array.from(dedupByTitle.values()).sort((a, b) => a.experience - b.experience);
     if (creaturesOfType.length === 0) continue;
+    const avgHp = creaturesOfType.reduce((acc, it) => acc + it.hitpoints, 0) / creaturesOfType.length;
+    const avgDmg = creaturesOfType.reduce((acc, it) => acc + it.maxDamage, 0) / creaturesOfType.length;
     const avgExp = creaturesOfType.reduce((acc, it) => acc + it.experience, 0) / creaturesOfType.length;
     groups.push({
       type_primary: typePrimary,
+      average_hitpoints: avgHp,
+      average_max_damage: avgDmg,
       average_experience: avgExp,
       creatures: creaturesOfType,
     });
   }
 
-  groups.sort((a, b) => a.average_experience - b.average_experience);
+  groups.sort((a, b) => a.average_max_damage - b.average_max_damage);
   return groups;
 }
 

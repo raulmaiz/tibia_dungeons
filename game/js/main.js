@@ -1,20 +1,58 @@
-import { getCreatureTypeProgressionGroups, getItemByArticleId, getCreatureDropTable } from './dataService.js';
+import {
+  getCreatureTypeProgressionGroups,
+  getItemByArticleId,
+  getCreatureDropTable,
+  getSpellsCatalogWithPrices,
+} from './dataService.js';
 
 let game;
 let selectedSex = 'male';
+let selectedClass = 'knight';
 let playerConfig = null;
 let typeProgressionGroups = [];
 let creatureDropTable = new Map();
+let onConsumeFood = null;
+let onUseLiquid = null;
+let onPlayerLevelStatsUpdate = null;
+let onPanelLog = null;
+let lastLootRejectReason = '';
+let spellsCatalog = [];
+
+const BASE_PLAYER_HP = 150;
+const BASE_PLAYER_MANA = 10;
+const BASE_PLAYER_CAPACITY = 400;
+const CLASS_GROWTH = {
+  knight: { hp: 15, mana: 5, capacity: 25 },
+  paladin: { hp: 10, mana: 15, capacity: 20 },
+  sorcerer: { hp: 5, mana: 30, capacity: 10 },
+  druid: { hp: 5, mana: 30, capacity: 10 },
+};
+const MAX_FOOD_SECONDS = 900;
+
+function progressionStatsForLevel(level, playerClass = selectedClass) {
+  const lv = Math.max(1, Number(level || 1));
+  const growth = CLASS_GROWTH[playerClass] || CLASS_GROWTH.knight;
+  return {
+    maxHp: BASE_PLAYER_HP + (lv - 1) * growth.hp,
+    maxMana: BASE_PLAYER_MANA + (lv - 1) * growth.mana,
+    capacity: BASE_PLAYER_CAPACITY + (lv - 1) * growth.capacity,
+  };
+}
 
 const MAP_W = 20;
 const MAP_H = 15;
 const UI_BOTTOM_SPACE = 88;
 const UI_OVERLAP_ROWS = 1.5;
 const CREATURE_POOL_PER_LEVEL = 12;
-const MIN_CREATURES_PER_LEVEL = 3;
-const MAX_CREATURES_PER_LEVEL = 10;
+const MIN_CREATURES_PER_LEVEL = 6;
+const MAX_CREATURES_PER_LEVEL = 12;
 const START_TILE = { gx: 1, gy: 1 };
 const START_BAG_ARTICLE_ID = 1589;
+const GOLD_COIN_ID = 2119;
+const PLATINUM_COIN_ID = 2828;
+const CRYSTAL_COIN_ID = 2948;
+const GOLD_PER_PLATINUM = 100;
+const PLATINUM_PER_CRYSTAL = 100;
 
 function frameTextureName(sex, frame) {
   return `player_${sex}_${frame}`;
@@ -61,8 +99,16 @@ function rollCreatureDrops(creatureId) {
 function setupSelectorUI() {
   const choiceMale = document.getElementById('choiceMale');
   const choiceFemale = document.getElementById('choiceFemale');
+  const classKnight = document.getElementById('classKnight');
+  const classPaladin = document.getElementById('classPaladin');
+  const classSorcerer = document.getElementById('classSorcerer');
+  const classDruid = document.getElementById('classDruid');
   const startBtn = document.getElementById('startBtn');
   const playerNameInput = document.getElementById('playerName');
+  const hungryIndicator = document.getElementById('hungryIndicator');
+  const hungryLabel = document.getElementById('hungryLabel');
+  const lootContextMenu = document.getElementById('lootContextMenu');
+  const discardLootBtn = document.getElementById('discardLootBtn');
   playerNameInput.focus();
 
   function setChoice(sex) {
@@ -73,8 +119,21 @@ function setupSelectorUI() {
 
   choiceMale.addEventListener('click', () => setChoice('male'));
   choiceFemale.addEventListener('click', () => setChoice('female'));
+  function setClassChoice(classKey) {
+    selectedClass = classKey;
+    if (classKnight) classKnight.classList.toggle('active', classKey === 'knight');
+    if (classPaladin) classPaladin.classList.toggle('active', classKey === 'paladin');
+    if (classSorcerer) classSorcerer.classList.toggle('active', classKey === 'sorcerer');
+    if (classDruid) classDruid.classList.toggle('active', classKey === 'druid');
+  }
+  if (classKnight) classKnight.addEventListener('click', () => setClassChoice('knight'));
+  if (classPaladin) classPaladin.addEventListener('click', () => setClassChoice('paladin'));
+  if (classSorcerer) classSorcerer.addEventListener('click', () => setClassChoice('sorcerer'));
+  if (classDruid) classDruid.addEventListener('click', () => setClassChoice('druid'));
   let currentBagCapacity = 0;
   let currentBagItem = null;
+  let currentPlayerCapacity = progressionStatsForLevel(1).capacity;
+  lastLootRejectReason = '';
   const equippedSlots = {
     armor: null,
     shield: null,
@@ -87,6 +146,11 @@ function setupSelectorUI() {
     hand: null,
   };
   let bagLootItems = [];
+  const coinTemplateById = new Map([
+    [GOLD_COIN_ID, { id: GOLD_COIN_ID, title: 'Gold Coin', isStackable: true, raw: { article_id: GOLD_COIN_ID, value_sell: 1, value_buy: 1, weight: 0.1 }, item_type: 'Valuables', item_class: 'Currency' }],
+    [PLATINUM_COIN_ID, { id: PLATINUM_COIN_ID, title: 'Platinum Coin', isStackable: true, raw: { article_id: PLATINUM_COIN_ID, value_sell: 100, value_buy: 100, weight: 0.1 }, item_type: 'Valuables', item_class: 'Currency' }],
+    [CRYSTAL_COIN_ID, { id: CRYSTAL_COIN_ID, title: 'Crystal Coin', isStackable: true, raw: { article_id: CRYSTAL_COIN_ID, value_sell: 10000, value_buy: 10000, weight: 0.1 }, item_type: 'Valuables', item_class: 'Currency' }],
+  ]);
   const slotRules = {
     armor: { id: 'Armor', iconDefault: 'BODY', requireType: 'Armors', footName: 'armor' },
     shield: { id: 'Shield', iconDefault: 'SHLD', requireType: 'Shields', footName: 'shield' },
@@ -106,35 +170,144 @@ function setupSelectorUI() {
     'amulets and necklaces': 'amulet',
   };
   const itemTooltip = document.getElementById('itemTooltip');
+  let lootContextIndex = -1;
+  const hideItemTooltip = () => {
+    if (!itemTooltip) return;
+    itemTooltip.style.display = 'none';
+    itemTooltip.textContent = '';
+  };
+
+  function setHungryUi(isHungry, secondsLeft = 0) {
+    if (!hungryIndicator || !hungryLabel) return;
+    if (isHungry) {
+      hungryIndicator.classList.remove('sated');
+      hungryLabel.textContent = 'Hungry';
+      hungryIndicator.title = 'You are hungry.';
+    } else {
+      hungryIndicator.classList.add('sated');
+      hungryLabel.textContent = '';
+      hungryIndicator.title = 'Food regeneration active.';
+    }
+  }
+  window.setHungryUi = setHungryUi;
+  setHungryUi(true, 0);
+  window.addEventListener('blur', hideItemTooltip);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) hideItemTooltip();
+  });
+  document.addEventListener('keydown', hideItemTooltip);
+  document.addEventListener('click', hideItemTooltip);
+  const hideLootContextMenu = () => {
+    if (!lootContextMenu) return;
+    lootContextMenu.style.display = 'none';
+    lootContextIndex = -1;
+  };
+  const showLootContextMenu = (x, y, index) => {
+    if (!lootContextMenu) return;
+    lootContextIndex = index;
+    lootContextMenu.style.display = 'block';
+    lootContextMenu.style.left = `${Math.min(window.innerWidth - 140, Math.max(0, x))}px`;
+    lootContextMenu.style.top = `${Math.min(window.innerHeight - 70, Math.max(0, y))}px`;
+  };
+  document.addEventListener('click', hideLootContextMenu);
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') hideLootContextMenu();
+  });
+  window.addEventListener('blur', hideLootContextMenu);
+  if (discardLootBtn) {
+    discardLootBtn.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      if (lootContextIndex < 0 || lootContextIndex >= bagLootItems.length) {
+        hideLootContextMenu();
+        return;
+      }
+      const removed = bagLootItems[lootContextIndex];
+      bagLootItems.splice(lootContextIndex, 1);
+      hideLootContextMenu();
+      renderLootSlots(currentBagCapacity);
+      if (removed) {
+        const equipmentFoot = document.getElementById('equipmentFoot');
+        if (equipmentFoot) equipmentFoot.textContent = `Discarded: ${removed.title}`;
+      }
+    });
+  }
+  async function ensureCoinTemplatesLoaded() {
+    const ids = [GOLD_COIN_ID, PLATINUM_COIN_ID, CRYSTAL_COIN_ID];
+    await Promise.all(ids.map(async (id) => {
+      try {
+        const item = await getItemByArticleId(id);
+        if (item) {
+          coinTemplateById.set(id, {
+            ...item,
+            isStackable: true,
+            count: 1,
+          });
+        }
+      } catch (_err) {
+        // Keep fallback template when lookup fails.
+      }
+    }));
+  }
+
+  function getFoodTimeSeconds(item) {
+    const attrs = Array.isArray(item && item.attributes) ? item.attributes : [];
+    const foodAttr = attrs.find((a) => (a && (a.name || '').toLowerCase() === 'food_time'));
+    if (!foodAttr) return 0;
+    const n = Number(foodAttr.value);
+    return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+  }
 
   function formatItemTooltip(item) {
     if (!item) return '';
     const raw = item.raw && typeof item.raw === 'object' ? item.raw : {};
     const attrs = Array.isArray(item.attributes) ? item.attributes : [];
-    const lines = [];
-    lines.push(`Name: ${item.title || raw.title || 'Unknown'}`);
-    if (item.id != null) lines.push(`Article ID: ${item.id}`);
-    if (item.item_class || raw.item_class) lines.push(`Class: ${item.item_class || raw.item_class}`);
-    if (item.item_type || raw.item_type) lines.push(`Type: ${item.item_type || raw.item_type}`);
-    if (Number(item.attack_value || 0) > 0) lines.push(`Attack: ${item.attack_value}`);
-    if (Number(item.shielding_value || 0) > 0) lines.push(`Shielding: ${item.shielding_value}`);
-    if (Number(item.armor_value || 0) > 0) lines.push(`Armor: ${item.armor_value}`);
-    if (raw.weight != null) lines.push(`Weight: ${raw.weight}`);
-    if (raw.value_buy != null) lines.push(`Buy: ${raw.value_buy}`);
-    if (raw.value_sell != null) lines.push(`Sell: ${raw.value_sell}`);
-    if (raw.is_stackable != null) lines.push(`Stackable: ${Number(raw.is_stackable) === 1 ? 'yes' : 'no'}`);
-    if (raw.is_pickupable != null) lines.push(`Pickupable: ${Number(raw.is_pickupable) === 1 ? 'yes' : 'no'}`);
-    if (item.count && item.count > 1) lines.push(`Amount: ${item.count}`);
-    lines.push('');
-    lines.push('Attributes (item_attribute.json):');
-    if (attrs.length === 0) {
-      lines.push('- none');
-    } else {
-      for (const a of attrs) lines.push(`- ${a.name}: ${a.value}`);
+    const attrMap = new Map();
+    for (const a of attrs) {
+      const key = String((a && a.name) || '').toLowerCase().trim();
+      if (!key || key === 'is_walkable') continue;
+      if (!attrMap.has(key)) attrMap.set(key, []);
+      attrMap.get(key).push(a.value);
     }
+    const attrValue = (key) => {
+      const values = attrMap.get(String(key).toLowerCase());
+      return values && values.length > 0 ? String(values[0]) : null;
+    };
+    const isTwoHanded = String(attrValue('hands') || '').toLowerCase() === 'two';
+    const lines = [];
+    lines.push(`${item.title || raw.title || 'Unknown Item'}`);
+    lines.push(`────────────────────`);
+    const cls = item.item_class || raw.item_class;
+    const type = item.item_type || raw.item_type;
+    if (cls || type) lines.push(`${cls || 'Item'}${type ? ` • ${type}` : ''}`);
+    if (item.count && item.count > 1) lines.push(`Amount: x${item.count}`);
     lines.push('');
-    lines.push(`Item JSON: ${JSON.stringify(raw)}`);
-    lines.push(`Attributes JSON: ${JSON.stringify(attrs)}`);
+    const combatBits = [];
+    if (Number(item.attack_value || 0) > 0) combatBits.push(`ATK ${item.attack_value}`);
+    if (Number(item.shielding_value || 0) > 0) combatBits.push(`SHD ${item.shielding_value}`);
+    if (Number(item.armor_value || 0) > 0) combatBits.push(`ARM ${item.armor_value}`);
+    if (Number(item.range_value || 0) > 1) combatBits.push(`RNG ${item.range_value}`);
+    if (isTwoHanded) combatBits.push('Two-handed');
+    if (combatBits.length > 0) {
+      lines.push('Combat');
+      lines.push(`- ${combatBits.join(' | ')}`);
+      lines.push('');
+    }
+    lines.push('Economy');
+    if (raw.weight != null) lines.push(`- Weight: ${raw.weight}`);
+    const sellRaw = Number(raw.value_sell || 0);
+    const buyRaw = Number(raw.value_buy || 0);
+    const effectiveSell = sellRaw > 0 ? sellRaw : Math.max(0, buyRaw);
+    if (effectiveSell > 0) lines.push(`- Sell: ${effectiveSell} gp`);
+    const keyAttrs = ['speed', 'healthgain', 'managain', 'duration', 'charges', 'capacity'];
+    for (const k of keyAttrs) {
+      const v = attrValue(k);
+      if (v != null) lines.push(`- ${k}: ${v}`);
+    }
+    if (item.id != null) {
+      lines.push('');
+      lines.push(`ID: ${item.id}`);
+    }
     return lines.join('\n');
   }
 
@@ -153,8 +326,7 @@ function setupSelectorUI() {
       itemTooltip.style.top = `${Math.min(window.innerHeight - 240, (ev.clientY || 0) + 14)}px`;
     };
     const hide = () => {
-      itemTooltip.style.display = 'none';
-      itemTooltip.textContent = '';
+      hideItemTooltip();
     };
     el.addEventListener('mouseenter', show);
     el.addEventListener('mousemove', move);
@@ -178,10 +350,49 @@ function setupSelectorUI() {
       slotImg.style.display = 'none';
       slotIcon.textContent = rule.iconDefault;
     }
-    slotLabel.textContent = item.title || 'Equipped';
+    const qty = Math.max(1, Number(item.count || 1));
+    slotLabel.textContent = qty > 1 ? `${item.title} x${qty}` : (item.title || 'Equipped');
     const slotRoot = document.getElementById(`slot${rule.id}`);
     bindTooltip(slotRoot, item);
     equipmentFoot.textContent = equipmentFootText || `Equipped ${rule.footName}: ${item.title}`;
+    return true;
+  }
+  // Backward-compatible alias for accidental casing typos in runtime/cached code paths.
+  const setEquippedslotVisual = setEquippedSlotVisual;
+
+  function canEquipItemInSlot(slotKey, item) {
+    const rule = slotRules[slotKey];
+    if (!rule || !item) return false;
+    const matchesType = !rule.requireType || (item.item_type || '').toLowerCase() === rule.requireType.toLowerCase();
+    const matchesClass = !rule.requireClass || (item.item_class || '').toLowerCase() === rule.requireClass.toLowerCase();
+    if (slotKey === 'hand' && String(item.item_type || '').toLowerCase() === 'ammunition') return false;
+    return matchesType && matchesClass;
+  }
+
+  function resolveEquipSlotForItem(item) {
+    if (!item) return null;
+    const preferredOrder = ['hand', 'ammunition', 'armor', 'shield', 'legs', 'boots', 'ring', 'helmet', 'amulet'];
+    for (const key of preferredOrder) {
+      if (canEquipItemInSlot(key, item)) return key;
+    }
+    return null;
+  }
+
+  function clearEquippedSlotVisual(slotKey, footText = null) {
+    const rule = slotRules[slotKey];
+    if (!rule) return false;
+    const slotRoot = document.getElementById(`slot${rule.id}`);
+    const slotImg = document.getElementById(`slot${rule.id}Img`);
+    const slotIcon = document.getElementById(`slot${rule.id}Icon`);
+    const slotLabel = document.getElementById(`slot${rule.id}Label`);
+    const equipmentFoot = document.getElementById('equipmentFoot');
+    if (!slotRoot || !slotImg || !slotIcon || !slotLabel || !equipmentFoot) return false;
+    equippedSlots[slotKey] = null;
+    slotImg.style.display = 'none';
+    slotIcon.textContent = rule.iconDefault;
+    slotLabel.textContent = 'Empty';
+    slotRoot.title = '';
+    if (footText) equipmentFoot.textContent = footText;
     return true;
   }
 
@@ -201,19 +412,40 @@ function setupSelectorUI() {
 
   function tryAutoEquipShieldUpgrade(item) {
     if ((item.item_type || '').toLowerCase() !== 'shields') return false;
-    const nextShielding = Number(item.shielding_value || 0);
-    if (!Number.isFinite(nextShielding) || nextShielding <= 0) return false;
-    const equippedShielding = Number((equippedSlots.shield && equippedSlots.shield.shielding_value) || 0);
-    if (nextShielding <= equippedShielding) return false;
+    const readDefenseAttr = (it) => {
+      const attrs = Array.isArray(it && it.attributes) ? it.attributes : [];
+      const row = attrs.find((a) => (
+        a
+        && String(a.name || '').toLowerCase() === 'defense'
+      ));
+      const n = Number(row && row.value);
+      return Number.isFinite(n) ? n : 0;
+    };
+    const hand = equippedSlots.hand;
+    const handAttrs = Array.isArray(hand && hand.attributes) ? hand.attributes : [];
+    const isTwoHandedEquipped = handAttrs.some((a) => (
+      a
+      && String(a.name || '').toLowerCase() === 'hands'
+      && String(a.value || '').toLowerCase() === 'two'
+    ));
+    // Requirement: only auto-equip shield when NOT using a two-handed weapon.
+    if (isTwoHandedEquipped) return false;
+    const nextDefense = readDefenseAttr(item);
+    if (!Number.isFinite(nextDefense) || nextDefense <= 0) return false;
+    const equippedDefense = readDefenseAttr(equippedSlots.shield);
+    // Requirement: only if incoming shield has higher defense than current shield.
+    if (nextDefense <= equippedDefense) return false;
     return setEquippedSlotVisual(
       'shield',
       item,
-      `Auto-equipped ${item.title} (shield ${nextShielding}) > current (${equippedShielding}).`
+      `Auto-equipped ${item.title} (def ${nextDefense}) > current (${equippedDefense}).`
     );
   }
 
   function tryAutoEquipWeaponUpgrade(item) {
+    if (String(item.item_type || '').toLowerCase() === 'ammunition') return false;
     if ((item.item_class || '').toLowerCase() !== 'weapons') return false;
+    if (equippedSlots.hand) return false;
     const nextAttack = Number(item.attack_value || 0);
     if (!Number.isFinite(nextAttack) || nextAttack <= 0) return false;
     const equippedAttack = Number((equippedSlots.hand && equippedSlots.hand.attack_value) || 0);
@@ -229,6 +461,8 @@ function setupSelectorUI() {
     const lootGrid = document.getElementById('lootGrid');
     const lootFoot = document.getElementById('lootFoot');
     if (!lootGrid || !lootFoot) return;
+    hideItemTooltip();
+    hideLootContextMenu();
     lootGrid.innerHTML = '';
     const count = Math.max(0, Math.floor(Number(slotCount) || 0));
     for (let i = 1; i <= count; i += 1) {
@@ -257,33 +491,297 @@ function setupSelectorUI() {
           cell.appendChild(countTag);
         }
         bindTooltip(cell, lootItem);
+        cell.style.cursor = 'pointer';
+        cell.addEventListener('contextmenu', (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          const idx = i - 1;
+          const current = bagLootItems[idx];
+          if (!current) return;
+          const sell = Number((current.raw && current.raw.value_sell) || 0);
+          const buy = Number((current.raw && current.raw.value_buy) || 0);
+          const unitPrice = sell > 0 ? sell : buy;
+          const amount = Math.max(1, Number(current.count || 1));
+          const totalGold = Math.max(0, Math.floor(unitPrice * amount));
+          bagLootItems.splice(idx, 1);
+          addCoinsToInventory(totalGold);
+          renderLootSlots(currentBagCapacity);
+          if (typeof onPanelLog === 'function') {
+            onPanelLog(`Sold ${current.title} for ${totalGold} gold.`);
+          }
+        });
+        cell.addEventListener('mousedown', (ev) => {
+          if (ev.button !== 0) return; // left click only
+          const idx = i - 1;
+          const current = bagLootItems[idx];
+          if (!current) return;
+
+          if ((current.item_type || '').toLowerCase() === 'food') {
+            const foodSeconds = getFoodTimeSeconds(current);
+            if (foodSeconds <= 0) return;
+            if (typeof onConsumeFood !== 'function') return;
+            const consumed = onConsumeFood(foodSeconds, current.title || 'Food');
+            if (!consumed) return;
+            if (current.count > 1) {
+              current.count -= 1;
+            } else {
+              bagLootItems.splice(idx, 1);
+            }
+            renderLootSlots(currentBagCapacity);
+            return;
+          }
+          if ((current.item_type || '').toLowerCase() === 'liquids') {
+            if (typeof onUseLiquid !== 'function') return;
+            const used = onUseLiquid(current);
+            if (!used) return;
+            if (current.count > 1) {
+              current.count -= 1;
+            } else {
+              bagLootItems.splice(idx, 1);
+            }
+            renderLootSlots(currentBagCapacity);
+            return;
+          }
+
+          const slotKey = resolveEquipSlotForItem(current);
+          if (!slotKey) return;
+          const equipped = equippedSlots[slotKey];
+          const equippedCopy = equipped ? { ...equipped } : null;
+          const equipOk = setEquippedSlotVisual(slotKey, { ...current }, `Equipped ${slotKey}: ${current.title}`);
+          if (!equipOk) return;
+          if (equippedCopy) {
+            bagLootItems[idx] = equippedCopy;
+          } else {
+            bagLootItems.splice(idx, 1);
+          }
+          renderLootSlots(currentBagCapacity);
+        });
       } else {
         cell.textContent = String(i);
       }
       cell.style.position = 'relative';
       lootGrid.appendChild(cell);
     }
-    lootFoot.textContent = `Capacity: ${bagLootItems.length}/${count} slots`;
+    lootFoot.textContent = '';
   }
 
-  function addLootItemToBag(itemData) {
+  function applyCapacityForLevel(level) {
+    const stats = progressionStatsForLevel(level, selectedClass);
+    currentPlayerCapacity = stats.capacity;
+    renderLootSlots(currentBagCapacity);
+  }
+  applyCapacityForLevel(1);
+  onPlayerLevelStatsUpdate = (level) => applyCapacityForLevel(level);
+
+  function normalizeCoinStacks() {
+    const getCount = (id) => {
+      const stack = bagLootItems.find((it) => Number(it.id) === id);
+      return stack ? Math.max(1, Number(stack.count || 1)) : 0;
+    };
+    let gold = getCount(GOLD_COIN_ID);
+    let platinum = getCount(PLATINUM_COIN_ID);
+    let crystal = getCount(CRYSTAL_COIN_ID);
+    platinum += Math.floor(gold / GOLD_PER_PLATINUM);
+    gold %= GOLD_PER_PLATINUM;
+    crystal += Math.floor(platinum / PLATINUM_PER_CRYSTAL);
+    platinum %= PLATINUM_PER_CRYSTAL;
+    bagLootItems = bagLootItems.filter((it) => ![GOLD_COIN_ID, PLATINUM_COIN_ID, CRYSTAL_COIN_ID].includes(Number(it.id)));
+    const putCoin = (id, count) => {
+      if (count <= 0) return;
+      const tpl = coinTemplateById.get(id);
+      if (!tpl) return;
+      bagLootItems.unshift({
+        ...tpl,
+        count,
+      });
+    };
+    putCoin(CRYSTAL_COIN_ID, crystal);
+    putCoin(PLATINUM_COIN_ID, platinum);
+    putCoin(GOLD_COIN_ID, gold);
+    window.dispatchEvent(new CustomEvent('coins-changed'));
+  }
+
+  function addCoinsToInventory(goldAmount) {
+    const amount = Math.max(0, Math.floor(Number(goldAmount) || 0));
+    if (amount <= 0) return;
+    const goldTpl = coinTemplateById.get(GOLD_COIN_ID);
+    if (!goldTpl) return;
+    const incoming = {
+      ...goldTpl,
+      count: amount,
+    };
+    const stackIdx = bagLootItems.findIndex((it) => Number(it.id) === GOLD_COIN_ID);
+    if (stackIdx >= 0) {
+      bagLootItems[stackIdx].count = Math.max(1, Number(bagLootItems[stackIdx].count || 1)) + amount;
+    } else if (bagLootItems.length < currentBagCapacity) {
+      bagLootItems.push(incoming);
+    } else {
+      // If there is no slot, try to force conversion by replacing lower-value coin stacks if present.
+      bagLootItems.push(incoming);
+    }
+    normalizeCoinStacks();
+  }
+
+  function getTotalGoldInInventory() {
+    let gold = 0;
+    let platinum = 0;
+    let crystal = 0;
+    for (const it of bagLootItems) {
+      const id = Number(it && it.id);
+      const count = Math.max(1, Number((it && it.count) || 1));
+      if (id === GOLD_COIN_ID) gold += count;
+      if (id === PLATINUM_COIN_ID) platinum += count;
+      if (id === CRYSTAL_COIN_ID) crystal += count;
+    }
+    return gold + (platinum * GOLD_PER_PLATINUM) + (crystal * GOLD_PER_PLATINUM * PLATINUM_PER_CRYSTAL);
+  }
+
+  function setCoinsFromTotalGold(totalGold) {
+    let value = Math.max(0, Math.floor(Number(totalGold) || 0));
+    const crystal = Math.floor(value / (GOLD_PER_PLATINUM * PLATINUM_PER_CRYSTAL));
+    value %= (GOLD_PER_PLATINUM * PLATINUM_PER_CRYSTAL);
+    const platinum = Math.floor(value / GOLD_PER_PLATINUM);
+    const gold = value % GOLD_PER_PLATINUM;
+    bagLootItems = bagLootItems.filter((it) => ![GOLD_COIN_ID, PLATINUM_COIN_ID, CRYSTAL_COIN_ID].includes(Number(it.id)));
+    const putCoin = (id, count) => {
+      if (count <= 0) return;
+      const tpl = coinTemplateById.get(id);
+      if (!tpl) return;
+      bagLootItems.unshift({
+        ...tpl,
+        count,
+      });
+    };
+    putCoin(CRYSTAL_COIN_ID, crystal);
+    putCoin(PLATINUM_COIN_ID, platinum);
+    putCoin(GOLD_COIN_ID, gold);
+    window.dispatchEvent(new CustomEvent('coins-changed'));
+  }
+
+  function spendGoldFromInventory(goldAmount) {
+    const cost = Math.max(0, Math.floor(Number(goldAmount) || 0));
+    if (cost <= 0) return true;
+    const total = getTotalGoldInInventory();
+    if (total < cost) return false;
+    setCoinsFromTotalGold(total - cost);
+    renderLootSlots(currentBagCapacity);
+    return true;
+  }
+
+  function addLootItemToBag(itemData, opts = {}) {
+    lastLootRejectReason = '';
+    const disableAutoEquip = Boolean(opts && opts.disableAutoEquip);
     const incoming = {
       id: itemData && itemData.id != null ? Number(itemData.id) : null,
       title: itemData && itemData.title ? itemData.title : 'Loot',
       image: itemData && itemData.image ? itemData.image : null,
       item_type: itemData && itemData.item_type ? itemData.item_type : null,
       item_class: itemData && itemData.item_class ? itemData.item_class : null,
+      type_secondary: itemData && itemData.type_secondary ? itemData.type_secondary : null,
       armor_value: Number((itemData && itemData.armor_value) || 0),
       shielding_value: Number((itemData && itemData.shielding_value) || 0),
       attack_value: Number((itemData && itemData.attack_value) || 0),
+      range_value: Number((itemData && itemData.range_value) || 1),
+      throwable: Boolean(itemData && itemData.throwable),
       attributes: Array.isArray(itemData && itemData.attributes) ? itemData.attributes : [],
       raw: (itemData && itemData.raw && typeof itemData.raw === 'object') ? itemData.raw : {},
       isStackable: Boolean(itemData && itemData.isStackable),
       count: Math.max(1, Number((itemData && itemData.count) || 1)),
     };
-    tryAutoEquipArmorUpgrade(incoming);
-    tryAutoEquipShieldUpgrade(incoming);
-    tryAutoEquipWeaponUpgrade(incoming);
+    const itemUnitWeight = (it) => {
+      if (!it) return 0;
+      const rawW = it.raw && it.raw.weight != null ? Number(it.raw.weight) : Number(it.weight);
+      if (Number.isFinite(rawW) && rawW > 0) return rawW;
+      return 0;
+    };
+    const totalCarriedWeight = () => {
+      let total = 0;
+      if (currentBagItem) total += itemUnitWeight(currentBagItem);
+      for (const eq of Object.values(equippedSlots)) {
+        if (!eq) continue;
+        total += itemUnitWeight(eq) * Math.max(1, Number(eq.count || 1));
+      }
+      for (const it of bagLootItems) {
+        total += itemUnitWeight(it) * Math.max(1, Number(it.count || 1));
+      }
+      return total;
+    };
+    const incomingWeight = itemUnitWeight(incoming) * Math.max(1, Number(incoming.count || 1));
+    if (totalCarriedWeight() + incomingWeight > currentPlayerCapacity) {
+      lastLootRejectReason = 'capacity';
+      return false;
+    }
+    const sameItemIdentity = (a, b) => {
+      if (!a || !b) return false;
+      if (a.id != null && b.id != null) return Number(a.id) === Number(b.id);
+      return String(a.title || '').trim().toLowerCase() === String(b.title || '').trim().toLowerCase();
+    };
+    if (!disableAutoEquip) {
+      const equippedHand = equippedSlots.hand;
+      const equippedAmmo = equippedSlots.ammunition;
+      const equippedThrowable = Boolean(
+        equippedHand
+        && (equippedHand.throwable || String(equippedHand.type_secondary || '').toLowerCase() === 'throwing weapons')
+      );
+      const incomingThrowable = Boolean(
+        incoming.throwable || String(incoming.type_secondary || '').toLowerCase() === 'throwing weapons'
+      );
+      const isSameThrowableAsEquipped = Boolean(
+        equippedHand
+        && equippedThrowable
+        && incomingThrowable
+        && sameItemIdentity(equippedHand, incoming)
+      );
+      // Fallback robusto: si ambos son distance+throwing y coinciden por id/titulo, apilar en HAND.
+      const robustSameThrowable = Boolean(
+        equippedHand
+        && sameItemIdentity(equippedHand, incoming)
+        && String(equippedHand.item_type || '').toLowerCase() === 'distance weapons'
+        && String(incoming.item_type || '').toLowerCase() === 'distance weapons'
+        && (
+          equippedThrowable
+          || incomingThrowable
+          || String(equippedHand.type_secondary || '').toLowerCase() === 'throwing weapons'
+          || String(incoming.type_secondary || '').toLowerCase() === 'throwing weapons'
+        )
+      );
+      if (isSameThrowableAsEquipped || robustSameThrowable) {
+        const next = {
+          ...equippedHand,
+          count: Math.max(1, Number(equippedHand.count || 1)) + Math.max(1, Number(incoming.count || 1)),
+        };
+        setEquippedSlotVisual('hand', next, `Throwable stack +${Math.max(1, Number(incoming.count || 1))}: ${incoming.title}.`);
+        return true;
+      }
+      const incomingIsAmmoWeapon = Boolean(
+        String(incoming.item_class || '').toLowerCase() === 'weapons'
+        && String(incoming.item_type || '').toLowerCase() === 'ammunition'
+      );
+      const isSameAmmoAsEquipped = Boolean(
+        incomingIsAmmoWeapon
+        && equippedAmmo
+        && sameItemIdentity(equippedAmmo, incoming)
+      );
+      if (incomingIsAmmoWeapon && !equippedAmmo) {
+        setEquippedSlotVisual('ammunition', { ...incoming, count: Math.max(1, Number(incoming.count || 1)) }, `Auto-equipped ammunition: ${incoming.title}.`);
+        return true;
+      }
+      if (isSameAmmoAsEquipped) {
+        const nextAmmo = {
+          ...equippedAmmo,
+          count: Math.max(1, Number(equippedAmmo.count || 1)) + Math.max(1, Number(incoming.count || 1)),
+        };
+        setEquippedSlotVisual('ammunition', nextAmmo, `Ammunition stack +${Math.max(1, Number(incoming.count || 1))}: ${incoming.title}.`);
+        return true;
+      }
+      const equippedNow = (
+        tryAutoEquipArmorUpgrade(incoming)
+        || tryAutoEquipShieldUpgrade(incoming)
+        || tryAutoEquipWeaponUpgrade(incoming)
+      );
+      // If it was equipped, it should not occupy inventory space.
+      if (equippedNow) return true;
+    }
     if (incoming.isStackable) {
       const stackIdx = bagLootItems.findIndex((it) => (
         Boolean(it && it.isStackable)
@@ -294,12 +792,17 @@ function setupSelectorUI() {
       ));
       if (stackIdx >= 0) {
         bagLootItems[stackIdx].count = Math.max(1, Number(bagLootItems[stackIdx].count || 1)) + incoming.count;
+        normalizeCoinStacks();
         renderLootSlots(currentBagCapacity);
         return true;
       }
     }
-    if (bagLootItems.length >= currentBagCapacity) return false;
+    if (bagLootItems.length >= currentBagCapacity) {
+      lastLootRejectReason = 'slots';
+      return false;
+    }
     bagLootItems.push(incoming);
+    normalizeCoinStacks();
     renderLootSlots(currentBagCapacity);
     return true;
   }
@@ -385,6 +888,10 @@ function setupSelectorUI() {
       }
       const matchesType = !rule.requireType || (item.item_type || '').toLowerCase() === rule.requireType.toLowerCase();
       const matchesClass = !rule.requireClass || (item.item_class || '').toLowerCase() === rule.requireClass.toLowerCase();
+      if (slotKey === 'hand' && String(item.item_type || '').toLowerCase() === 'ammunition') {
+        equipmentFoot.textContent = `Cannot equip ${item.title} in HAND slot (use AMMO slot).`;
+        return false;
+      }
       if (!matchesType || !matchesClass) {
         const req = rule.requireType || `item_class ${rule.requireClass}`;
         equipmentFoot.textContent = `Cannot equip ${item.title} in ${slotKey.toUpperCase()} slot (requires ${req}).`;
@@ -428,6 +935,9 @@ function setupSelectorUI() {
     async equipHand(articleId) {
       return equipItemInSlot('hand', articleId);
     },
+    unequipHand() {
+      return clearEquippedSlotVisual('hand', 'Your hand slot is empty.');
+    },
     addLoot(item = 'Loot') {
       if (typeof item === 'string') {
         return addLootItemToBag({ title: item, image: null });
@@ -438,9 +948,12 @@ function setupSelectorUI() {
         image: (item && item.image) ? item.image : null,
         item_type: (item && item.item_type) ? item.item_type : null,
         item_class: (item && item.item_class) ? item.item_class : null,
+        type_secondary: (item && item.type_secondary) ? item.type_secondary : null,
         armor_value: Number((item && item.armor_value) || 0),
         shielding_value: Number((item && item.shielding_value) || 0),
         attack_value: Number((item && item.attack_value) || 0),
+        range_value: Number((item && item.range_value) || 1),
+        throwable: Boolean(item && item.throwable),
         attributes: Array.isArray(item && item.attributes) ? item.attributes : [],
         raw: (item && item.raw && typeof item.raw === 'object') ? item.raw : {},
         isStackable: Boolean(item && item.isStackable),
@@ -448,25 +961,73 @@ function setupSelectorUI() {
       });
     },
     state() {
+      const itemUnitWeight = (it) => {
+        if (!it) return 0;
+        const rawW = it.raw && it.raw.weight != null ? Number(it.raw.weight) : Number(it.weight);
+        return Number.isFinite(rawW) && rawW > 0 ? rawW : 0;
+      };
+      let carriedWeight = 0;
+      if (currentBagItem) carriedWeight += itemUnitWeight(currentBagItem);
+      for (const eq of Object.values(equippedSlots)) {
+        if (!eq) continue;
+        carriedWeight += itemUnitWeight(eq) * Math.max(1, Number(eq.count || 1));
+      }
+      for (const it of bagLootItems) {
+        carriedWeight += itemUnitWeight(it) * Math.max(1, Number(it.count || 1));
+      }
       return {
         bag: currentBagItem,
         equipped: { ...equippedSlots },
-        capacity: currentBagCapacity,
+        bagSlots: currentBagCapacity,
+        capacity: currentPlayerCapacity,
+        carriedWeight,
         used: bagLootItems.length,
         items: [...bagLootItems],
       };
     },
+    getGold() {
+      return getTotalGoldInInventory();
+    },
+    spendGold(amount) {
+      return spendGoldFromInventory(amount);
+    },
+    addGold(amount) {
+      addCoinsToInventory(amount);
+      renderLootSlots(currentBagCapacity);
+    },
   };
+
+  // Left click equipped slot to unequip into loot bag when there is space/capacity.
+  for (const slotKey of Object.keys(slotRules)) {
+    const rule = slotRules[slotKey];
+    const slotRoot = document.getElementById(`slot${rule.id}`);
+    if (!slotRoot) continue;
+    slotRoot.addEventListener('mousedown', (ev) => {
+      if (ev.button !== 0) return;
+      const equipped = equippedSlots[slotKey];
+      if (!equipped) return;
+      const stored = addLootItemToBag({ ...equipped }, { disableAutoEquip: true });
+      if (!stored) return;
+      clearEquippedSlotVisual(slotKey);
+      if (typeof onPanelLog === 'function') onPanelLog(`Unequipped ${equipped.title} to loot bag.`);
+      renderLootSlots(currentBagCapacity);
+    });
+  }
 
   startBtn.addEventListener('click', async () => {
     startBtn.disabled = true;
     const playerName = (playerNameInput.value || '').trim() || 'Adventurer';
-    playerConfig = { name: playerName, sex: selectedSex };
+    currentPlayerCapacity = progressionStatsForLevel(1, selectedClass).capacity;
+    playerConfig = { name: playerName, sex: selectedSex, classKey: selectedClass };
     await Promise.all([
       loadProgressionDatabase(),
       equipBagByArticleId(START_BAG_ARTICLE_ID),
       (async () => { creatureDropTable = await getCreatureDropTable(); })(),
+      ensureCoinTemplatesLoaded(),
+      (async () => { spellsCatalog = await getSpellsCatalogWithPrices(); })(),
     ]);
+    // Testing seed: start each run with 200 gp.
+    addCoinsToInventory(200);
     document.getElementById('startOverlay').style.display = 'none';
     startGame(playerConfig);
   });
@@ -645,18 +1206,32 @@ function startGame(configPlayer) {
         levelProgressText.setOrigin(0.5, 0.5);
         levelProgressText.setStroke('#0b1220', 2);
         levelProgressText.setScrollFactor(0);
-        const combatLog = this.add.text(14, uiBaseY + 32, '', {
-          color: '#ffffff',
-          fontSize: '12px',
-          wordWrap: { width: this.scale.width - 28 },
-        });
-        combatLog.setScrollFactor(0);
-        const combatLogLines = [];
-        const addCombatLog = (msg) => {
-          combatLogLines.push(msg);
-          if (combatLogLines.length > 3) combatLogLines.shift();
-          combatLog.setText(combatLogLines.join('\n'));
+        const LOG_COLORS = {
+          DEFAULT: '#ffffff',
+          HIT: '#e2e8f0',
+          CRIT: '#facc15',
+          SPELL: '#7dd3fc',
         };
+        const combatLogRows = [0, 1, 2].map((idx) => {
+          const row = this.add.text(14, uiBaseY + 32 + idx * 14, '', {
+            color: LOG_COLORS.DEFAULT,
+            fontSize: '12px',
+            wordWrap: { width: this.scale.width - 28 },
+          });
+          row.setScrollFactor(0);
+          return row;
+        });
+        const combatLogLines = [];
+        const addCombatLog = (msg, color = LOG_COLORS.DEFAULT) => {
+          combatLogLines.push({ msg, color });
+          if (combatLogLines.length > 3) combatLogLines.shift();
+          for (let i = 0; i < combatLogRows.length; i += 1) {
+            const line = combatLogLines[i];
+            combatLogRows[i].setText(line ? String(line.msg) : '');
+            combatLogRows[i].setColor(line ? line.color : LOG_COLORS.DEFAULT);
+          }
+        };
+        onPanelLog = addCombatLog;
         addCombatLog('Combat ready.');
 
         const stairRect = this.add.rectangle(
@@ -682,19 +1257,47 @@ function startGame(configPlayer) {
         const cursors = this.input.keyboard.createCursorKeys();
         const keys = this.input.keyboard.addKeys('W,A,S,D');
         const ctrlKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.CTRL);
+        const spellHotkeys = this.input.keyboard.addKeys({
+          one: Phaser.Input.Keyboard.KeyCodes.ONE,
+          two: Phaser.Input.Keyboard.KeyCodes.TWO,
+          three: Phaser.Input.Keyboard.KeyCodes.THREE,
+          four: Phaser.Input.Keyboard.KeyCodes.FOUR,
+          five: Phaser.Input.Keyboard.KeyCodes.FIVE,
+          six: Phaser.Input.Keyboard.KeyCodes.SIX,
+          seven: Phaser.Input.Keyboard.KeyCodes.SEVEN,
+          eight: Phaser.Input.Keyboard.KeyCodes.EIGHT,
+          nine: Phaser.Input.Keyboard.KeyCodes.NINE,
+          num1: Phaser.Input.Keyboard.KeyCodes.NUMPAD_ONE,
+          num2: Phaser.Input.Keyboard.KeyCodes.NUMPAD_TWO,
+          num3: Phaser.Input.Keyboard.KeyCodes.NUMPAD_THREE,
+          num4: Phaser.Input.Keyboard.KeyCodes.NUMPAD_FOUR,
+          num5: Phaser.Input.Keyboard.KeyCodes.NUMPAD_FIVE,
+          num6: Phaser.Input.Keyboard.KeyCodes.NUMPAD_SIX,
+          num7: Phaser.Input.Keyboard.KeyCodes.NUMPAD_SEVEN,
+          num8: Phaser.Input.Keyboard.KeyCodes.NUMPAD_EIGHT,
+          num9: Phaser.Input.Keyboard.KeyCodes.NUMPAD_NINE,
+        });
+        const playerClassKey = String(configPlayer.classKey || 'knight').toLowerCase();
+        const lvl1Stats = progressionStatsForLevel(1, playerClassKey);
         let gridX = START_TILE.gx;
         let gridY = START_TILE.gy;
+        let playerFacingFrame = 0; // 0 S, 1 E, 2 N, 3 W
         let moving = false;
         let playerMoveDurationMs = 190;
         let playerActionDelayMs = 320;
         let nextPlayerActionAt = 0;
-        let playerHp = 100;
-        const playerMaxHp = 100;
-        let playerMana = 60;
-        const playerMaxMana = 60;
-        const playerDamage = 12;
+        let playerHp = lvl1Stats.maxHp;
+        let playerMaxHp = lvl1Stats.maxHp;
+        let playerMana = lvl1Stats.maxMana;
+        let playerMaxMana = lvl1Stats.maxMana;
+        let hungerSecondsLeft = 0;
+        let isHungry = true;
+        const playerBaseDamage = 12;
         let playerLevel = 1;
         let playerXp = 0;
+        const learnedSpellIds = new Set();
+        const learnedSpellSlots = Array.from({ length: 9 }, () => null);
+        const spellCooldownUntil = new Map();
         let gameOver = false;
         let playerDead = false;
         let currentLevel = 1;
@@ -702,6 +1305,9 @@ function startGame(configPlayer) {
         const recentGroupIndices = [];
         const runStartBias = Phaser.Math.Between(0, 8);
         const runSpreadBias = Phaser.Math.Between(0, 4);
+        const runVariantBias = Phaser.Math.Between(0, 1000000);
+        let earlyShufflePool = [];
+        let earlyShuffleCursor = 0;
         let currentMap = [];
         let currentFloors = [];
         let currentStairsTile = { gx: MAP_W - 2, gy: MAP_H - 2 };
@@ -741,6 +1347,10 @@ function startGame(configPlayer) {
           while (playerXp >= xpToNextLevel(playerLevel)) {
             playerXp -= xpToNextLevel(playerLevel);
             playerLevel += 1;
+            const nextStats = progressionStatsForLevel(playerLevel, playerClassKey);
+            playerMaxHp = nextStats.maxHp;
+            playerMaxMana = nextStats.maxMana;
+            if (typeof onPlayerLevelStatsUpdate === 'function') onPlayerLevelStatsUpdate(playerLevel);
             leveled = true;
           }
           if (leveled) {
@@ -752,8 +1362,19 @@ function startGame(configPlayer) {
             updatePlayerBar();
           }
         };
+        const effectiveXpFromCreature = (creature) => {
+          const xp = Number((creature && creature.experience) || 0);
+          if (Number.isFinite(xp) && xp > 0) return Math.floor(xp);
+          // Fallback: monsters with 0 XP grant scaling XP based on player level.
+          return Math.max(1, Math.floor((5 + (playerLevel * 3)) * 2));
+        };
+        const fallbackGoldFromLevel = () => {
+          // Baseline gold reward when a monster drops no items.
+          return Math.max(1, Math.floor(2 + (playerLevel * 2)));
+        };
 
         const creatures = [];
+        const groundLootByTile = new Map();
 
         const isWallTile = (gx, gy) => {
           if (!isWalkableTile(gx, gy)) return true;
@@ -763,6 +1384,120 @@ function startGame(configPlayer) {
         const isAdjacent = (ax, ay, bx, by) => Math.abs(ax - bx) + Math.abs(ay - by) === 1;
         const aliveCreatures = () => creatures.filter((c) => c.alive);
         const creatureAt = (gx, gy) => aliveCreatures().find((c) => c.gx === gx && c.gy === gy) || null;
+        const groundTileKey = (gx, gy) => `${gx},${gy}`;
+        const groundLootTextureKey = (imagePath) => `ground_loot_${String(imagePath || '').replace(/[^a-zA-Z0-9_]/g, '_')}`;
+        const refreshGroundLootMarker = (entry) => {
+          if (!entry) return;
+          const count = entry.items.length;
+          const firstItem = count > 0 ? entry.items[0] : null;
+          const markerX = centerX(entry.gx);
+          const markerY = centerY(entry.gy) + tileSize * 0.18;
+          const ensureTextMarker = (txt = '📦') => {
+            if (!entry.marker || entry.marker.type !== 'Text') {
+              if (entry.marker) entry.marker.destroy();
+              entry.marker = this.add.text(markerX, markerY, txt, {
+                color: '#facc15',
+                fontSize: '14px',
+                fontStyle: 'bold',
+              });
+              entry.marker.setOrigin(0.5, 0.5);
+            } else {
+              entry.marker.setText(txt);
+            }
+          };
+          const ensureImageMarker = (textureKey) => {
+            const isImageMarker = entry.marker && entry.marker.type !== 'Text' && typeof entry.marker.setTexture === 'function';
+            if (!isImageMarker) {
+              if (entry.marker) entry.marker.destroy();
+              entry.marker = this.add.image(markerX, markerY, textureKey);
+              entry.marker.setOrigin(0.5, 0.5);
+              entry.marker.setDisplaySize(tileSize * 0.42, tileSize * 0.42);
+            } else {
+              entry.marker.setTexture(textureKey);
+              entry.marker.setDisplaySize(tileSize * 0.42, tileSize * 0.42);
+            }
+          };
+          if (count <= 0) {
+            if (entry.marker) entry.marker.destroy();
+            if (entry.markerCount) entry.markerCount.destroy();
+            groundLootByTile.delete(groundTileKey(entry.gx, entry.gy));
+            return;
+          }
+          if (firstItem && firstItem.image) {
+            const textureKey = groundLootTextureKey(firstItem.image);
+            if (this.textures.exists(textureKey)) {
+              ensureImageMarker(textureKey);
+            } else {
+              ensureTextMarker('📦');
+              if (entry.loadingTextureKey !== textureKey) {
+                entry.loadingTextureKey = textureKey;
+                this.load.image(textureKey, `./data/images/${firstItem.image}`);
+                this.load.once(`filecomplete-image-${textureKey}`, () => {
+                  entry.loadingTextureKey = null;
+                  refreshGroundLootMarker(entry);
+                });
+                if (!this.load.isLoading()) this.load.start();
+              }
+            }
+          } else {
+            ensureTextMarker('📦');
+          }
+          if (!entry.markerCount) {
+            entry.markerCount = this.add.text(markerX + tileSize * 0.2, markerY + tileSize * 0.08, '', {
+              color: '#f8fafc',
+              fontSize: '10px',
+              fontStyle: 'bold',
+            });
+            entry.markerCount.setOrigin(1, 1);
+          }
+          entry.markerCount.setPosition(markerX + tileSize * 0.2, markerY + tileSize * 0.08);
+          entry.markerCount.setText(count > 1 ? String(count) : '');
+        };
+        const dropItemOnGround = (gx, gy, item) => {
+          const key = groundTileKey(gx, gy);
+          if (!groundLootByTile.has(key)) {
+            groundLootByTile.set(key, { gx, gy, items: [], marker: null, markerCount: null, loadingTextureKey: null });
+          }
+          const entry = groundLootByTile.get(key);
+          const incoming = { ...item };
+          if (incoming.isStackable) {
+            const stackIdx = entry.items.findIndex((it) => (
+              Boolean(it && it.isStackable)
+              && (
+                (incoming.id != null && it.id != null && Number(incoming.id) === Number(it.id))
+                || String(incoming.title || '').toLowerCase() === String(it.title || '').toLowerCase()
+              )
+            ));
+            if (stackIdx >= 0) {
+              entry.items[stackIdx].count = Math.max(1, Number(entry.items[stackIdx].count || 1)) + Math.max(1, Number(incoming.count || 1));
+              refreshGroundLootMarker(entry);
+              return;
+            }
+          }
+          entry.items.push(incoming);
+          refreshGroundLootMarker(entry);
+        };
+        const pickupGroundLootAtPlayer = () => {
+          const key = groundTileKey(gridX, gridY);
+          const entry = groundLootByTile.get(key);
+          if (!entry || entry.items.length === 0) return;
+          const kept = [];
+          let picked = 0;
+          for (const item of entry.items) {
+            const stored = window.debugInventory && typeof window.debugInventory.addLoot === 'function'
+              ? window.debugInventory.addLoot(item)
+              : false;
+            if (stored) {
+              picked += 1;
+              addCombatLog(`Picked from ground: ${item.title}.`);
+            } else {
+              kept.push(item);
+            }
+          }
+          entry.items = kept;
+          refreshGroundLootMarker(entry);
+          if (picked > 0) updateHud();
+        };
         const isOccupiedByActor = (gx, gy) => {
           if (gx === gridX && gy === gridY) return true;
           return Boolean(creatureAt(gx, gy));
@@ -804,7 +1539,7 @@ function startGame(configPlayer) {
           placeHealthBar(playerManaBar, player.x, player.y - tileSize * 0.48);
           playerNameTag.setPosition(player.x, player.y - tileSize * 0.8);
           const ratio = playerHp / playerMaxHp;
-          const manaRatio = playerMana / playerMaxMana;
+          const manaRatio = playerMaxMana > 0 ? (playerMana / playerMaxMana) : 0;
           setHealthBarRatio(playerBar, ratio);
           setHealthBarRatio(playerManaBar, manaRatio);
           if (playerHp <= 0) {
@@ -816,6 +1551,178 @@ function startGame(configPlayer) {
             playerBar.fill.setFillStyle(barColorByHpRatio(ratio), 1);
             playerManaBar.fill.setFillStyle(0x3b82f6, 1);
           }
+        };
+        const setHungryState = (hungry, secondsLeft = 0) => {
+          isHungry = hungry;
+          if (typeof window.setHungryUi === 'function') window.setHungryUi(hungry, secondsLeft);
+        };
+        const showEatEffect = (label) => {
+          if (playerDead || gameOver) return;
+          player.setTint(0x86efac);
+          this.tweens.add({
+            targets: player,
+            scaleX: basePlayerScaleX * 1.08,
+            scaleY: basePlayerScaleY * 1.08,
+            yoyo: true,
+            duration: 120,
+            ease: 'Sine.easeOut',
+            onComplete: () => {
+              if (!playerDead) player.setScale(basePlayerScaleX, basePlayerScaleY);
+              player.clearTint();
+            },
+          });
+          for (let i = 0; i < 4; i += 1) {
+            const spark = this.add.circle(
+              player.x + Phaser.Math.Between(-8, 8),
+              player.y - tileSize * 0.55 + Phaser.Math.Between(-6, 6),
+              Phaser.Math.Between(2, 4),
+              0x86efac,
+              0.9
+            );
+            this.tweens.add({
+              targets: spark,
+              y: spark.y - Phaser.Math.Between(14, 22),
+              alpha: 0,
+              duration: 380,
+              ease: 'Sine.easeOut',
+              onComplete: () => spark.destroy(),
+            });
+          }
+          const txt = this.add.text(player.x, player.y - tileSize * 0.95, `EAT ${label || ''}`.trim(), {
+            color: '#86efac',
+            fontSize: '13px',
+            fontStyle: 'bold',
+          });
+          txt.setOrigin(0.5, 0.5);
+          this.tweens.add({
+            targets: txt,
+            y: txt.y - 16,
+            alpha: 0,
+            duration: 520,
+            ease: 'Sine.easeOut',
+            onComplete: () => txt.destroy(),
+          });
+        };
+        const showDrinkEffect = (label, color = '#7dd3fc') => {
+          if (playerDead || gameOver) return;
+          player.setTintFill(0x60a5fa);
+          this.tweens.add({
+            targets: player,
+            alpha: 0.85,
+            yoyo: true,
+            duration: 100,
+            repeat: 1,
+            ease: 'Sine.easeOut',
+            onComplete: () => {
+              player.setAlpha(1);
+              player.clearTint();
+            },
+          });
+          const txt = this.add.text(player.x, player.y - tileSize * 0.95, label, {
+            color,
+            fontSize: '13px',
+            fontStyle: 'bold',
+          });
+          txt.setOrigin(0.5, 0.5);
+          this.tweens.add({
+            targets: txt,
+            y: txt.y - 16,
+            alpha: 0,
+            duration: 560,
+            ease: 'Sine.easeOut',
+            onComplete: () => txt.destroy(),
+          });
+        };
+        const showFullFoodEffect = () => {
+          if (playerDead || gameOver) return;
+          player.setTint(0xfbbf24);
+          this.tweens.add({
+            targets: player,
+            scaleX: basePlayerScaleX * 1.1,
+            scaleY: basePlayerScaleY * 1.1,
+            yoyo: true,
+            repeat: 1,
+            duration: 90,
+            ease: 'Sine.easeOut',
+            onComplete: () => {
+              if (!playerDead) player.setScale(basePlayerScaleX, basePlayerScaleY);
+              player.clearTint();
+            },
+          });
+          const full = this.add.text(player.x, player.y - tileSize * 0.95, 'FULL', {
+            color: '#fbbf24',
+            fontSize: '15px',
+            fontStyle: 'bold',
+          });
+          full.setOrigin(0.5, 0.5);
+          this.tweens.add({
+            targets: full,
+            y: full.y - 18,
+            alpha: 0,
+            duration: 620,
+            ease: 'Sine.easeOut',
+            onComplete: () => full.destroy(),
+          });
+        };
+        setHungryState(true, 0);
+        if (typeof onPlayerLevelStatsUpdate === 'function') onPlayerLevelStatsUpdate(playerLevel);
+        onConsumeFood = (foodSeconds, itemTitle) => {
+          if (!Number.isFinite(foodSeconds) || foodSeconds <= 0 || playerDead || gameOver) return false;
+          const nextSatiety = hungerSecondsLeft + Math.floor(foodSeconds);
+          if (hungerSecondsLeft >= MAX_FOOD_SECONDS || nextSatiety > MAX_FOOD_SECONDS) {
+            addCombatLog('You are too full to eat more.');
+            showFullFoodEffect();
+            return false;
+          }
+          hungerSecondsLeft = nextSatiety;
+          setHungryState(false, hungerSecondsLeft);
+          addCombatLog(`You eat ${itemTitle}.`);
+          showEatEffect(itemTitle);
+          return true;
+        };
+        onUseLiquid = (item) => {
+          if (!item || playerDead || gameOver) return false;
+          const title = String(item.title || '').toLowerCase();
+          let hpGain = 0;
+          let mpGain = 0;
+          // Canonical potion/fluid mapping (simplified).
+          if (title.includes('ultimate health potion')) hpGain = 250;
+          else if (title.includes('great health potion')) hpGain = 120;
+          else if (title.includes('strong health potion')) hpGain = 70;
+          else if (title.includes('health potion') || title.includes('lifefluid')) hpGain = 45;
+          else if (title.includes('ultimate mana potion')) mpGain = 180;
+          else if (title.includes('great mana potion')) mpGain = 90;
+          else if (title.includes('strong mana potion')) mpGain = 55;
+          else if (title.includes('mana potion') || title.includes('manafluid')) mpGain = 35;
+          else if (title.includes('great spirit potion')) {
+            hpGain = 85;
+            mpGain = 45;
+          }
+          if (hpGain <= 0 && mpGain <= 0) {
+            addCombatLog(`${item.title}: no usable liquid effect.`);
+            return false;
+          }
+          const prevHp = playerHp;
+          const prevMp = playerMana;
+          playerHp = Math.min(playerMaxHp, playerHp + hpGain);
+          playerMana = Math.min(playerMaxMana, playerMana + mpGain);
+          const healed = playerHp - prevHp;
+          const restored = playerMana - prevMp;
+          if (healed > 0 && restored > 0) {
+            addCombatLog(`You drink ${item.title}: +${healed} HP, +${restored} MP.`);
+            showDrinkEffect(`+${healed}HP +${restored}MP`, '#7dd3fc');
+          } else if (healed > 0) {
+            addCombatLog(`You drink ${item.title}: +${healed} HP.`);
+            showDrinkEffect(`+${healed}HP`, '#86efac');
+          } else if (restored > 0) {
+            addCombatLog(`You drink ${item.title}: +${restored} MP.`);
+            showDrinkEffect(`+${restored}MP`, '#93c5fd');
+          } else {
+            addCombatLog(`You drink ${item.title}, but no stats were restored.`);
+          }
+          updatePlayerBar();
+          updateHud();
+          return true;
         };
         const updateCreatureBar = (creature) => {
           if (!creature.hpBar) return;
@@ -837,22 +1744,87 @@ function startGame(configPlayer) {
         };
         const pickGroupForLevel = (level) => {
           if (!typeProgressionGroups.length) return null;
-          // Objetivo de dificultad creciente, pero con rango amplio y ruido.
           const n = typeProgressionGroups.length;
-          // Curva inicial mucho mas suave para niveles tempranos.
-          const earlyFactor = level <= 8 ? 0.45 : 1.7;
-          const baseTarget = Math.floor((level - 1) * earlyFactor);
-          const startBias = level <= 8 ? Math.min(1, runStartBias) : runStartBias;
-          const target = Math.min(n - 1, baseTarget + startBias);
-          const radius = Math.max(level <= 8 ? 2 : 5 + runSpreadBias, Math.floor(n * (level <= 8 ? 0.08 : 0.2)));
-          const minIdx = Math.max(0, target - radius);
-          const maxCap = level <= 8
-            ? Math.min(n - 1, 6 + level)
-            : n - 1;
-          const maxIdx = Math.min(maxCap, target + radius);
-
-          // Candidatos del rango con exclusion de repetidos recientes.
           const recentSet = new Set(recentGroupIndices);
+
+          // Early-game rework:
+          // - Build a per-run shuffled pool from easier groups.
+          // - Iterate without immediate repeats, giving real variation between runs.
+          const earlyLevels = 10;
+          if (level <= earlyLevels) {
+            // Inicio mucho mas facil:
+            // una fraccion muy pequena de grupos de menor experiencia,
+            // abriendo lentamente con el nivel.
+            const phase = (level - 1) / Math.max(1, earlyLevels - 1); // 0..1
+            const easyPct = 0.06 + phase * 0.18; // lvl1~6% -> lvl10~24%
+            const easyMax = Math.max(2, Math.min(n - 1, Math.floor(n * easyPct)));
+            // Excluir criaturas con muchos HP al principio.
+            // Usamos percentil de average_hitpoints para filtrar grupos tanque.
+            const hpValues = typeProgressionGroups
+              .map((g) => Number(g.average_hitpoints || 0))
+              .filter((v) => Number.isFinite(v) && v > 0)
+              .sort((a, b) => a - b);
+            const hpPct = 0.10 + phase * 0.30; // lvl1~10% -> lvl10~40%
+            const hpCap = hpValues.length > 0
+              ? hpValues[Math.min(hpValues.length - 1, Math.floor((hpValues.length - 1) * hpPct))]
+              : Number.POSITIVE_INFINITY;
+            if (earlyShufflePool.length === 0) {
+              earlyShufflePool = Array.from({ length: easyMax + 1 }, (_, i) => i)
+                .filter((idx) => Number(typeProgressionGroups[idx].average_hitpoints || 0) <= hpCap);
+              if (earlyShufflePool.length === 0) {
+                earlyShufflePool = Array.from({ length: easyMax + 1 }, (_, i) => i);
+              }
+              // Rework de variedad entre runs: mezclar por bloques + sesgo por run.
+              const blockA = earlyShufflePool.filter((_, i) => i % 2 === 0);
+              const blockB = earlyShufflePool.filter((_, i) => i % 2 === 1);
+              Phaser.Utils.Array.Shuffle(blockA);
+              Phaser.Utils.Array.Shuffle(blockB);
+              earlyShufflePool = (runVariantBias % 2 === 0) ? [...blockA, ...blockB] : [...blockB, ...blockA];
+              const offset = (runStartBias + (runVariantBias % Math.max(1, earlyShufflePool.length))) % earlyShufflePool.length;
+              earlyShufflePool = earlyShufflePool.slice(offset).concat(earlyShufflePool.slice(0, offset));
+              earlyShuffleCursor = 0;
+            } else {
+              // Si el rango facil crece por nivel, anadimos nuevos grupos y rebarajamos suave.
+              const missing = [];
+              const inPool = new Set(earlyShufflePool);
+              for (let i = 0; i <= easyMax; i += 1) {
+                if (!inPool.has(i)) missing.push(i);
+              }
+              const filteredMissing = missing.filter(
+                (idx) => Number(typeProgressionGroups[idx].average_hitpoints || 0) <= hpCap
+              );
+              if (filteredMissing.length > 0) {
+                Phaser.Utils.Array.Shuffle(filteredMissing);
+                for (const m of filteredMissing) {
+                  const pos = (runVariantBias + m + earlyShufflePool.length) % (earlyShufflePool.length + 1);
+                  earlyShufflePool.splice(pos, 0, m);
+                }
+              }
+            }
+            let chosen = null;
+            const maxTries = earlyShufflePool.length;
+            for (let t = 0; t < maxTries; t += 1) {
+              const idx = earlyShufflePool[(earlyShuffleCursor + t) % earlyShufflePool.length];
+              if (!recentSet.has(idx)) {
+                chosen = idx;
+                earlyShuffleCursor = (earlyShuffleCursor + t + 1) % earlyShufflePool.length;
+                break;
+              }
+            }
+            if (chosen == null) {
+              chosen = earlyShufflePool[earlyShuffleCursor % earlyShufflePool.length];
+              earlyShuffleCursor = (earlyShuffleCursor + 1) % earlyShufflePool.length;
+            }
+            recentGroupIndices.push(chosen);
+            if (recentGroupIndices.length > 5) recentGroupIndices.shift();
+            return typeProgressionGroups[chosen];
+          }
+
+          // Mid/late game: weighted randomness around progression target with broader spread.
+          const target = Math.min(n - 1, Math.floor((level - earlyLevels) * 1.45) + runStartBias);
+          const radius = Math.max(7 + runSpreadBias, Math.floor(n * 0.28));
+          const minIdx = Math.max(0, target - radius);
+          const maxIdx = Math.min(n - 1, target + radius);
           let candidates = [];
           for (let i = minIdx; i <= maxIdx; i += 1) {
             if (!recentSet.has(i)) candidates.push(i);
@@ -860,11 +1832,10 @@ function startGame(configPlayer) {
           if (candidates.length === 0) {
             for (let i = minIdx; i <= maxIdx; i += 1) candidates.push(i);
           }
-
-          // Eleccion aleatoria ponderada por cercania al target.
           const weighted = candidates.map((idx) => {
             const dist = Math.abs(idx - target);
-            return { idx, w: 1 / (1 + dist) };
+            const randomBoost = 0.65 + Math.random() * 0.7;
+            return { idx, w: (1 / (1 + dist)) * randomBoost };
           });
           const totalW = weighted.reduce((acc, x) => acc + x.w, 0);
           let r = Math.random() * totalW;
@@ -876,9 +1847,8 @@ function startGame(configPlayer) {
               break;
             }
           }
-
           recentGroupIndices.push(chosen);
-          if (recentGroupIndices.length > 4) recentGroupIndices.shift();
+          if (recentGroupIndices.length > 5) recentGroupIndices.shift();
           return typeProgressionGroups[chosen];
         };
         const hasStairsAtPlayer = () => gridX === currentStairsTile.gx && gridY === currentStairsTile.gy;
@@ -975,10 +1945,15 @@ function startGame(configPlayer) {
           }
           const first = templates[0] || levelPool[0];
           addCombatLog(
-            `Floor ${level}: ${first.type_primary} (base exp ${first.experience}).`
+            `Floor ${level}: ${first.type_primary} (base dmg ${first.maxDamage}).`
           );
         };
         const descendLevel = (toNext = true) => {
+          for (const entry of groundLootByTile.values()) {
+            if (entry.marker) entry.marker.destroy();
+            if (entry.markerCount) entry.markerCount.destroy();
+          }
+          groundLootByTile.clear();
           if (toNext) currentLevel += 1;
           currentLevelGroup = pickGroupForLevel(currentLevel);
           const generated = generateLevelMap();
@@ -1021,25 +1996,650 @@ function startGame(configPlayer) {
           player.y = centerY(gridY);
           updatePlayerBar();
         };
+        const spellTooltipEl = document.getElementById('itemTooltip');
+        const equipmentPanelEl = document.querySelector('.equipment-panel');
+        const equipmentAccordionEl = document.getElementById('equipmentAccordion');
+        const lootPanelEl = document.querySelector('.loot-panel');
+        const spellsPanelEl = document.querySelector('.spells-panel');
+        const spellsAccordionEl = document.getElementById('spellsAccordion');
+        const learnedSpellsPanelEl = document.getElementById('learnedSpellsPanel');
+        const hideSpellTooltip = () => {
+          if (!spellTooltipEl) return;
+          spellTooltipEl.style.display = 'none';
+          spellTooltipEl.textContent = '';
+        };
+        const formatSpellTooltip = (spell) => {
+          if (!spell) return '';
+          const raw = spell.raw && typeof spell.raw === 'object' ? spell.raw : {};
+          const lines = [];
+          lines.push(`${spell.title || raw.title || 'Unknown Spell'}`);
+          lines.push(`────────────────────`);
+          if (spell.words) lines.push(`Words: ${spell.words}`);
+          lines.push(`Type: ${spell.spell_type || 'Unknown'}  |  Group: ${spell.group_spell || 'Unknown'}`);
+          lines.push(``);
+          lines.push(`Requirements`);
+          lines.push(`- Level: ${Math.max(0, Number(spell.level || 0))}`);
+          lines.push(``);
+          lines.push(`Cast Cost`);
+          lines.push(`- Mana: ${Math.max(0, Number(spell.mana || 0))}`);
+          lines.push(``);
+          lines.push(`Shop`);
+          lines.push(`- Price: ${Math.max(0, Number(spell.price || 0))} gp`);
+          if (raw.effect) {
+            lines.push(``);
+            lines.push(`Effect`);
+            lines.push(`${raw.effect}`);
+          }
+          return lines.join('\n');
+        };
+        const bindSpellTooltip = (el, spell) => {
+          if (!el || !spellTooltipEl) return;
+          const place = (ev) => {
+            const pad = 12;
+            const x = Math.min(window.innerWidth - 440, ev.clientX + pad);
+            const y = Math.min(window.innerHeight - 240, ev.clientY + pad);
+            spellTooltipEl.style.left = `${Math.max(6, x)}px`;
+            spellTooltipEl.style.top = `${Math.max(6, y)}px`;
+          };
+          el.addEventListener('mouseenter', (ev) => {
+            spellTooltipEl.textContent = formatSpellTooltip(spell);
+            spellTooltipEl.style.display = 'block';
+            spellTooltipEl.style.overflow = 'hidden';
+            spellTooltipEl.style.maxHeight = 'none';
+            place(ev);
+          });
+          el.addEventListener('mousemove', place);
+          el.addEventListener('mouseleave', hideSpellTooltip);
+        };
+        window.addEventListener('blur', hideSpellTooltip);
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden) hideSpellTooltip();
+        });
+        document.addEventListener('keydown', hideSpellTooltip);
+        document.addEventListener('click', hideSpellTooltip);
+        const syncLootPanelPosition = () => {
+          if (!equipmentPanelEl || !lootPanelEl) return;
+          const rect = equipmentPanelEl.getBoundingClientRect();
+          const nextTop = Math.round(rect.bottom + 6);
+          lootPanelEl.style.top = `${nextTop}px`;
+        };
+        if (equipmentAccordionEl) {
+          equipmentAccordionEl.addEventListener('toggle', syncLootPanelPosition);
+        }
+        window.addEventListener('resize', syncLootPanelPosition);
+        const syncLearnedPanelPosition = () => {
+          if (!spellsPanelEl || !learnedSpellsPanelEl) return;
+          const rect = spellsPanelEl.getBoundingClientRect();
+          const nextTop = Math.round(rect.bottom + 6);
+          learnedSpellsPanelEl.style.top = `${nextTop}px`;
+        };
+        if (spellsAccordionEl) {
+          spellsAccordionEl.addEventListener('toggle', syncLearnedPanelPosition);
+        }
+        window.addEventListener('resize', syncLearnedPanelPosition);
+        const renderLearnedSpells = () => {
+          const learnedGrid = document.getElementById('learnedSpellsGrid');
+          const learnedFoot = document.getElementById('learnedSpellsFoot');
+          if (!learnedGrid || !learnedFoot) return;
+          learnedGrid.innerHTML = '';
+          const learned = (spellsCatalog || [])
+            .filter((s) => learnedSpellIds.has(Number(s.article_id)))
+            .sort((a, b) => {
+              if (a.level !== b.level) return a.level - b.level;
+              return String(a.title || '').localeCompare(String(b.title || ''));
+            });
+          if (learned.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'learned-spell-row';
+            empty.textContent = 'No spells learned yet.';
+            learnedGrid.appendChild(empty);
+          } else {
+            for (const spell of learned) {
+              const row = document.createElement('div');
+              row.className = 'learned-spell-row';
+              const slotIdx = learnedSpellSlots.findIndex((id) => Number(id) === Number(spell.article_id));
+              const slotPrefix = slotIdx >= 0 ? `[${slotIdx + 1}] ` : '';
+              row.textContent = `${slotPrefix}${spell.title} (Lv ${Math.max(0, Number(spell.level || 0))})`;
+              bindSpellTooltip(row, spell);
+              learnedGrid.appendChild(row);
+            }
+          }
+          learnedFoot.textContent = `Total: ${learned.length}`;
+          syncLootPanelPosition();
+          syncLearnedPanelPosition();
+        };
+        const renderSpellShop = () => {
+          const spellsGrid = document.getElementById('spellsGrid');
+          const spellsFoot = document.getElementById('spellsFoot');
+          if (!spellsGrid || !spellsFoot) return;
+          const currentGold = window.debugInventory && typeof window.debugInventory.getGold === 'function'
+            ? Math.max(0, Number(window.debugInventory.getGold() || 0))
+            : 0;
+          spellsGrid.innerHTML = '';
+          const available = (spellsCatalog || []).filter((s) => {
+            if (String(s.status || '').toLowerCase() !== 'active') return false;
+            if (Math.max(0, Number(s.level || 0)) === 0) return false;
+            if (String(s.spell_type || '').toLowerCase() === 'rune') return false;
+            if (Math.max(0, Number(s.level || 0)) > playerLevel) return false;
+            if (learnedSpellIds.has(Number(s.article_id))) return false;
+            const classAllowed = Number((s.raw && s.raw[playerClassKey]) || 0) === 1;
+            if (!classAllowed) return false;
+            const title = String(s.title || '').trim().toLowerCase();
+            if (title === 'find person') return false;
+            const words = String(s.words || '').trim().toLowerCase();
+            const effect = String((s.raw && s.raw.effect) || '').trim().toLowerCase();
+            const isLightSpell = (
+              title.includes('light')
+              || effect.includes('illumination')
+              || words === 'utevo lux'
+              || words === 'utevo gran lux'
+              || words === 'utevo vis lux'
+            );
+            if (isLightSpell) return false;
+            return true;
+          });
+          const frag = document.createDocumentFragment();
+          for (const spell of available) {
+            const row = document.createElement('div');
+            row.className = 'spell-row';
+            const lvl = Math.max(0, Number(spell.level || 0));
+            const price = Math.max(0, Number(spell.price || 0));
+            const isLearned = learnedSpellIds.has(Number(spell.article_id));
+            const canLevel = playerLevel >= lvl;
+            const canGold = currentGold >= price;
+            const head = document.createElement('div');
+            head.className = 'head';
+            const left = document.createElement('span');
+            left.textContent = spell.title || `Spell ${spell.article_id}`;
+            const right = document.createElement('span');
+            right.textContent = `${price} gp`;
+            head.appendChild(left);
+            head.appendChild(right);
+            bindSpellTooltip(row, spell);
+            const meta = document.createElement('div');
+            meta.className = 'meta';
+            meta.textContent = `Lv ${lvl} | Mana ${Math.max(0, Number(spell.mana || 0))}`;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            if (isLearned) {
+              btn.textContent = 'Learned';
+              btn.disabled = true;
+            } else if (!canLevel) {
+              btn.textContent = `Need Lv ${lvl}`;
+              btn.disabled = true;
+            } else if (!canGold) {
+              btn.textContent = `Need ${price} gp`;
+              btn.disabled = true;
+            } else {
+              btn.textContent = 'Buy spell';
+              btn.disabled = false;
+              const buySpell = (ev) => {
+                ev.preventDefault();
+                ev.stopPropagation();
+                if (btn.disabled) return;
+                const spent = window.debugInventory && typeof window.debugInventory.spendGold === 'function'
+                  ? window.debugInventory.spendGold(price)
+                  : false;
+                if (!spent) {
+                  addCombatLog(`Not enough gold to buy ${spell.title}.`);
+                  return;
+                }
+                btn.disabled = true;
+                learnedSpellIds.add(Number(spell.article_id));
+                const freeIdx = learnedSpellSlots.findIndex((id) => id == null);
+                if (freeIdx >= 0) {
+                  learnedSpellSlots[freeIdx] = Number(spell.article_id);
+                } else {
+                  addCombatLog(`No free hotkey slot (1-9) for ${spell.title}.`);
+                }
+                addCombatLog(`Bought spell: ${spell.title} for ${price} gp.`);
+                renderLootSlots(currentBagCapacity);
+                updateHud();
+                renderSpellShop();
+                renderLearnedSpells();
+              };
+              btn.addEventListener('mousedown', (ev) => {
+                if (ev.button !== 0) return;
+                buySpell(ev);
+              });
+              btn.addEventListener('touchstart', buySpell, { passive: false });
+            }
+            row.appendChild(head);
+            row.appendChild(meta);
+            row.appendChild(btn);
+            frag.appendChild(row);
+          }
+          spellsGrid.appendChild(frag);
+          spellsFoot.textContent = `Gold: ${currentGold} | Learned: ${learnedSpellIds.size}`;
+          renderLearnedSpells();
+        };
+        window.addEventListener('coins-changed', renderSpellShop);
         const updateHud = () => {
           const group = currentLevelGroup;
           const typeName = group ? group.type_primary : 'Creature';
-          nameLabel.setText(`${configPlayer.name} | Player Lv ${playerLevel}`);
+          const invState = window.debugInventory && typeof window.debugInventory.state === 'function'
+            ? window.debugInventory.state()
+            : null;
+          const capTotal = invState ? Number(invState.capacity || 0) : progressionStatsForLevel(playerLevel, playerClassKey).capacity;
+          const capCurrent = invState ? Number(invState.carriedWeight || 0) : 0;
+          const capCurrentText = Number.isFinite(capCurrent) ? capCurrent.toFixed(1) : '0.0';
+          const capTotalText = Number.isFinite(capTotal) ? capTotal.toFixed(0) : '0';
+          nameLabel.setText(`${configPlayer.name} (${playerClassKey}) | Player Lv ${playerLevel}`);
           levelHud.setText(`Floor ${currentLevel} | ${typeName} ${aliveCreatures().length}/${creaturesTargetCount}`);
-          combatHud.setText(`HP ${playerHp}/${playerMaxHp} MP ${playerMana}/${playerMaxMana}`);
+          combatHud.setText(`HP ${playerHp}/${playerMaxHp} MP ${playerMana}/${playerMaxMana} CAP ${capCurrentText}/${capTotalText}`);
           const xpNeeded = xpToNextLevel(playerLevel);
           const progress = xpNeeded > 0 ? playerXp / xpNeeded : 0;
           const totalWidth = this.scale.width - 18;
           levelProgressFill.width = Math.max(2, totalWidth * progress);
           levelProgressText.setText(`XP ${playerXp} / ${xpNeeded}`);
+          renderSpellShop();
         };
         const pickCreatureDamage = () => {
           const max = Math.max(1, Number(this._activeAttackerMaxDamage || 1));
           return Phaser.Math.Between(1, max);
         };
+        const getEquippedHandWeapon = () => {
+          const state = window.debugInventory && typeof window.debugInventory.state === 'function'
+            ? window.debugInventory.state()
+            : null;
+          return state && state.equipped ? state.equipped.hand : null;
+        };
+        const currentPlayerDamage = () => {
+          const hand = getEquippedHandWeapon();
+          const weaponAttack = Math.max(0, Number((hand && hand.attack_value) || 0));
+          return Math.max(1, playerBaseDamage + weaponAttack);
+        };
+        const isThrowableWeapon = (item) => {
+          if (!item) return false;
+          if (item.throwable) return true;
+          return String(item.type_secondary || '').toLowerCase() === 'throwing weapons';
+        };
+        const isDistanceWeapon = (item) => (
+          item
+          && String(item.item_class || '').toLowerCase() === 'weapons'
+          && String(item.item_type || '').toLowerCase() === 'distance weapons'
+        );
+        const rangeFromAttributes = (item) => {
+          const attrs = Array.isArray(item && item.attributes) ? item.attributes : [];
+          const row = attrs.find((a) => a && String(a.name || '').toLowerCase() === 'range');
+          if (!row) return null;
+          const n = Number(row.value);
+          return Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
+        };
+        const effectiveWeaponRange = (item) => {
+          if (!item) return 1;
+          const fromAttrs = rangeFromAttributes(item);
+          if (fromAttrs != null) return fromAttrs;
+          const raw = Number(item.range_value || 1);
+          if (Number.isFinite(raw) && raw > 0) return Math.floor(raw);
+          if (isDistanceWeapon(item)) {
+            return isThrowableWeapon(item) ? 4 : 5;
+          }
+          return 1;
+        };
+        const findRangedTargetInDirection = (dx, dy, rangeTiles) => {
+          const maxRange = Math.max(1, Math.floor(Number(rangeTiles) || 1));
+          for (let step = 1; step <= maxRange; step += 1) {
+            const tx = gridX + dx * step;
+            const ty = gridY + dy * step;
+            if (!isWalkableTile(tx, ty)) break;
+            if (isWallTile(tx, ty)) break;
+            const c = creatureAt(tx, ty);
+            if (c) return c;
+          }
+          return null;
+        };
+        const hasRangedLineOfSight = (fromX, fromY, toX, toY) => {
+          const dx = toX - fromX;
+          const dy = toY - fromY;
+          const steps = Math.max(Math.abs(dx), Math.abs(dy));
+          if (steps <= 1) return true;
+          for (let i = 1; i < steps; i += 1) {
+            const t = i / steps;
+            const sx = Math.round(fromX + dx * t);
+            const sy = Math.round(fromY + dy * t);
+            if (sx === toX && sy === toY) break;
+            if (isWallTile(sx, sy)) return false;
+          }
+          return true;
+        };
+        const findNearestRangedTarget = (rangeTiles) => {
+          const maxRange = Math.max(1, Math.floor(Number(rangeTiles) || 1));
+          const candidates = aliveCreatures()
+            .filter((c) => {
+              const dist = Math.max(Math.abs(c.gx - gridX), Math.abs(c.gy - gridY));
+              if (dist <= 0 || dist > maxRange) return false;
+              return hasRangedLineOfSight(gridX, gridY, c.gx, c.gy);
+            })
+            .sort((a, b) => {
+              const da = Math.max(Math.abs(a.gx - gridX), Math.abs(a.gy - gridY));
+              const db = Math.max(Math.abs(b.gx - gridX), Math.abs(b.gy - gridY));
+              return da - db;
+            });
+          return candidates[0] || null;
+        };
+        const inferSpellRange = (spell) => {
+          const effect = String((spell && spell.raw && spell.raw.effect) || '').toLowerCase();
+          if (effect.includes('adjacent')) return 1;
+          if (effect.includes('around the caster') || effect.includes('area')) return 2;
+          return 4;
+        };
+        const inferHealingAmount = (spell) => {
+          const title = String((spell && spell.title) || '').toLowerCase();
+          if (title.includes('ultimate')) return 75 + playerLevel * 4;
+          if (title.includes('intense')) return 45 + playerLevel * 3;
+          if (title.includes('light')) return 20 + playerLevel * 2;
+          return 30 + playerLevel * 2;
+        };
+        const inferAttackDamage = (spell) => {
+          const manaCost = Math.max(0, Number((spell && spell.mana) || 0));
+          return Math.max(8, Math.floor(6 + playerLevel * 1.5 + manaCost * 0.35));
+        };
+        const showSpellTileEffect = (tiles, color = 0xf59e0b) => {
+          for (const t of tiles || []) {
+            if (!isWalkableTile(t.gx, t.gy)) continue;
+            const fx = this.add.rectangle(centerX(t.gx), centerY(t.gy), tileSize * 0.95, tileSize * 0.95, color, 0.42);
+            fx.setStrokeStyle(2, color, 0.85);
+            const slash = this.add.text(centerX(t.gx), centerY(t.gy), '✦', {
+              color: '#fde68a',
+              fontSize: '16px',
+              fontStyle: 'bold',
+            });
+            slash.setOrigin(0.5, 0.5);
+            this.tweens.add({
+              targets: fx,
+              alpha: 0,
+              scaleX: 1.18,
+              scaleY: 1.18,
+              duration: 300,
+              ease: 'Sine.easeOut',
+              onComplete: () => fx.destroy(),
+            });
+            this.tweens.add({
+              targets: slash,
+              alpha: 0,
+              y: slash.y - 10,
+              duration: 320,
+              ease: 'Sine.easeOut',
+              onComplete: () => slash.destroy(),
+            });
+          }
+        };
+        const frontSweepTiles = () => {
+          // 3 impacted tiles in the row directly in front of player.
+          if (playerFacingFrame === 0) {
+            return [{ gx: gridX - 1, gy: gridY + 1 }, { gx: gridX, gy: gridY + 1 }, { gx: gridX + 1, gy: gridY + 1 }];
+          }
+          if (playerFacingFrame === 2) {
+            return [{ gx: gridX - 1, gy: gridY - 1 }, { gx: gridX, gy: gridY - 1 }, { gx: gridX + 1, gy: gridY - 1 }];
+          }
+          if (playerFacingFrame === 1) {
+            return [{ gx: gridX + 1, gy: gridY - 1 }, { gx: gridX + 1, gy: gridY }, { gx: gridX + 1, gy: gridY + 1 }];
+          }
+          return [{ gx: gridX - 1, gy: gridY - 1 }, { gx: gridX - 1, gy: gridY }, { gx: gridX - 1, gy: gridY + 1 }];
+        };
+        const castLearnedSpell = (slotNumber, now) => {
+          const articleId = learnedSpellSlots[slotNumber - 1];
+          if (!articleId) return false;
+          const spell = (spellsCatalog || []).find((s) => Number(s.article_id) === Number(articleId));
+          if (!spell) return false;
+          const manaCost = Math.max(0, Number(spell.mana || 0));
+          if (playerMana < manaCost) {
+            addCombatLog(`Not enough mana for ${spell.title}.`);
+            return true;
+          }
+          const cdSec = Math.max(0, Number((spell.raw && spell.raw.cooldown) || 0));
+          const cdUntil = Number(spellCooldownUntil.get(articleId) || 0);
+          if (now < cdUntil) {
+            addCombatLog(`${spell.title} is on cooldown.`);
+            return true;
+          }
+          playerMana = Math.max(0, playerMana - manaCost);
+          spellCooldownUntil.set(articleId, now + (cdSec * 1000));
+          const group = String(spell.group_spell || '').toLowerCase();
+          const title = String(spell.title || '').toLowerCase();
+          if (group === 'healing' || title.includes('healing') || title.includes('exura')) {
+            const heal = inferHealingAmount(spell);
+            const prev = playerHp;
+            playerHp = Math.min(playerMaxHp, playerHp + heal);
+            const gained = Math.max(0, playerHp - prev);
+            addCombatLog(`Cast [${slotNumber}] ${spell.title}: +${gained} HP.`, LOG_COLORS.SPELL);
+            showDrinkEffect(`+${gained} HP`, 0x60a5fa);
+          } else if (group === 'attack') {
+            if (title.includes('lesser front sweep')) {
+              const tiles = frontSweepTiles().filter((t) => isWalkableTile(t.gx, t.gy));
+              showSpellTileEffect(tiles, 0xfbbf24);
+              const impacted = [];
+              for (const t of tiles) {
+                const target = creatureAt(t.gx, t.gy);
+                if (!target) continue;
+                const crit = didAttackCrit();
+                const base = inferAttackDamage(spell);
+                const dmg = crit ? applyCriticalDamage(base) : base;
+                target.hp = Math.max(0, target.hp - dmg);
+                showCreatureHitEffect(target, dmg);
+                if (crit) showCritText(target.sprite.x, target.sprite.y);
+                impacted.push({ target, dmg });
+                if (target.hp <= 0) {
+                  target.alive = false;
+                  target.sprite.setVisible(false);
+                  updateCreatureBar(target);
+                  grantPlayerXp(effectiveXpFromCreature(target));
+                }
+              }
+              if (impacted.length === 0) {
+                addCombatLog(`Cast [${slotNumber}] ${spell.title}, but it hits nothing.`, LOG_COLORS.SPELL);
+              } else {
+                const detail = impacted
+                  .map((x) => `${x.target.title}(${x.dmg})`)
+                  .join(', ');
+                addCombatLog(`Cast [${slotNumber}] ${spell.title}: ${detail}.`, LOG_COLORS.SPELL);
+              }
+              updatePlayerBar();
+              updateHud();
+              return true;
+            }
+            const target = findNearestRangedTarget(inferSpellRange(spell));
+            if (!target) {
+              addCombatLog(`Cast [${slotNumber}] ${spell.title}, but no target in range.`, LOG_COLORS.SPELL);
+            } else if (didAttackMiss()) {
+              if (title.includes('ethereal spear')) {
+                showRangedProjectileEffect({ title: 'Ethereal Spear', type_secondary: 'Throwing Weapons' }, target);
+              }
+              showMissSmoke(target.sprite.x, target.sprite.y);
+              addCombatLog(`Your ${spell.title} misses ${target.title}.`, LOG_COLORS.SPELL);
+            } else {
+              if (title.includes('ethereal spear')) {
+                showRangedProjectileEffect({ title: 'Ethereal Spear', type_secondary: 'Throwing Weapons' }, target);
+              }
+              const crit = didAttackCrit();
+              const base = inferAttackDamage(spell);
+              const dmg = crit ? applyCriticalDamage(base) : base;
+              target.hp = Math.max(0, target.hp - dmg);
+              showCreatureHitEffect(target, dmg);
+              if (crit) showCritText(target.sprite.x, target.sprite.y);
+              addCombatLog(`${spell.title} hits ${target.title} for ${dmg}.`, LOG_COLORS.SPELL);
+              if (target.hp <= 0) {
+                target.alive = false;
+                target.sprite.setVisible(false);
+                updateCreatureBar(target);
+                grantPlayerXp(effectiveXpFromCreature(target));
+                addCombatLog(`${target.title} dies from ${spell.title}.`);
+              }
+            }
+          } else {
+            const effect = String((spell.raw && spell.raw.effect) || '').toLowerCase();
+            if (effect.includes('speed')) {
+              playerMoveDurationMs = Math.max(90, playerMoveDurationMs - 20);
+              playerActionDelayMs = Math.max(150, playerActionDelayMs - 30);
+              this.time.delayedCall(10000, () => updatePlayerTimingsByLevel());
+              addCombatLog(`Cast [${slotNumber}] ${spell.title}: speed boosted.`, LOG_COLORS.SPELL);
+            } else {
+              addCombatLog(`Cast [${slotNumber}] ${spell.title}.`, LOG_COLORS.SPELL);
+            }
+          }
+          updatePlayerBar();
+          updateHud();
+          return true;
+        };
+        const performPlayerAttack = (targetCreature, handWeapon, usedRangedShot, now) => {
+          if (!targetCreature) return false;
+          if (handWeapon && isDistanceWeapon(handWeapon)) {
+            showRangedProjectileEffect(handWeapon, targetCreature);
+          }
+          if (didAttackMiss()) {
+            showMissSmoke(targetCreature.sprite.x, targetCreature.sprite.y);
+            addCombatLog(`You miss your hit against ${targetCreature.title}.`);
+          } else {
+            const isCrit = didAttackCrit();
+            const baseDamage = currentPlayerDamage();
+            const damage = isCrit ? applyCriticalDamage(baseDamage) : baseDamage;
+            targetCreature.hp = Math.max(0, targetCreature.hp - damage);
+            showCreatureHitEffect(targetCreature, damage);
+            if (isCrit) {
+              showCritText(targetCreature.sprite.x, targetCreature.sprite.y);
+            }
+            addCombatLog(
+              isCrit
+                ? `CRITICAL hit on ${targetCreature.title} for ${damage}.`
+                : `You hit ${targetCreature.title} for ${damage}.`,
+              isCrit ? LOG_COLORS.CRIT : LOG_COLORS.HIT
+            );
+            if (targetCreature.hp <= 0) {
+              targetCreature.alive = false;
+              targetCreature.sprite.setVisible(false);
+              updateCreatureBar(targetCreature);
+              grantPlayerXp(effectiveXpFromCreature(targetCreature));
+              addCombatLog(
+                isCrit
+                  ? `CRITICAL hit on ${targetCreature.title} for ${damage}, and it dies.`
+                  : `You hit ${targetCreature.title} and it dies.`,
+                isCrit ? LOG_COLORS.CRIT : LOG_COLORS.HIT
+              );
+              const rolledDrops = rollCreatureDrops(targetCreature.id);
+              if (rolledDrops.length > 0) {
+                addCombatLog(`${targetCreature.title} dropped: ${rolledDrops.map((d) => d.itemTitle).join(', ')}.`);
+              } else {
+                const fallbackGold = fallbackGoldFromLevel();
+                if (window.debugInventory && typeof window.debugInventory.addGold === 'function') {
+                  window.debugInventory.addGold(fallbackGold);
+                }
+                addCombatLog(`${targetCreature.title} dropped no items. You receive ${fallbackGold} gold.`);
+              }
+              if (rolledDrops.length > 0 && window.debugInventory && typeof window.debugInventory.addLoot === 'function') {
+                for (const d of rolledDrops) {
+                  const stored = window.debugInventory.addLoot({
+                    id: d.itemId,
+                    title: d.itemTitle,
+                    image: d.itemImage || null,
+                    item_type: d.itemType || null,
+                    item_class: d.itemClass || null,
+                    type_secondary: d.itemSecondary || null,
+                    armor_value: Number(d.armorValue || 0),
+                    shielding_value: Number(d.shieldingValue || 0),
+                    attack_value: Number(d.attackValue || 0),
+                    range_value: Number(d.rangeValue || 1),
+                    throwable: Boolean(d.throwable),
+                    attributes: Array.isArray(d.attributes) ? d.attributes : [],
+                    raw: (d.raw && typeof d.raw === 'object') ? d.raw : {},
+                    isStackable: Boolean(d.isStackable),
+                    count: 1,
+                  });
+                  if (stored) {
+                    addCombatLog(`Stored in bag: ${d.itemTitle}.`);
+                  } else {
+                      const droppedItem = {
+                        id: d.itemId,
+                        title: d.itemTitle,
+                        image: d.itemImage || null,
+                        item_type: d.itemType || null,
+                        item_class: d.itemClass || null,
+                        type_secondary: d.itemSecondary || null,
+                        armor_value: Number(d.armorValue || 0),
+                        shielding_value: Number(d.shieldingValue || 0),
+                        attack_value: Number(d.attackValue || 0),
+                        range_value: Number(d.rangeValue || 1),
+                        throwable: Boolean(d.throwable),
+                        attributes: Array.isArray(d.attributes) ? d.attributes : [],
+                        raw: (d.raw && typeof d.raw === 'object') ? d.raw : {},
+                        isStackable: Boolean(d.isStackable),
+                        count: 1,
+                      };
+                      dropItemOnGround(targetCreature.gx, targetCreature.gy, droppedItem);
+                      if (lastLootRejectReason === 'capacity') {
+                        addCombatLog(`Not enough capacity, dropped on ground: ${d.itemTitle}.`);
+                      } else {
+                        addCombatLog(`Bag slots full, dropped on ground: ${d.itemTitle}.`);
+                      }
+                  }
+                }
+              }
+            } else {
+              addCombatLog(
+                isCrit
+                  ? `CRITICAL hit on ${targetCreature.title} for ${damage} (${targetCreature.hp} HP).`
+                  : `You hit ${targetCreature.title} for ${damage} (${targetCreature.hp} HP).`,
+                isCrit ? LOG_COLORS.CRIT : LOG_COLORS.HIT
+              );
+            }
+          }
+          if (handWeapon && isDistanceWeapon(handWeapon) && isThrowableWeapon(handWeapon) && Math.random() < 0.1) {
+            const currentCount = Math.max(1, Number(handWeapon.count || 1));
+            if (currentCount > 1) {
+              setEquippedSlotVisual('hand', { ...handWeapon, count: currentCount - 1 }, `${handWeapon.title} consumed on throw (${currentCount - 1} left).`);
+            } else if (window.debugInventory && typeof window.debugInventory.unequipHand === 'function') {
+              window.debugInventory.unequipHand();
+            }
+            addCombatLog(`${handWeapon.title} was consumed after the throw.`);
+          }
+          updateCreatureBar(targetCreature);
+          updateHud();
+          if (aliveCreatures().length === 0) {
+            stairRect.setVisible(true);
+            stairText.setVisible(true);
+            addCombatLog(`You defeated all creatures on floor ${currentLevel}. Go down the stairs.`);
+            nextPlayerActionAt = now + playerActionDelayMs;
+            return true;
+          }
+          nextPlayerActionAt = now + playerActionDelayMs;
+          return true;
+        };
         const didAttackMiss = () => Math.random() < 0.1;
         const didAttackCrit = () => Math.random() < 0.1;
         const applyCriticalDamage = (baseDamage) => Math.max(1, Math.round(baseDamage * 2.5)); // +150%
+        const projectileVisualForWeapon = (weapon) => {
+          const title = String((weapon && weapon.title) || '').toLowerCase();
+          const secondary = String((weapon && weapon.type_secondary) || '').toLowerCase();
+          if (title.includes('ethereal spear')) return { glyph: '➤', color: '#7dd3fc', size: 18 };
+          if (title.includes('star')) return { glyph: '✶', color: '#fde047', size: 16 };
+          if (title.includes('knife')) return { glyph: '†', color: '#e5e7eb', size: 16 };
+          if (title.includes('spear')) return { glyph: '➤', color: '#f8fafc', size: 16 };
+          if (title.includes('snowball')) return { glyph: '●', color: '#f8fafc', size: 14 };
+          if (title.includes('stone')) return { glyph: '●', color: '#cbd5e1', size: 14 };
+          if (secondary.includes('crossbow')) return { glyph: '✦', color: '#f59e0b', size: 14 };
+          if (secondary.includes('bow')) return { glyph: '➵', color: '#f59e0b', size: 14 };
+          if (secondary.includes('throwing')) return { glyph: '◆', color: '#e2e8f0', size: 14 };
+          return { glyph: '•', color: '#f8fafc', size: 14 };
+        };
+        const showRangedProjectileEffect = (weapon, target) => {
+          if (!weapon || !target || !target.sprite) return;
+          const visual = projectileVisualForWeapon(weapon);
+          const shot = this.add.text(player.x, player.y - 4, visual.glyph, {
+            color: visual.color,
+            fontSize: `${visual.size}px`,
+            fontStyle: 'bold',
+          });
+          shot.setOrigin(0.5, 0.5);
+          shot.setDepth(50);
+          this.tweens.add({
+            targets: shot,
+            x: target.sprite.x,
+            y: target.sprite.y - 4,
+            duration: 150,
+            ease: 'Linear',
+            onComplete: () => shot.destroy(),
+          });
+        };
         const showCritText = (x, y) => {
           const crit = this.add.text(x, y - tileSize * 0.9, 'CRIT!', {
             color: '#ff0000',
@@ -1343,12 +2943,49 @@ function startGame(configPlayer) {
           loop: true,
           callback: creatureTurn,
         });
+        this.time.addEvent({
+          delay: 1000,
+          loop: true,
+          callback: () => {
+            if (playerDead || gameOver) return;
+            if (hungerSecondsLeft <= 0) {
+              if (!isHungry) setHungryState(true, 0);
+              return;
+            }
+            hungerSecondsLeft = Math.max(0, hungerSecondsLeft - 1);
+            if (playerHp < playerMaxHp) playerHp += 1;
+            if (playerMana < playerMaxMana) playerMana += 1;
+            updatePlayerBar();
+            updateHud();
+            setHungryState(false, hungerSecondsLeft);
+            if (hungerSecondsLeft <= 0) setHungryState(true, 0);
+          },
+        });
 
         this.events.on('update', () => {
           updateAllHealthBars();
           if (moving || gameOver) return;
           const now = this.time.now;
           if (now < nextPlayerActionAt) return;
+          const spellSlotToCast = (
+            Phaser.Input.Keyboard.JustDown(spellHotkeys.one) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num1) ? 1
+              : Phaser.Input.Keyboard.JustDown(spellHotkeys.two) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num2) ? 2
+                : Phaser.Input.Keyboard.JustDown(spellHotkeys.three) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num3) ? 3
+                  : Phaser.Input.Keyboard.JustDown(spellHotkeys.four) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num4) ? 4
+                    : Phaser.Input.Keyboard.JustDown(spellHotkeys.five) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num5) ? 5
+                      : Phaser.Input.Keyboard.JustDown(spellHotkeys.six) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num6) ? 6
+                        : Phaser.Input.Keyboard.JustDown(spellHotkeys.seven) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num7) ? 7
+                          : Phaser.Input.Keyboard.JustDown(spellHotkeys.eight) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num8) ? 8
+                            : Phaser.Input.Keyboard.JustDown(spellHotkeys.nine) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num9) ? 9
+                              : 0
+          );
+          if (spellSlotToCast > 0) {
+            const casted = castLearnedSpell(spellSlotToCast, now);
+            if (casted) {
+              nextPlayerActionAt = now + Math.max(140, Math.floor(playerActionDelayMs * 0.55));
+              return;
+            }
+          }
 
           let dx = 0;
           let dy = 0;
@@ -1371,9 +3008,20 @@ function startGame(configPlayer) {
 
           if (frame !== null) {
             player.setTexture(frameTextureName(configPlayer.sex, frame));
+            playerFacingFrame = frame;
           }
 
-          if (dx === 0 && dy === 0) return;
+          const handWeapon = getEquippedHandWeapon();
+          const handIsDistance = isDistanceWeapon(handWeapon);
+          if (dx === 0 && dy === 0) {
+            if (handIsDistance && handWeapon) {
+              const autoTarget = findNearestRangedTarget(effectiveWeaponRange(handWeapon));
+              if (autoTarget) {
+                performPlayerAttack(autoTarget, handWeapon, true, now);
+              }
+            }
+            return;
+          }
           if (ctrlPressed && (cursors.left.isDown || cursors.right.isDown || cursors.up.isDown || cursors.down.isDown)) {
             return;
           }
@@ -1384,76 +3032,17 @@ function startGame(configPlayer) {
             return;
           }
 
-          const targetCreature = creatureAt(targetGX, targetGY);
+          let targetCreature = creatureAt(targetGX, targetGY);
+          if (!targetCreature && handIsDistance) {
+            targetCreature = findRangedTargetInDirection(dx, dy, effectiveWeaponRange(handWeapon));
+          }
+          const usedRangedShot = Boolean(
+            targetCreature
+            && handIsDistance
+            && (targetCreature.gx !== targetGX || targetCreature.gy !== targetGY)
+          );
           if (targetCreature) {
-            if (didAttackMiss()) {
-              showMissSmoke(targetCreature.sprite.x, targetCreature.sprite.y);
-              addCombatLog(`You miss your hit against ${targetCreature.title}.`);
-            } else {
-              const isCrit = didAttackCrit();
-              const damage = isCrit ? applyCriticalDamage(playerDamage) : playerDamage;
-              targetCreature.hp = Math.max(0, targetCreature.hp - damage);
-              showCreatureHitEffect(targetCreature, damage);
-              if (isCrit) {
-                showCritText(targetCreature.sprite.x, targetCreature.sprite.y);
-              }
-              if (targetCreature.hp <= 0) {
-                targetCreature.alive = false;
-                targetCreature.sprite.setVisible(false);
-                updateCreatureBar(targetCreature);
-                grantPlayerXp(targetCreature.experience);
-                addCombatLog(
-                  isCrit
-                    ? `CRITICAL hit on ${targetCreature.title} for ${damage}, and it dies.`
-                    : `You hit ${targetCreature.title} and it dies.`
-                );
-                const rolledDrops = rollCreatureDrops(targetCreature.id);
-                if (rolledDrops.length > 0) {
-                  addCombatLog(`${targetCreature.title} dropped: ${rolledDrops.map((d) => d.itemTitle).join(', ')}.`);
-                } else {
-                  addCombatLog(`${targetCreature.title} dropped nothing.`);
-                }
-                if (rolledDrops.length > 0 && window.debugInventory && typeof window.debugInventory.addLoot === 'function') {
-                  for (const d of rolledDrops) {
-                    const stored = window.debugInventory.addLoot({
-                      id: d.itemId,
-                      title: d.itemTitle,
-                      image: d.itemImage || null,
-                      item_type: d.itemType || null,
-                      item_class: d.itemClass || null,
-                      armor_value: Number(d.armorValue || 0),
-                      shielding_value: Number(d.shieldingValue || 0),
-                      attack_value: Number(d.attackValue || 0),
-                      attributes: Array.isArray(d.attributes) ? d.attributes : [],
-                      raw: (d.raw && typeof d.raw === 'object') ? d.raw : {},
-                      isStackable: Boolean(d.isStackable),
-                      count: 1,
-                    });
-                    if (stored) {
-                      addCombatLog(`Stored in bag: ${d.itemTitle}.`);
-                    } else {
-                      addCombatLog(`Bag full, lost: ${d.itemTitle}.`);
-                    }
-                  }
-                }
-              } else {
-                addCombatLog(
-                  isCrit
-                    ? `CRITICAL hit on ${targetCreature.title} for ${damage} (${targetCreature.hp} HP).`
-                    : `You hit ${targetCreature.title} for ${damage} (${targetCreature.hp} HP).`
-                );
-              }
-            }
-            updateCreatureBar(targetCreature);
-            updateHud();
-            if (aliveCreatures().length === 0) {
-              stairRect.setVisible(true);
-              stairText.setVisible(true);
-              addCombatLog(`You defeated all creatures on floor ${currentLevel}. Go down the stairs.`);
-              nextPlayerActionAt = now + playerActionDelayMs;
-              return;
-            }
-            nextPlayerActionAt = now + playerActionDelayMs;
+            performPlayerAttack(targetCreature, handWeapon, usedRangedShot, now);
             return;
           }
 
@@ -1471,6 +3060,7 @@ function startGame(configPlayer) {
               player.x = centerX(gridX);
               player.y = centerY(gridY);
               player.setOrigin(0.5, 0.5);
+              pickupGroundLootAtPlayer();
               moving = false;
               if (hasStairsAtPlayer() && aliveCreatures().length === 0) {
                 descendLevel();
