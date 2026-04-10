@@ -36,6 +36,7 @@ let itemsShopCatalog = [];
 let creatureAbilitiesById = new Map();
 let inventorySetEquippedSlotVisual = null;
 let inventoryClearEquippedSlotVisual = null;
+let trollSpearKillCounter = 0;
 
 const BASE_PLAYER_HP = 150;
 const BASE_PLAYER_MANA = 10;
@@ -282,10 +283,63 @@ function pickRandomTileFrom(list) {
 function rollCreatureDrops(creatureId) {
   const drops = creatureDropTable.get(Number(creatureId)) || [];
   if (drops.length === 0) return [];
+  if (Number(creatureId) === 1166 || Number(creatureId) === 1167) {
+    const spearDrop = drops.find((d) => Number(d && d.itemId) === 1658);
+    if (spearDrop) {
+      trollSpearKillCounter += 1;
+      // Exact 1-in-2 pattern for troll spear drops.
+      return (trollSpearKillCounter % 2 === 0) ? [{ ...spearDrop }] : [];
+    }
+  }
+  // Loot rework: fewer drops, biased towards rarer entries (lower chance).
+  const normalized = drops
+    .map((drop) => ({
+      drop,
+      chance: Math.max(0.01, Math.min(100, Number(drop.chance || 0))),
+    }))
+    .filter((x) => Number.isFinite(x.chance));
+  if (normalized.length === 0) return [];
+
+  const roll = Math.random();
+  const targetCount = roll < 0.42 ? 0 : 1; // Only 0 or 1 drop.
+  if (targetCount <= 0) return [];
+
+  const pickWeightedRare = (pool) => {
+    let total = 0;
+    const weighted = pool.map((x) => {
+      // Much stronger bias to rare/very rare drops.
+      const inverse = Math.max(1, 101 - x.chance);
+      const tierBoost = x.chance <= 2
+        ? 18
+        : x.chance <= 5
+          ? 10
+          : x.chance <= 10
+            ? 5
+            : x.chance <= 20
+              ? 2.5
+              : 1;
+      const rarityWeight = Math.pow(inverse, 3) * tierBoost;
+      total += rarityWeight;
+      return { ...x, w: rarityWeight };
+    });
+    if (total <= 0) return pool[0] || null;
+    let r = Math.random() * total;
+    for (const it of weighted) {
+      r -= it.w;
+      if (r <= 0) return it;
+    }
+    return weighted[weighted.length - 1] || null;
+  };
+
   const won = [];
-  for (const drop of drops) {
-    const p = Math.max(0, Math.min(100, Number(drop.chance || 0)));
-    if (Math.random() * 100 < p) won.push(drop);
+  const pool = normalized.slice();
+  while (won.length < targetCount && pool.length > 0) {
+    const picked = pickWeightedRare(pool);
+    if (!picked) break;
+    won.push(picked.drop);
+    const idx = pool.indexOf(picked);
+    if (idx >= 0) pool.splice(idx, 1);
+    else break;
   }
   return won;
 }
@@ -452,72 +506,90 @@ function setupSelectorUI() {
     return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
   }
 
+  function escapeHtml(text) {
+    return String(text == null ? '' : text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function formatItemTooltip(item) {
     if (!item) return '';
     const raw = item.raw && typeof item.raw === 'object' ? item.raw : {};
-    const attrs = Array.isArray(item.attributes) ? item.attributes : [];
-    const attrMap = new Map();
-    for (const a of attrs) {
-      const key = String((a && a.name) || '').toLowerCase().trim();
-      if (!key || key === 'is_walkable') continue;
-      if (!attrMap.has(key)) attrMap.set(key, []);
-      attrMap.get(key).push(a.value);
-    }
-    const attrValue = (key) => {
-      const values = attrMap.get(String(key).toLowerCase());
-      return values && values.length > 0 ? String(values[0]) : null;
-    };
-    const isTwoHanded = String(attrValue('hands') || '').toLowerCase() === 'two';
-    const lines = [];
-    lines.push(`${item.title || raw.title || 'Unknown Item'}`);
-    lines.push(`────────────────────`);
-    const cls = item.item_class || raw.item_class;
-    const type = item.item_type || raw.item_type;
-    if (cls || type) lines.push(`${cls || 'Item'}${type ? ` • ${type}` : ''}`);
-    if (item.count && item.count > 1) lines.push(`Amount: x${item.count}`);
-    lines.push('');
-    const combatBits = [];
-    if (Number(item.attack_value || 0) > 0) combatBits.push(`ATK ${item.attack_value}`);
-    if (Number(item.shielding_value || 0) > 0) combatBits.push(`SHD ${item.shielding_value}`);
-    if (Number(item.armor_value || 0) > 0) combatBits.push(`ARM ${item.armor_value}`);
-    if (Number(item.range_value || 0) > 1) combatBits.push(`RNG ${item.range_value}`);
-    if (isTwoHanded) combatBits.push('Two-handed');
-    if (combatBits.length > 0) {
-      lines.push('Combat');
-      lines.push(`- ${combatBits.join(' | ')}`);
-      lines.push('');
-    }
-    lines.push('Economy');
-    if (raw.weight != null) lines.push(`- Weight: ${raw.weight}`);
+    const title = item.title || raw.title || 'Unknown Item';
+    const cls = item.item_class || raw.item_class || 'Item';
+    const type = item.item_type || raw.item_type || 'Unknown';
     const sellRaw = Number(raw.value_sell || 0);
     const buyRaw = Number(raw.value_buy || 0);
-    const effectiveSell = sellRaw > 0 ? sellRaw : Math.max(0, buyRaw);
-    if (effectiveSell > 0) lines.push(`- Sell: ${effectiveSell} gp`);
-    const keyAttrs = ['speed', 'healthgain', 'managain', 'duration', 'charges', 'capacity'];
-    for (const k of keyAttrs) {
-      const v = attrValue(k);
-      if (v != null) lines.push(`- ${k}: ${v}`);
+    const price = Math.max(0, sellRaw > 0 ? sellRaw : buyRaw);
+    const weight = Number(raw.weight != null ? raw.weight : item.weight || 0);
+    const safeTitle = escapeHtml(title);
+    const safeCls = escapeHtml(cls);
+    const safeType = escapeHtml(type);
+    const safeWeight = Number.isFinite(weight) ? weight : 0;
+    const isEquippable = Boolean(resolveEquipSlotForItem(item));
+    const isSameItem = (a, b) => {
+      if (!a || !b) return false;
+      if (a.id != null && b.id != null) return Number(a.id) === Number(b.id);
+      return String(a.title || '').trim().toLowerCase() === String(b.title || '').trim().toLowerCase();
+    };
+    const isCurrentlyEquipped = Object.values(equippedSlots || {}).some((eq) => isSameItem(eq, item));
+    const primaryAction = isCurrentlyEquipped ? 'Unequip' : (isEquippable ? 'Equip' : 'Use');
+    const attrs = Array.isArray(item.attributes) ? item.attributes : [];
+    const attrNum = (name) => {
+      const row = attrs.find((a) => a && String(a.name || '').toLowerCase() === name);
+      const n = Number(row && row.value);
+      return Number.isFinite(n) ? n : null;
+    };
+    const attackStat = attrNum('attack');
+    const defenseStat = attrNum('defense');
+    const armorStat = attrNum('armor');
+    const statLines = [];
+    if (isEquippable) {
+      if (attackStat != null) statLines.push(`<div><span class="tt-label">Attack:</span> ${attackStat}</div>`);
+      if (defenseStat != null) statLines.push(`<div><span class="tt-label">Defense:</span> ${defenseStat}</div>`);
+      if (armorStat != null) statLines.push(`<div><span class="tt-label">Armor:</span> ${armorStat}</div>`);
     }
-    if (item.id != null) {
-      lines.push('');
-      lines.push(`ID: ${item.id}`);
-    }
-    return lines.join('\n');
+    return [
+      `<div class="tt-title">${safeTitle}</div>`,
+      '<div class="tt-sep"></div>',
+      `<div><span class="tt-label">Name:</span> ${safeTitle}</div>`,
+      `<div><span class="tt-label">Type:</span> ${safeCls} • ${safeType}</div>`,
+      `<div><span class="tt-label">Price:</span> ${price} gp</div>`,
+      `<div><span class="tt-label">Weight:</span> ${safeWeight}</div>`,
+      ...statLines,
+      '<div class="tt-space"></div>',
+      `<div class="tt-actions"><span class="tt-label">${primaryAction} / Sell</span></div>`,
+      `<div>- Left click: ${primaryAction}</div>`,
+      '<div>- Right click: Sell</div>',
+    ].join('');
   }
 
   function bindTooltip(el, item) {
     if (!el || !itemTooltip || !item) return;
     const text = formatItemTooltip(item);
     if (!text) return;
+    const placeNearElement = () => {
+      const rect = el.getBoundingClientRect();
+      const tipW = Math.max(220, itemTooltip.offsetWidth || 220);
+      const tipH = Math.max(120, itemTooltip.offsetHeight || 120);
+      let x = rect.right + 8;
+      let y = rect.top + 2;
+      if (x + tipW > window.innerWidth - 6) x = rect.left - tipW - 14;
+      if (y + tipH > window.innerHeight - 6) y = rect.top - tipH - 10;
+      itemTooltip.style.left = `${Math.max(6, Math.floor(x))}px`;
+      itemTooltip.style.top = `${Math.max(6, Math.floor(y))}px`;
+    };
     const show = (ev) => {
-      itemTooltip.textContent = text;
+      itemTooltip.innerHTML = text;
       itemTooltip.style.display = 'block';
-      itemTooltip.style.left = `${Math.min(window.innerWidth - 440, (ev.clientX || 0) + 14)}px`;
-      itemTooltip.style.top = `${Math.min(window.innerHeight - 240, (ev.clientY || 0) + 14)}px`;
+      placeNearElement();
     };
     const move = (ev) => {
-      itemTooltip.style.left = `${Math.min(window.innerWidth - 440, (ev.clientX || 0) + 14)}px`;
-      itemTooltip.style.top = `${Math.min(window.innerHeight - 240, (ev.clientY || 0) + 14)}px`;
+      void ev;
+      placeNearElement();
     };
     const hide = () => {
       hideItemTooltip();
@@ -535,6 +607,41 @@ function setupSelectorUI() {
     const slotLabel = document.getElementById(`slot${rule.id}Label`);
     const equipmentFoot = document.getElementById('equipmentFoot');
     if (!slotImg || !slotIcon || !slotLabel || !equipmentFoot) return false;
+    if (slotKey === 'hand') {
+      const attrs = Array.isArray(item && item.attributes) ? item.attributes : [];
+      const isTwoHanded = attrs.some((a) => (
+        a
+        && String(a.name || '').toLowerCase() === 'hands'
+        && String(a.value || '').toLowerCase() === 'two'
+      ));
+      if (isTwoHanded && equippedSlots.shield) {
+        const shieldToBag = { ...equippedSlots.shield };
+        const storedShield = addLootItemToBag(shieldToBag, { disableAutoEquip: true });
+        if (!storedShield) {
+          equipmentFoot.textContent = 'Cannot equip two-handed weapon: no space/capacity to move shield to loot.';
+          return false;
+        }
+        clearEquippedSlotVisual('shield');
+      }
+    }
+    if (slotKey === 'shield') {
+      const hand = equippedSlots.hand;
+      const handAttrs = Array.isArray(hand && hand.attributes) ? hand.attributes : [];
+      const handIsTwoHanded = handAttrs.some((a) => (
+        a
+        && String(a.name || '').toLowerCase() === 'hands'
+        && String(a.value || '').toLowerCase() === 'two'
+      ));
+      if (handIsTwoHanded && hand) {
+        const handToBag = { ...hand };
+        const storedHand = addLootItemToBag(handToBag, { disableAutoEquip: true });
+        if (!storedHand) {
+          equipmentFoot.textContent = 'Cannot equip shield: no space/capacity to move two-handed weapon to loot.';
+          return false;
+        }
+        clearEquippedSlotVisual('hand');
+      }
+    }
     equippedSlots[slotKey] = item;
     if (item.image) {
       slotImg.src = `./data/images/${item.image}`;
@@ -1236,6 +1343,13 @@ function setupSelectorUI() {
       event.preventDefault();
       if (!startBtn.disabled) startBtn.click();
     }
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    const overlay = document.getElementById('startOverlay');
+    if (!overlay || overlay.style.display === 'none') return;
+    event.preventDefault();
+    if (!startBtn.disabled) startBtn.click();
   });
 }
 
@@ -2179,6 +2293,32 @@ function startGame(configPlayer) {
         };
         const pickGroupForLevel = (level) => {
           if (!typeProgressionGroups.length) return null;
+          const forcedTypeByLevel = {
+            4: 'trolls',
+            5: 'skeletons',
+            6: 'goblins',
+            7: 'humans',
+            8: 'dwarves',
+            9: 'minotaurs',
+            10: 'vampires',
+            11: 'arachnids',
+            12: 'dragons',
+            13: 'orcs',
+            14: 'pirats',
+            15: 'demon overlords',
+            16: 'demon overlords',
+          };
+          const forcedType = forcedTypeByLevel[Number(level)];
+          if (forcedType) {
+            const forcedIdx = typeProgressionGroups.findIndex(
+              (g) => String((g && g.type_primary) || '').toLowerCase().includes(forcedType)
+            );
+            if (forcedIdx >= 0) {
+              recentGroupIndices.push(forcedIdx);
+              if (recentGroupIndices.length > 5) recentGroupIndices.shift();
+              return typeProgressionGroups[forcedIdx];
+            }
+          }
           const n = typeProgressionGroups.length;
           const recentSet = new Set(recentGroupIndices);
 
@@ -2392,6 +2532,69 @@ function startGame(configPlayer) {
             : [{ id: 1116, title: 'Rat', type_primary: 'Glires', experience: 5, hitpoints: 20, maxDamage: 8, image: 'creature/Rat.gif' }];
           const earlyLevels = 12;
           let levelPool = basePool.slice();
+          let hasForcedPoolRestriction = false;
+          if (String((group && group.type_primary) || '').toLowerCase().includes('troll')) {
+            const trollAllowedIds = new Set([1166, 1167]);
+            levelPool = levelPool.filter((c) => trollAllowedIds.has(Number(c && c.id)));
+            hasForcedPoolRestriction = true;
+          }
+          const forcedCreatureIdByLevel = {
+            1: 1116,
+            2: 1261,
+            3: 1141,
+          };
+          const forcedCreatureIdsByLevel = {
+            5: [1457, 1547],
+          };
+          const forcedCreatureTemplateByLevel = {
+            1: {
+              id: 1116,
+              title: 'Rat',
+              type_primary: 'Glires',
+              experience: 5,
+              hitpoints: 20,
+              maxDamage: 8,
+              image: 'creature/Rat.gif',
+              speed: 67,
+              runs_at: 5,
+            },
+            2: {
+              id: 1261,
+              title: 'Wolf',
+              type_primary: 'Canines',
+              experience: 18,
+              hitpoints: 25,
+              maxDamage: 10,
+              image: 'creature/Wolf.gif',
+              speed: 82,
+              runs_at: 8,
+            },
+            3: {
+              id: 1141,
+              title: 'Rotworm',
+              type_primary: 'Annelids',
+              experience: 40,
+              hitpoints: 65,
+              maxDamage: 18,
+              image: 'creature/Rotworm.gif',
+              speed: 58,
+              runs_at: 0,
+            },
+          };
+          const forcedCreatureId = forcedCreatureIdByLevel[Number(level)];
+          const forcedCreatureIds = forcedCreatureIdsByLevel[Number(level)];
+          if (Array.isArray(forcedCreatureIds) && forcedCreatureIds.length > 0) {
+            const allowed = new Set(forcedCreatureIds.map((id) => Number(id)));
+            levelPool = levelPool.filter((c) => allowed.has(Number(c && c.id)));
+            hasForcedPoolRestriction = true;
+          }
+          if (forcedCreatureId != null) {
+            levelPool = levelPool.filter((c) => Number(c && c.id) === forcedCreatureId);
+            hasForcedPoolRestriction = true;
+            if (levelPool.length === 0 && forcedCreatureTemplateByLevel[Number(level)]) {
+              levelPool = [{ ...forcedCreatureTemplateByLevel[Number(level)] }];
+            }
+          }
           // Single-type-primary guarantee per floor:
           // we only use creatures from the selected group's type_primary.
           if (level <= earlyLevels) {
@@ -2424,7 +2627,7 @@ function startGame(configPlayer) {
             });
             if (difficultyFiltered.length >= 8) {
               levelPool = difficultyFiltered;
-            } else {
+            } else if (!hasForcedPoolRestriction) {
               levelPool = basePool.slice();
             }
             // Progression hard-gate by floor (very conservative for first floors).
@@ -2470,7 +2673,9 @@ function startGame(configPlayer) {
             if (filtered.length >= 12) levelPool = filtered;
             Phaser.Utils.Array.Shuffle(levelPool);
           }
-          creaturesTargetCount = Phaser.Math.Between(MIN_CREATURES_PER_LEVEL, MAX_CREATURES_PER_LEVEL);
+          creaturesTargetCount = Number(level) === 1
+            ? 10
+            : Phaser.Math.Between(MIN_CREATURES_PER_LEVEL, MAX_CREATURES_PER_LEVEL);
           const templates = pickRandomCreatures(levelPool, creaturesTargetCount);
           if (level <= earlyLevels) {
             for (const t of templates) {
@@ -2731,6 +2936,7 @@ function startGame(configPlayer) {
           const currentGold = window.debugInventory && typeof window.debugInventory.getGold === 'function'
             ? Math.max(0, Number(window.debugInventory.getGold() || 0))
             : 0;
+          const roomCleared = aliveCreatures().length === 0;
           spellsGrid.innerHTML = '';
           const available = (spellsCatalog || []).filter((s) => {
             if (String(s.status || '').toLowerCase() !== 'active') return false;
@@ -2744,8 +2950,14 @@ function startGame(configPlayer) {
             if (isBlockedSpellTitle(title)) return false;
             const words = String(s.words || '').trim().toLowerCase();
             const effect = String((s.raw && s.raw.effect) || '').trim().toLowerCase();
+            const looksHealing = (
+              title.includes('healing')
+              || title.includes('exura')
+              || effect.includes('restore hit points')
+              || effect.includes('heals')
+            );
             const isLightSpell = (
-              title.includes('light')
+              (title.includes('light') && !looksHealing)
               || effect.includes('illumination')
               || words === 'utevo lux'
               || words === 'utevo gran lux'
@@ -2786,6 +2998,9 @@ function startGame(configPlayer) {
             } else if (!canGold) {
               btn.textContent = `Need ${price} gp`;
               btn.disabled = true;
+            } else if (!roomCleared) {
+              btn.textContent = 'Clear room first';
+              btn.disabled = true;
             } else {
               btn.textContent = 'Buy spell';
               btn.disabled = false;
@@ -2793,6 +3008,10 @@ function startGame(configPlayer) {
                 ev.preventDefault();
                 ev.stopPropagation();
                 if (btn.disabled) return;
+                if (aliveCreatures().length > 0) {
+                  addCombatLog('Clear all creatures on this floor before buying spells.');
+                  return;
+                }
                 const spent = window.debugInventory && typeof window.debugInventory.spendGold === 'function'
                   ? window.debugInventory.spendGold(price)
                   : false;
@@ -2826,7 +3045,9 @@ function startGame(configPlayer) {
             frag.appendChild(row);
           }
           spellsGrid.appendChild(frag);
-          spellsFoot.textContent = `Gold: ${currentGold} | Learned: ${learnedSpellIds.size}`;
+          spellsFoot.textContent = roomCleared
+            ? `Gold: ${currentGold} | Learned: ${learnedSpellIds.size}`
+            : `Clear room to buy | Gold: ${currentGold} | Learned: ${learnedSpellIds.size}`;
           renderLearnedSpells();
         };
         const formatItemShopTooltip = (item) => {
@@ -2863,9 +3084,10 @@ function startGame(configPlayer) {
         const bindItemShopTooltip = (el, item) => {
           if (!el || !spellTooltipEl) return;
           const place = (ev) => {
-            const pad = 12;
-            const x = Math.min(window.innerWidth - 440, ev.clientX + pad);
-            const y = Math.min(window.innerHeight - 240, ev.clientY + pad);
+            const padX = 36;
+            const padY = 52;
+            const x = Math.min(window.innerWidth - 440, ev.clientX + padX);
+            const y = Math.min(window.innerHeight - 240, ev.clientY + padY);
             spellTooltipEl.style.left = `${Math.max(6, x)}px`;
             spellTooltipEl.style.top = `${Math.max(6, y)}px`;
           };
@@ -2888,6 +3110,7 @@ function startGame(configPlayer) {
           const currentGold = window.debugInventory && typeof window.debugInventory.getGold === 'function'
             ? Math.max(0, Number(window.debugInventory.getGold() || 0))
             : 0;
+          const roomCleared = aliveCreatures().length === 0;
           gridEl.innerHTML = '';
           if (itemsShopQuery.length < 3) {
             footEl.textContent = `Type at least 3 chars | Gold: ${currentGold}`;
@@ -2943,6 +3166,11 @@ function startGame(configPlayer) {
               const totalPrice = price * qty;
               const btn = document.createElement('button');
               btn.type = 'button';
+              if (!roomCleared) {
+                btn.textContent = 'Clear room first';
+                btn.disabled = true;
+                return btn;
+              }
               const canGold = currentGold >= totalPrice;
               if (!canGold) {
                 btn.textContent = `Need ${totalPrice} gp`;
@@ -2956,6 +3184,10 @@ function startGame(configPlayer) {
                 ev.preventDefault();
                 ev.stopPropagation();
                 if (btn.disabled) return;
+                if (aliveCreatures().length > 0) {
+                  addCombatLog('Clear all creatures on this floor before buying items.');
+                  return;
+                }
                 const spent = window.debugInventory && typeof window.debugInventory.spendGold === 'function'
                   ? window.debugInventory.spendGold(totalPrice)
                   : false;
@@ -3004,7 +3236,9 @@ function startGame(configPlayer) {
             frag.appendChild(row);
           }
           gridEl.appendChild(frag);
-          footEl.textContent = `Results: ${matches.length} | Gold: ${currentGold}`;
+          footEl.textContent = roomCleared
+            ? `Results: ${matches.length} | Gold: ${currentGold}`
+            : `Clear room to buy | Results: ${matches.length} | Gold: ${currentGold}`;
         };
         window.addEventListener('coins-changed', renderSpellShop);
         window.addEventListener('coins-changed', () => renderItemsShop(itemsShopQuery));
@@ -3117,23 +3351,43 @@ function startGame(configPlayer) {
         };
         const applyShieldingReduction = (incomingDamage) => {
           const raw = Math.max(1, Math.floor(Number(incomingDamage) || 1));
+          const readAttrValue = (it, attrName) => {
+            const attrs = Array.isArray(it && it.attributes) ? it.attributes : [];
+            const row = attrs.find((a) => (
+              a
+              && String(a.name || '').toLowerCase() === String(attrName || '').toLowerCase()
+            ));
+            const n = Number(row && row.value);
+            return Number.isFinite(n) ? Math.max(0, n) : 0;
+          };
+          const state = window.debugInventory && typeof window.debugInventory.state === 'function'
+            ? window.debugInventory.state()
+            : null;
+          const equipped = (state && state.equipped) ? state.equipped : {};
           const shield = getEquippedShield();
-          if (!shield || String(shield.item_type || '').toLowerCase() !== 'shields') return raw;
-          const attrs = Array.isArray(shield.attributes) ? shield.attributes : [];
-          const defenseAttr = attrs.find((a) => (
-            a
-            && String(a.name || '').toLowerCase() === 'defense'
-          ));
-          const defenseValue = Math.max(0, Number((defenseAttr && defenseAttr.value) || 0));
-          const shieldValue = Math.max(0, Number(shield.shielding_value || 0)) + defenseValue;
+          const hand = getEquippedHandWeapon();
+          const shieldDefense = (shield && String(shield.item_type || '').toLowerCase() === 'shields')
+            ? readAttrValue(shield, 'defense')
+            : 0;
+          const handDefense = hand ? readAttrValue(hand, 'defense') : 0;
+          const shieldValue = Math.max(0, Number((shield && shield.shielding_value) || 0)) + shieldDefense;
+          const armorFromEquipment = Object.entries(equipped)
+            .filter(([slot, eq]) => eq && slot !== 'hand' && slot !== 'shield' && slot !== 'ammunition' && slot !== 'bag')
+            .reduce((acc, [, eq]) => {
+              const baseArmor = Math.max(0, Number(eq && eq.armor_value) || 0);
+              const armorAttr = readAttrValue(eq, 'armor');
+              return acc + baseArmor + armorAttr;
+            }, 0);
+          const totalDefenseValue = shieldValue + handDefense + armorFromEquipment;
+          if (totalDefenseValue <= 0) return raw;
           const skillValue = Math.max(10, Number(playerShieldingLevel || 10));
-          // Mitigacion fuerte: combina reduccion porcentual + plana.
+          // Mitigacion total: escudo + defensa de arma + armor de equipo.
           const percentReduction = Phaser.Math.Clamp(
-            0.14 + (shieldValue * 0.012) + ((skillValue - 10) * 0.005),
-            0.14,
+            0.08 + (totalDefenseValue * 0.009) + ((skillValue - 10) * 0.004),
+            0.08,
             0.72
           );
-          const flatReduction = Math.floor((shieldValue * 0.22) + ((skillValue - 10) * 0.10));
+          const flatReduction = Math.floor((totalDefenseValue * 0.18) + ((skillValue - 10) * 0.08));
           const reducedByPercent = Math.floor(raw * (1 - percentReduction));
           const reduced = Math.max(1, reducedByPercent - flatReduction);
           return reduced;
@@ -3156,13 +3410,13 @@ function startGame(configPlayer) {
           const skillBonus = Math.max(0, Math.floor((skillLevel - 10) * 0.35));
           return Math.max(5, Math.floor(3 + lv * 0.55 + ml * 3.0 + weaponAttack * 0.65 + skillBonus));
         };
-        const currentPlayerDamage = (handOverride = null) => {
-          const hand = handOverride || getEquippedHandWeapon();
+        const currentPlayerDamage = (handOverride = undefined) => {
+          const hand = handOverride === undefined ? getEquippedHandWeapon() : handOverride;
           if (isMagicRangedWeapon(hand)) return magicWeaponDamage(hand);
           if (!hand) {
-            // Intentionally low unarmed damage so weapon upgrades matter a lot.
-            const fistBonus = Math.max(0, Math.floor((playerFistLevel - 10) * 0.35));
-            return Math.max(1, Math.floor(2 + playerLevel * 0.12 + fistBonus));
+            // Keep unarmed damage clearly below weapon damage progression.
+            const fistBonus = Math.max(0, Math.floor((playerFistLevel - 10) * 0.6));
+            return Math.max(1, Math.floor(3 + playerLevel * 0.22 + fistBonus));
           }
           const weaponAttack = Math.max(0, Number((hand && hand.attack_value) || 0));
           const rangedAmmoBonus = requiresAmmoForWeapon(hand) ? ammoAttackBonus() : 0;
@@ -3290,6 +3544,72 @@ function startGame(configPlayer) {
           const manaCost = Math.max(0, Number((spell && spell.mana) || 0));
           const ml = Math.max(0, Number(playerMagicLevel || 0));
           return Math.max(6, Math.floor(4 + playerLevel * 0.8 + ml * 3.4 + manaCost * 0.18));
+        };
+        const conjureArrowPayloadFromSpell = (spell) => {
+          const effectRaw = String((spell && spell.raw && spell.raw.effect) || '').trim();
+          if (!effectRaw) return null;
+          // Ignore legacy descriptions like "used to create ...".
+          if (/used\s+to\s+create/i.test(effectRaw)) return null;
+          const m = effectRaw.match(/creates?\s+(\d+)\s+(.+?)\.\s*$/i);
+          if (!m) return null;
+          const count = Math.max(1, Number(m[1] || 1));
+          const createdNameRaw = String(m[2] || '').trim();
+          if (!/arrow/i.test(createdNameRaw)) return null;
+          const normalized = createdNameRaw
+            .replace(/\barrows\b/ig, 'Arrow')
+            .replace(/\s+/g, ' ')
+            .trim();
+          return {
+            count,
+            title: normalized,
+          };
+        };
+        const resolveConjuredArrowItem = (arrowTitle) => {
+          const wanted = String(arrowTitle || '').trim().toLowerCase();
+          if (!wanted) return null;
+          const ammoItems = (itemsShopCatalog || []).filter((it) => (
+            it
+            && String(it.item_type || '').toLowerCase() === 'ammunition'
+          ));
+          // Exact title match first.
+          const exact = ammoItems.find((it) => String(it.title || '').trim().toLowerCase() === wanted);
+          if (exact) return exact;
+          // Singular/plural fallback.
+          const singularWanted = wanted.replace(/\barrows\b/g, 'arrow').trim();
+          const singular = ammoItems.find((it) => String(it.title || '').trim().toLowerCase() === singularWanted);
+          if (singular) return singular;
+          return null;
+        };
+        const equipConjuredArrowToAmmoSlot = (ammoItem, amount) => {
+          if (!ammoItem) return false;
+          if (typeof inventorySetEquippedSlotVisual !== 'function') return false;
+          const qty = Math.max(1, Number(amount || 1));
+          const equippedAmmo = getEquippedAmmo();
+          const sameAmmoEquipped = Boolean(
+            equippedAmmo
+            && Number(equippedAmmo.id) === Number(ammoItem.id)
+          );
+          if (sameAmmoEquipped) {
+            const nextAmmo = {
+              ...equippedAmmo,
+              count: Math.max(1, Number(equippedAmmo.count || 1)) + qty,
+            };
+            return inventorySetEquippedSlotVisual('ammunition', nextAmmo, `${ammoItem.title} +${qty} (ammo slot).`);
+          }
+          if (equippedAmmo) {
+            const moved = window.debugInventory && typeof window.debugInventory.addLoot === 'function'
+              ? window.debugInventory.addLoot({ ...equippedAmmo })
+              : false;
+            if (!moved) return false;
+            if (typeof inventoryClearEquippedSlotVisual === 'function') {
+              inventoryClearEquippedSlotVisual('ammunition');
+            }
+          }
+          return inventorySetEquippedSlotVisual(
+            'ammunition',
+            { ...ammoItem, isStackable: true, count: qty },
+            `Conjured ${qty} ${ammoItem.title}${qty > 1 ? 's' : ''} to ammo slot.`
+          );
         };
         const showSpellTileEffect = (tiles, color = 0xf59e0b, opts = {}) => {
           const duration = opts.duration != null ? opts.duration : 300;
@@ -3551,6 +3871,23 @@ function startGame(configPlayer) {
           spellCooldownUntil.set(articleId, now + (cdSec * 1000));
           const group = String(spell.group_spell || '').toLowerCase();
           const title = String(spell.title || '').toLowerCase();
+          const conjuredArrow = conjureArrowPayloadFromSpell(spell);
+          if (conjuredArrow) {
+            const ammoItem = resolveConjuredArrowItem(conjuredArrow.title);
+            if (!ammoItem) {
+              addCombatLog(`Cast [${slotNumber}] ${spell.title}, but no matching arrow item was found.`, LOG_COLORS.SPELL);
+            } else {
+              const equipped = equipConjuredArrowToAmmoSlot(ammoItem, conjuredArrow.count);
+              if (equipped) {
+                addCombatLog(`Cast [${slotNumber}] ${spell.title}: ${conjuredArrow.count} ${ammoItem.title}${conjuredArrow.count > 1 ? 's' : ''} equipped in ammo slot.`, LOG_COLORS.SPELL);
+              } else {
+                addCombatLog(`Cast [${slotNumber}] ${spell.title}, but ammo slot update failed (bag full/capacity).`, LOG_COLORS.SPELL);
+              }
+            }
+            updatePlayerBar();
+            updateHud();
+            return true;
+          }
           if (group === 'healing' || title.includes('healing') || title.includes('exura')) {
             const heal = inferHealingAmount(spell);
             const prev = playerHp;
@@ -3654,10 +3991,10 @@ function startGame(configPlayer) {
             gainWeaponSkillUse(activeWeapon, 1);
           } else if (activeWeapon && String(activeWeapon.item_class || '').toLowerCase() === 'weapons') {
             gainWeaponSkillUse(activeWeapon, 1);
-          } else if (!handWeapon) {
+          } else if (!activeWeapon) {
             gainFistSkillUse(1);
           }
-          if (didAttackMiss()) {
+          if (didAttackMiss(activeWeapon)) {
             showMissSmoke(targetCreature.sprite.x, targetCreature.sprite.y);
             addCombatLog(`You miss your hit against ${targetCreature.title}.`);
           } else {
@@ -3776,7 +4113,11 @@ function startGame(configPlayer) {
           nextPlayerActionAt = now + playerActionDelayMs;
           return true;
         };
-        const didAttackMiss = () => Math.random() < 0.1;
+        const didAttackMiss = (weapon = null) => {
+          const secondary = String((weapon && weapon.type_secondary) || '').toLowerCase();
+          if (secondary === 'throwing weapons') return Math.random() < 0.5;
+          return Math.random() < 0.1;
+        };
         const didAttackCrit = () => Math.random() < 0.1;
         const applyCriticalDamage = (baseDamage) => Math.max(1, Math.round(baseDamage * 2.5)); // +150%
         const projectileVisualForWeapon = (weapon) => {
@@ -3947,6 +4288,8 @@ function startGame(configPlayer) {
           for (let i = 1; i < line.length && out.length < lim; i += 1) {
             const p = line[i];
             if (!isWalkableTile(p.gx, p.gy)) break;
+            // Ranged attacks cannot cross walls.
+            if (isWallTile(p.gx, p.gy)) break;
             out.push(p);
             if (p.gx === gridX && p.gy === gridY) break;
           }
@@ -4094,6 +4437,16 @@ function startGame(configPlayer) {
           if (n.includes('melee')) return 'melee';
           return 'offensive';
         };
+        let attackersPressureInTurn = 0;
+        const applyMultiAttackerPressure = (baseDamage) => {
+          const raw = Math.max(1, Math.floor(Number(baseDamage) || 1));
+          const bonusMultiplier = Phaser.Math.Clamp(
+            1 + (Math.max(0, attackersPressureInTurn) * 0.15),
+            1,
+            2.1
+          );
+          return Math.max(1, Math.floor(raw * bonusMultiplier));
+        };
         const tryUseCreatureAbility = (creature) => {
           const abilities = Array.isArray(creature && creature.abilities) ? creature.abilities : [];
           if (abilities.length === 0) return false;
@@ -4104,6 +4457,7 @@ function startGame(configPlayer) {
             if (t === 'heal') return creature.hp < creature.maxHp && Math.random() < 0.5;
             if (t === 'melee') return dist <= 1;
             if (dist > 4) return false;
+            if (!hasRangedLineOfSight(creature.gx, creature.gy, gridX, gridY)) return false;
             try {
               const pattern = inferCreatureAbilityPattern(ab);
               const tiles = resolveCreatureAbilityTiles(creature, pattern);
@@ -4128,6 +4482,10 @@ function startGame(configPlayer) {
           if (!playerInAbilityTiles(abilityTiles)) {
             return false;
           }
+          // Hard gate: offensive ranged abilities need clear line of sight.
+          if (!hasRangedLineOfSight(creature.gx, creature.gy, gridX, gridY)) {
+            return false;
+          }
           showCreatureAbilityEffect(creature, ability, abilityTiles);
           if (didAttackMiss()) {
             showMissSmoke(player.x, player.y);
@@ -4139,9 +4497,11 @@ function startGame(configPlayer) {
           const crit = didAttackCrit();
           const scaledBase = Math.max(1, Math.floor(base * floorMultiplier));
           const rawDamage = crit ? applyCriticalDamage(scaledBase) : scaledBase;
-          const dmg = clampIncomingCreatureDamage(rawDamage, creature.maxDamage);
+          const pressuredDamage = applyMultiAttackerPressure(rawDamage);
+          const dmg = clampIncomingCreatureDamage(pressuredDamage, creature.maxDamage);
           const reduced = applyShieldingReduction(dmg);
           playerHp = Math.max(0, playerHp - reduced);
+          attackersPressureInTurn += 1;
           if (reduced < dmg && getEquippedShield()) gainShieldingSkillUse(1);
           showPlayerHitEffect(reduced);
           addCombatLog(
@@ -4266,6 +4626,7 @@ function startGame(configPlayer) {
         const creatureTurn = () => {
           if (gameOver) return;
           const now = this.time.now;
+          attackersPressureInTurn = 0;
           for (const creature of aliveCreatures()) {
             if (now < creature.nextActionAt) continue;
             if (!hasAggro(creature)) {
@@ -4302,9 +4663,11 @@ function startGame(configPlayer) {
                 const baseDamage = pickCreatureDamage();
                 const isCrit = didAttackCrit();
                 const rawDamage = isCrit ? applyCriticalDamage(baseDamage) : baseDamage;
-                const dmg = clampIncomingCreatureDamage(rawDamage, creature.maxDamage);
+                const pressuredDamage = applyMultiAttackerPressure(rawDamage);
+                const dmg = clampIncomingCreatureDamage(pressuredDamage, creature.maxDamage);
                 const reduced = applyShieldingReduction(dmg);
                 playerHp = Math.max(0, playerHp - reduced);
+                attackersPressureInTurn += 1;
                 if (reduced < dmg && getEquippedShield()) gainShieldingSkillUse(1);
                 showPlayerHitEffect(reduced);
                 if (isCrit) {
