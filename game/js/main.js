@@ -1,10 +1,24 @@
 import {
   getCreatureTypeProgressionGroups,
   getItemByArticleId,
+  getItemShopCatalog,
   getCreatureDropTable,
   getSpellsCatalogWithPrices,
   getCreatureAbilitiesById,
 } from './dataService.js';
+import {
+  shakeCamera,
+  flashCamera,
+  radialSparkBurst,
+  shockwaveRing,
+  floatingCombatText,
+  tileSpellBurst,
+  spellAuraBurst,
+  spellProjectileLine,
+  rangedProjectileLine,
+  missEffect,
+  critBanner,
+} from './vfx.js';
 
 let game;
 let selectedSex = 'male';
@@ -18,7 +32,10 @@ let onPlayerLevelStatsUpdate = null;
 let onPanelLog = null;
 let lastLootRejectReason = '';
 let spellsCatalog = [];
+let itemsShopCatalog = [];
 let creatureAbilitiesById = new Map();
+let inventorySetEquippedSlotVisual = null;
+let inventoryClearEquippedSlotVisual = null;
 
 const BASE_PLAYER_HP = 150;
 const BASE_PLAYER_MANA = 10;
@@ -28,6 +45,12 @@ const CLASS_GROWTH = {
   paladin: { hp: 10, mana: 15, capacity: 20 },
   sorcerer: { hp: 5, mana: 30, capacity: 10 },
   druid: { hp: 5, mana: 30, capacity: 10 },
+};
+const CLASS_MAGIC_LEVEL_GROWTH = {
+  knight: 0.12,
+  paladin: 0.45,
+  sorcerer: 1.0,
+  druid: 1.0,
 };
 const CREATURE_DAMAGE_MULTIPLIER_BY_ID = new Map([
   [37051, 0.5],
@@ -201,10 +224,12 @@ const MAX_FOOD_SECONDS = 900;
 function progressionStatsForLevel(level, playerClass = selectedClass) {
   const lv = Math.max(1, Number(level || 1));
   const growth = CLASS_GROWTH[playerClass] || CLASS_GROWTH.knight;
+  const mlGrowth = Number(CLASS_MAGIC_LEVEL_GROWTH[playerClass] || CLASS_MAGIC_LEVEL_GROWTH.knight);
   return {
     maxHp: BASE_PLAYER_HP + (lv - 1) * growth.hp,
     maxMana: BASE_PLAYER_MANA + (lv - 1) * growth.mana,
     capacity: BASE_PLAYER_CAPACITY + (lv - 1) * growth.capacity,
+    magicLevel: Math.max(0, Math.floor((lv - 1) * mlGrowth)),
   };
 }
 
@@ -213,8 +238,8 @@ const MAP_H = 15;
 const UI_BOTTOM_SPACE = 88;
 const UI_OVERLAP_ROWS = 1.5;
 const CREATURE_POOL_PER_LEVEL = 12;
-const MIN_CREATURES_PER_LEVEL = 6;
-const MAX_CREATURES_PER_LEVEL = 12;
+const MIN_CREATURES_PER_LEVEL = 10;
+const MAX_CREATURES_PER_LEVEL = 15;
 const START_TILE = { gx: 1, gy: 1 };
 const START_BAG_ARTICLE_ID = 1589;
 const GOLD_COIN_ID = 2119;
@@ -564,6 +589,9 @@ function setupSelectorUI() {
     if (footText) equipmentFoot.textContent = footText;
     return true;
   }
+  // Expose equip visual mutators to combat/runtime code outside setupSelectorUI scope.
+  inventorySetEquippedSlotVisual = setEquippedSlotVisual;
+  inventoryClearEquippedSlotVisual = clearEquippedSlotVisual;
 
   function tryAutoEquipArmorUpgrade(item) {
     const slotKey = armorAutoSlotByType[(item.item_type || '').toLowerCase()];
@@ -1195,9 +1223,10 @@ function setupSelectorUI() {
       (async () => { creatureAbilitiesById = await getCreatureAbilitiesById(); })(),
       ensureCoinTemplatesLoaded(),
       (async () => { spellsCatalog = await getSpellsCatalogWithPrices(); })(),
+      (async () => { itemsShopCatalog = await getItemShopCatalog(); })(),
     ]);
-    // Testing seed: start each run with 200 gp.
-    addCoinsToInventory(200);
+    // Testing seed: start each run with 0 gp.
+    addCoinsToInventory(0);
     document.getElementById('startOverlay').style.display = 'none';
     startGame(playerConfig);
   });
@@ -1259,8 +1288,9 @@ function startGame(configPlayer) {
               y * tileSize + tileSize / 2,
               tileSize - 1,
               tileSize - 1,
-              0x1a2534
+              0x162238
             );
+            rect.setDepth(0);
             mapTiles[y][x] = rect;
           }
         }
@@ -1269,6 +1299,7 @@ function startGame(configPlayer) {
         // Centrado visual y tamano menor a 1 tile para evitar solapes entre casillas vecinas.
         player.setOrigin(0.5, 0.5);
         player.setDisplaySize(tileSize * 0.9, tileSize * 0.9);
+        player.setDepth(25);
         const deathCaption = this.add.text(player.x, player.y + tileSize * 0.72, 'You are dead.', {
           color: '#ffffff',
           fontSize: '12px',
@@ -1276,6 +1307,7 @@ function startGame(configPlayer) {
         });
         deathCaption.setOrigin(0.5, 0.5);
         deathCaption.setVisible(false);
+        deathCaption.setDepth(30);
         const basePlayerScaleX = player.scaleX;
         const basePlayerScaleY = player.scaleY;
         const makeHealthBar = (color = 0x22c55e) => {
@@ -1318,25 +1350,39 @@ function startGame(configPlayer) {
         const playerBar = makeHealthBar(0x22c55e);
         const playerManaBar = makeHealthBar(0x3b82f6);
         const playerNameTag = makeNameLabel(configPlayer.name, '#e5e7eb');
+        playerBar.bg.setDepth(26);
+        playerBar.fill.setDepth(27);
+        playerManaBar.bg.setDepth(28);
+        playerManaBar.fill.setDepth(29);
+        playerNameTag.setDepth(31);
 
         const nameLabel = this.add.text(12, 10, `${configPlayer.name} | Player Lv 1`, {
           color: '#e5e7eb',
           fontSize: '16px',
+          fontStyle: 'bold',
         });
         nameLabel.setScrollFactor(0);
+        nameLabel.setDepth(510);
+        nameLabel.setStroke('#020617', 4);
 
         const combatHud = this.add.text(this.scale.width - 12, 10, '', {
           color: '#fca5a5',
           fontSize: '13px',
+          fontStyle: 'bold',
         });
         combatHud.setOrigin(1, 0);
         combatHud.setScrollFactor(0);
+        combatHud.setDepth(510);
+        combatHud.setStroke('#1e1b4b', 3);
         const levelHud = this.add.text(this.scale.width / 2, 10, '', {
           color: '#93c5fd',
           fontSize: '13px',
+          fontStyle: 'bold',
         });
         levelHud.setOrigin(0.5, 0);
         levelHud.setScrollFactor(0);
+        levelHud.setDepth(510);
+        levelHud.setStroke('#0c4a6e', 3);
 
         const uiBaseY = mapHeight - (tileSize * UI_OVERLAP_ROWS);
         const logPanel = this.add.rectangle(
@@ -1344,52 +1390,60 @@ function startGame(configPlayer) {
           uiBaseY + 52,
           this.scale.width - 16,
           58,
-          0x0b1220,
-          0.78
+          0x070d18,
+          0.82
         );
-        logPanel.setStrokeStyle(1, 0x2b3444, 0.8);
+        logPanel.setStrokeStyle(1, 0x38bdf8, 0.35);
         logPanel.setScrollFactor(0);
+        logPanel.setDepth(500);
         const levelProgressBg = this.add.rectangle(
           this.scale.width / 2,
           uiBaseY + 21,
           this.scale.width - 16,
-          10,
-          0x0f172a,
-          0.95
+          11,
+          0x0c1526,
+          0.96
         );
-        levelProgressBg.setStrokeStyle(1, 0x334155, 1);
+        levelProgressBg.setStrokeStyle(1, 0x475569, 0.85);
         levelProgressBg.setScrollFactor(0);
+        levelProgressBg.setDepth(500);
         const levelProgressFill = this.add.rectangle(
           8,
           uiBaseY + 21,
           this.scale.width - 18,
           8,
-          0xeab308,
+          0xfbbf24,
           1
         );
         levelProgressFill.setOrigin(0, 0.5);
         levelProgressFill.setScrollFactor(0);
+        levelProgressFill.setDepth(501);
+        levelProgressFill.setStrokeStyle(1, 0xfde68a, 0.5);
         const levelProgressText = this.add.text(this.scale.width / 2, uiBaseY + 21, '', {
           color: '#f8fafc',
           fontSize: '11px',
           fontStyle: 'bold',
         });
         levelProgressText.setOrigin(0.5, 0.5);
-        levelProgressText.setStroke('#0b1220', 2);
+        levelProgressText.setStroke('#0b1220', 3);
         levelProgressText.setScrollFactor(0);
+        levelProgressText.setDepth(502);
         const LOG_COLORS = {
-          DEFAULT: '#ffffff',
-          HIT: '#e2e8f0',
-          CRIT: '#facc15',
+          DEFAULT: '#e8f0ff',
+          HIT: '#cbd5e1',
+          CRIT: '#fde047',
           SPELL: '#7dd3fc',
         };
         const combatLogRows = [0, 1, 2].map((idx) => {
           const row = this.add.text(14, uiBaseY + 32 + idx * 14, '', {
             color: LOG_COLORS.DEFAULT,
             fontSize: '12px',
+            fontStyle: 'bold',
             wordWrap: { width: this.scale.width - 28 },
           });
           row.setScrollFactor(0);
+          row.setDepth(503);
+          row.setStroke('#020617', 3);
           return row;
         });
         const combatLogLines = [];
@@ -1408,17 +1462,20 @@ function startGame(configPlayer) {
         const stairRect = this.add.rectangle(
           0,
           0,
-          tileSize - 6,
-          tileSize - 6,
-          0x7c5c16
+          tileSize - 4,
+          tileSize - 4,
+          0x1e3a5f
         );
-        stairRect.setStrokeStyle(2, 0xfacc15, 1);
-        const stairText = this.add.text(0, 0, '>', {
-          color: '#fde68a',
-          fontSize: '18px',
+        stairRect.setStrokeStyle(2, 0x38bdf8, 0.95);
+        stairRect.setDepth(4);
+        const stairText = this.add.text(0, 0, '▼', {
+          color: '#7dd3fc',
+          fontSize: '16px',
           fontStyle: 'bold',
         });
         stairText.setOrigin(0.5, 0.5);
+        stairText.setDepth(5);
+        stairText.setStroke('#0c4a6e', 4);
         stairRect.setVisible(false);
         stairText.setVisible(false);
 
@@ -1448,6 +1505,53 @@ function startGame(configPlayer) {
           num8: Phaser.Input.Keyboard.KeyCodes.NUMPAD_EIGHT,
           num9: Phaser.Input.Keyboard.KeyCodes.NUMPAD_NINE,
         });
+        const isTypingInInput = () => {
+          const el = document.activeElement;
+          if (!el) return false;
+          const tag = String(el.tagName || '').toLowerCase();
+          if (tag === 'textarea') return true;
+          if (tag === 'input') {
+            const input = /** @type {HTMLInputElement} */ (el);
+            const type = String(input.type || 'text').toLowerCase();
+            return type !== 'checkbox' && type !== 'radio' && type !== 'button' && type !== 'submit';
+          }
+          return Boolean(el.isContentEditable);
+        };
+        const syncGameKeyboardEnabled = () => {
+          if (!this.input || !this.input.keyboard) return;
+          const typing = isTypingInInput();
+          this.input.keyboard.enabled = !typing;
+          // Phaser can still capture movement keys even when typing.
+          // Remove captures while an input has focus so WASD writes normally.
+          if (typing) {
+            this.input.keyboard.removeCapture([
+              Phaser.Input.Keyboard.KeyCodes.W,
+              Phaser.Input.Keyboard.KeyCodes.A,
+              Phaser.Input.Keyboard.KeyCodes.S,
+              Phaser.Input.Keyboard.KeyCodes.D,
+              Phaser.Input.Keyboard.KeyCodes.UP,
+              Phaser.Input.Keyboard.KeyCodes.DOWN,
+              Phaser.Input.Keyboard.KeyCodes.LEFT,
+              Phaser.Input.Keyboard.KeyCodes.RIGHT,
+            ]);
+          } else {
+            this.input.keyboard.addCapture([
+              Phaser.Input.Keyboard.KeyCodes.W,
+              Phaser.Input.Keyboard.KeyCodes.A,
+              Phaser.Input.Keyboard.KeyCodes.S,
+              Phaser.Input.Keyboard.KeyCodes.D,
+              Phaser.Input.Keyboard.KeyCodes.UP,
+              Phaser.Input.Keyboard.KeyCodes.DOWN,
+              Phaser.Input.Keyboard.KeyCodes.LEFT,
+              Phaser.Input.Keyboard.KeyCodes.RIGHT,
+            ]);
+          }
+        };
+        document.addEventListener('focusin', syncGameKeyboardEnabled, true);
+        document.addEventListener('focusout', () => {
+          this.time.delayedCall(0, syncGameKeyboardEnabled);
+        }, true);
+        syncGameKeyboardEnabled();
         const playerClassKey = String(configPlayer.classKey || 'knight').toLowerCase();
         const lvl1Stats = progressionStatsForLevel(1, playerClassKey);
         let gridX = START_TILE.gx;
@@ -1465,6 +1569,13 @@ function startGame(configPlayer) {
         let isHungry = true;
         const playerBaseDamage = 12;
         let playerLevel = 1;
+        let playerMagicLevel = Math.max(0, Number(lvl1Stats.magicLevel || 0));
+        const weaponSkillLevelByType = new Map();
+        const weaponSkillUsesByType = new Map();
+        let playerFistLevel = 10;
+        let playerFistUses = 0;
+        let playerShieldingLevel = 10;
+        let playerShieldingUses = 0;
         let playerXp = 0;
         const learnedSpellIds = new Set();
         const learnedSpellSlots = Array.from({ length: 9 }, () => null);
@@ -1479,6 +1590,7 @@ function startGame(configPlayer) {
         const runVariantBias = Phaser.Math.Between(0, 1000000);
         let earlyShufflePool = [];
         let earlyShuffleCursor = 0;
+        const recentEarlyCreatureIds = [];
         let currentMap = [];
         let currentFloors = [];
         let currentStairsTile = { gx: MAP_W - 2, gy: MAP_H - 2 };
@@ -1486,29 +1598,163 @@ function startGame(configPlayer) {
         const centerX = (gx) => gx * tileSize + tileSize / 2;
         const centerY = (gy) => gy * tileSize + tileSize / 2;
         const xpToNextLevel = (level) => 50 + (level - 1) * 40;
+        const weaponUsesToNextLevel = (skillLevel) => {
+          const dl = Math.max(10, Math.floor(Number(skillLevel) || 10));
+          // Much faster skill progression requested by user.
+          return Math.max(6, Math.floor(4 + dl * 0.75));
+        };
+        const showSkillLevelUpText = (label, level) => {
+          const txt = this.add.text(this.scale.width / 2, 88, `${label} +1 (Lv ${level})`, {
+            color: '#bbf7d0',
+            fontSize: '22px',
+            fontStyle: 'bold',
+            fontFamily: 'Segoe UI, system-ui, sans-serif',
+          });
+          txt.setOrigin(0.5, 0.5);
+          txt.setScrollFactor(0);
+          txt.setDepth(620);
+          txt.setStroke('#052e16', 5);
+          txt.setShadow(0, 0, '#34d399', 14, true, true);
+          const glow = this.add.circle(this.scale.width / 2, 88, 40, 0x34d399, 0.18);
+          glow.setScrollFactor(0);
+          glow.setDepth(619);
+          this.tweens.add({
+            targets: glow,
+            alpha: 0,
+            scaleX: 2.1,
+            scaleY: 2.1,
+            duration: 520,
+            ease: 'Sine.easeOut',
+            onComplete: () => glow.destroy(),
+          });
+          radialSparkBurst(this, this.scale.width / 2, 88, 0x34d399, 12);
+          this.tweens.add({
+            targets: txt,
+            y: txt.y - 16,
+            alpha: 0,
+            duration: 760,
+            ease: 'Cubic.easeOut',
+            onComplete: () => txt.destroy(),
+          });
+        };
+        const weaponSkillTypeKey = (item) => {
+          if (!item) return null;
+          if (String(item.item_class || '').toLowerCase() !== 'weapons') return null;
+          const rawType = String(item.item_type || '').trim().toLowerCase();
+          return rawType || 'weapons';
+        };
+        const weaponSkillLabel = (typeKey) => {
+          const raw = String(typeKey || 'weapons')
+            .replace(/\s+/g, ' ')
+            .trim();
+          return raw
+            .split(' ')
+            .map((p) => (p ? (p.charAt(0).toUpperCase() + p.slice(1)) : p))
+            .join(' ');
+        };
+        const getWeaponSkillLevelByType = (typeKey) => {
+          const key = String(typeKey || '').toLowerCase();
+          if (!key) return 10;
+          if (!weaponSkillLevelByType.has(key)) weaponSkillLevelByType.set(key, 10);
+          return Math.max(10, Number(weaponSkillLevelByType.get(key) || 10));
+        };
+        const getWeaponSkillUsesByType = (typeKey) => {
+          const key = String(typeKey || '').toLowerCase();
+          if (!key) return 0;
+          if (!weaponSkillUsesByType.has(key)) weaponSkillUsesByType.set(key, 0);
+          return Math.max(0, Number(weaponSkillUsesByType.get(key) || 0));
+        };
+        const gainWeaponSkillUse = (item, amount = 1) => {
+          const typeKey = weaponSkillTypeKey(item);
+          if (!typeKey) return;
+          const add = Math.max(0, Math.floor(Number(amount) || 0)) * 3;
+          if (add <= 0) return;
+          let level = getWeaponSkillLevelByType(typeKey);
+          let uses = getWeaponSkillUsesByType(typeKey) + add;
+          let leveled = false;
+          while (uses >= weaponUsesToNextLevel(level)) {
+            uses -= weaponUsesToNextLevel(level);
+            level += 1;
+            leveled = true;
+          }
+          weaponSkillUsesByType.set(typeKey, uses);
+          weaponSkillLevelByType.set(typeKey, level);
+          if (leveled) {
+            addCombatLog(`${weaponSkillLabel(typeKey)} fighting advanced to ${level}.`);
+            showSkillLevelUpText(`${weaponSkillLabel(typeKey)} Fighting`, level);
+          }
+        };
+        const gainFistSkillUse = (amount = 1) => {
+          const add = Math.max(0, Math.floor(Number(amount) || 0)) * 3;
+          if (add <= 0) return;
+          playerFistUses += add;
+          let leveled = false;
+          while (playerFistUses >= weaponUsesToNextLevel(playerFistLevel)) {
+            playerFistUses -= weaponUsesToNextLevel(playerFistLevel);
+            playerFistLevel += 1;
+            leveled = true;
+          }
+          if (leveled) {
+            addCombatLog(`Fist Fighting advanced to ${playerFistLevel}.`);
+            showSkillLevelUpText('Fist Fighting', playerFistLevel);
+          }
+        };
+        const gainShieldingSkillUse = (amount = 1) => {
+          const add = Math.max(0, Math.floor(Number(amount) || 0)) * 3;
+          if (add <= 0) return;
+          playerShieldingUses += add;
+          let leveled = false;
+          while (playerShieldingUses >= weaponUsesToNextLevel(playerShieldingLevel)) {
+            playerShieldingUses -= weaponUsesToNextLevel(playerShieldingLevel);
+            playerShieldingLevel += 1;
+            leveled = true;
+          }
+          if (leveled) {
+            addCombatLog(`Shielding advanced to ${playerShieldingLevel}.`);
+            showSkillLevelUpText('Shielding', playerShieldingLevel);
+          }
+        };
         const updatePlayerTimingsByLevel = () => {
           // Progresion gradual por nivel del personaje (arranque mas lento).
           playerMoveDurationMs = Phaser.Math.Clamp(190 - (playerLevel - 1) * 2, 130, 190);
           playerActionDelayMs = Phaser.Math.Clamp(320 - (playerLevel - 1) * 5, 220, 320);
         };
         const showLevelUpText = () => {
-          const txt = this.add.text(this.scale.width / 2, this.scale.height / 2, 'LEVEL UP!', {
-            color: '#facc15',
-            fontSize: '56px',
+          flashCamera(this, 140, 255, 230, 140);
+          shakeCamera(this, 160, 0.012);
+          const cx = this.scale.width / 2;
+          const cy = this.scale.height / 2;
+          const glow = this.add.circle(cx, cy, 80, 0xfbbf24, 0.12);
+          glow.setScrollFactor(0);
+          glow.setDepth(600);
+          this.tweens.add({
+            targets: glow,
+            alpha: 0,
+            scaleX: 2.2,
+            scaleY: 2.2,
+            duration: 700,
+            ease: 'Sine.easeOut',
+            onComplete: () => glow.destroy(),
+          });
+          const txt = this.add.text(cx, cy, 'LEVEL UP!', {
+            color: '#fffbeb',
+            fontSize: '58px',
             fontStyle: 'bold',
-            fontFamily: 'Arial Black, Arial, sans-serif',
+            fontFamily: 'Segoe UI Black, Segoe UI, system-ui, sans-serif',
           });
           txt.setOrigin(0.5, 0.5);
-          txt.setStroke('#111827', 8);
+          txt.setStroke('#78350f', 10);
+          txt.setShadow(0, 0, '#fbbf24', 28, true, true);
           txt.setScrollFactor(0);
+          txt.setDepth(601);
           this.tweens.add({
             targets: txt,
-            y: txt.y - 24,
+            y: txt.y - 36,
             alpha: 0,
-            scaleX: 1.15,
-            scaleY: 1.15,
-            duration: 900,
-            ease: 'Sine.easeOut',
+            scaleX: 1.12,
+            scaleY: 1.12,
+            duration: 1000,
+            ease: 'Cubic.easeOut',
             onComplete: () => txt.destroy(),
           });
         };
@@ -1523,6 +1769,7 @@ function startGame(configPlayer) {
             const nextStats = progressionStatsForLevel(playerLevel, playerClassKey);
             playerMaxHp = nextStats.maxHp;
             playerMaxMana = nextStats.maxMana;
+            playerMagicLevel = Math.max(0, Number(nextStats.magicLevel || playerMagicLevel || 0));
             if (typeof onPlayerLevelStatsUpdate === 'function') onPlayerLevelStatsUpdate(playerLevel);
             leveled = true;
           }
@@ -1732,6 +1979,8 @@ function startGame(configPlayer) {
         };
         const showEatEffect = (label) => {
           if (playerDead || gameOver) return;
+          shockwaveRing(this, player.x, player.y, 0x4ade80, { startR: 8, endScale: 2.1, duration: 280 });
+          radialSparkBurst(this, player.x, player.y - 2, 0x86efac, 16);
           player.setTint(0x86efac);
           this.tweens.add({
             targets: player,
@@ -1745,40 +1994,45 @@ function startGame(configPlayer) {
               player.clearTint();
             },
           });
-          for (let i = 0; i < 4; i += 1) {
+          for (let i = 0; i < 7; i += 1) {
             const spark = this.add.circle(
-              player.x + Phaser.Math.Between(-8, 8),
-              player.y - tileSize * 0.55 + Phaser.Math.Between(-6, 6),
-              Phaser.Math.Between(2, 4),
-              0x86efac,
-              0.9
+              player.x + Phaser.Math.Between(-10, 10),
+              player.y - tileSize * 0.55 + Phaser.Math.Between(-8, 8),
+              Phaser.Math.Between(2, 5),
+              0xa7f3d0,
+              0.92
             );
+            spark.setDepth(120);
             this.tweens.add({
               targets: spark,
-              y: spark.y - Phaser.Math.Between(14, 22),
+              y: spark.y - Phaser.Math.Between(16, 28),
               alpha: 0,
-              duration: 380,
-              ease: 'Sine.easeOut',
+              duration: 420,
+              ease: 'Cubic.easeOut',
               onComplete: () => spark.destroy(),
             });
           }
           const txt = this.add.text(player.x, player.y - tileSize * 0.95, `EAT ${label || ''}`.trim(), {
-            color: '#86efac',
-            fontSize: '13px',
+            color: '#bbf7d0',
+            fontSize: '14px',
             fontStyle: 'bold',
           });
           txt.setOrigin(0.5, 0.5);
+          txt.setDepth(121);
+          txt.setStroke('#14532d', 3);
           this.tweens.add({
             targets: txt,
-            y: txt.y - 16,
+            y: txt.y - 18,
             alpha: 0,
-            duration: 520,
+            duration: 560,
             ease: 'Sine.easeOut',
             onComplete: () => txt.destroy(),
           });
         };
         const showDrinkEffect = (label, color = '#7dd3fc') => {
           if (playerDead || gameOver) return;
+          shockwaveRing(this, player.x, player.y, 0x38bdf8, { startR: 6, endScale: 2.4, duration: 300 });
+          radialSparkBurst(this, player.x, player.y, 0x7dd3fc, 12);
           player.setTintFill(0x60a5fa);
           this.tweens.add({
             targets: player,
@@ -1794,21 +2048,25 @@ function startGame(configPlayer) {
           });
           const txt = this.add.text(player.x, player.y - tileSize * 0.95, label, {
             color,
-            fontSize: '13px',
+            fontSize: '14px',
             fontStyle: 'bold',
           });
           txt.setOrigin(0.5, 0.5);
+          txt.setDepth(121);
+          txt.setStroke('#0c4a6e', 3);
           this.tweens.add({
             targets: txt,
-            y: txt.y - 16,
+            y: txt.y - 18,
             alpha: 0,
-            duration: 560,
+            duration: 580,
             ease: 'Sine.easeOut',
             onComplete: () => txt.destroy(),
           });
         };
         const showFullFoodEffect = () => {
           if (playerDead || gameOver) return;
+          flashCamera(this, 80, 255, 200, 80);
+          shakeCamera(this, 70, 0.008);
           player.setTint(0xfbbf24);
           this.tweens.add({
             targets: player,
@@ -1824,17 +2082,20 @@ function startGame(configPlayer) {
             },
           });
           const full = this.add.text(player.x, player.y - tileSize * 0.95, 'FULL', {
-            color: '#fbbf24',
-            fontSize: '15px',
+            color: '#fde047',
+            fontSize: '16px',
             fontStyle: 'bold',
           });
           full.setOrigin(0.5, 0.5);
+          full.setDepth(121);
+          full.setStroke('#713f12', 4);
+          full.setShadow(0, 0, '#fbbf24', 12, true, true);
           this.tweens.add({
             targets: full,
-            y: full.y - 18,
+            y: full.y - 22,
             alpha: 0,
-            duration: 620,
-            ease: 'Sine.easeOut',
+            duration: 680,
+            ease: 'Cubic.easeOut',
             onComplete: () => full.destroy(),
           });
         };
@@ -1924,13 +2185,13 @@ function startGame(configPlayer) {
           // Early-game rework:
           // - Build a per-run shuffled pool from easier groups.
           // - Iterate without immediate repeats, giving real variation between runs.
-          const earlyLevels = 10;
+          const earlyLevels = 14;
           if (level <= earlyLevels) {
             // Inicio mucho mas facil:
             // una fraccion muy pequena de grupos de menor experiencia,
             // abriendo lentamente con el nivel.
             const phase = (level - 1) / Math.max(1, earlyLevels - 1); // 0..1
-            const easyPct = 0.06 + phase * 0.18; // lvl1~6% -> lvl10~24%
+            const easyPct = 0.08 + phase * 0.24; // lvl1~8% -> lvl14~32%
             const easyMax = Math.max(2, Math.min(n - 1, Math.floor(n * easyPct)));
             // Excluir criaturas con muchos HP al principio.
             // Usamos percentil de average_hitpoints para filtrar grupos tanque.
@@ -1938,7 +2199,7 @@ function startGame(configPlayer) {
               .map((g) => Number(g.average_hitpoints || 0))
               .filter((v) => Number.isFinite(v) && v > 0)
               .sort((a, b) => a - b);
-            const hpPct = 0.10 + phase * 0.30; // lvl1~10% -> lvl10~40%
+            const hpPct = 0.10 + phase * 0.24; // lvl1~10% -> lvl14~34%
             const hpCap = hpValues.length > 0
               ? hpValues[Math.min(hpValues.length - 1, Math.floor((hpValues.length - 1) * hpPct))]
               : Number.POSITIVE_INFINITY;
@@ -2027,41 +2288,90 @@ function startGame(configPlayer) {
         };
         const hasStairsAtPlayer = () => gridX === currentStairsTile.gx && gridY === currentStairsTile.gy;
         const generateLevelMap = () => {
-          const map = Array.from({ length: MAP_H }, () => Array.from({ length: MAP_W }, () => '.'));
-          for (let y = 0; y < MAP_H; y += 1) {
-            for (let x = 0; x < MAP_W; x += 1) {
-              const isBorder = x === 0 || y === 0 || x === MAP_W - 1 || y === MAP_H - 1;
-              if (isBorder) {
-                map[y][x] = '#';
-              } else if (Math.random() < 0.22) {
-                map[y][x] = '#';
+          // Classic dungeon style: rooms connected by corridors.
+          const map = Array.from({ length: MAP_H }, () => Array.from({ length: MAP_W }, () => '#'));
+          const rooms = [];
+          const roomCount = Phaser.Math.Between(4, 6);
+          const carveRoom = (rx, ry, rw, rh) => {
+            for (let y = ry; y < ry + rh; y += 1) {
+              for (let x = rx; x < rx + rw; x += 1) {
+                if (x <= 0 || y <= 0 || x >= MAP_W - 1 || y >= MAP_H - 1) continue;
+                map[y][x] = '.';
               }
             }
-          }
-          // carve guaranteed path START -> stairs
-          const stairs = {
-            gx: Phaser.Math.Between(2, MAP_W - 3),
-            gy: Phaser.Math.Between(2, MAP_H - 3),
           };
-          let x = START_TILE.gx;
-          let y = START_TILE.gy;
-          map[y][x] = '.';
-          while (x !== stairs.gx || y !== stairs.gy) {
-            if (x < stairs.gx) x += 1;
-            else if (x > stairs.gx) x -= 1;
-            else if (y < stairs.gy) y += 1;
-            else if (y > stairs.gy) y -= 1;
-            map[y][x] = '.';
+          const roomOverlaps = (a, b) => !(
+            a.x + a.w + 1 < b.x
+            || b.x + b.w + 1 < a.x
+            || a.y + a.h + 1 < b.y
+            || b.y + b.h + 1 < a.y
+          );
+          for (let i = 0; i < roomCount; i += 1) {
+            const rw = Phaser.Math.Between(4, 7);
+            const rh = Phaser.Math.Between(3, 5);
+            const rx = Phaser.Math.Between(1, Math.max(1, MAP_W - rw - 2));
+            const ry = Phaser.Math.Between(1, Math.max(1, MAP_H - rh - 2));
+            const next = { x: rx, y: ry, w: rw, h: rh };
+            if (rooms.some((r) => roomOverlaps(r, next))) continue;
+            carveRoom(rx, ry, rw, rh);
+            rooms.push(next);
           }
+          if (rooms.length === 0) {
+            const fallback = { x: 2, y: 2, w: Math.max(4, MAP_W - 4), h: Math.max(3, MAP_H - 4) };
+            carveRoom(fallback.x, fallback.y, fallback.w, fallback.h);
+            rooms.push(fallback);
+          }
+          const centerOf = (r) => ({
+            gx: Math.floor(r.x + r.w / 2),
+            gy: Math.floor(r.y + r.h / 2),
+          });
+          const carveHCorridor = (x1, x2, y) => {
+            const from = Math.min(x1, x2);
+            const to = Math.max(x1, x2);
+            for (let x = from; x <= to; x += 1) {
+              if (x > 0 && x < MAP_W - 1 && y > 0 && y < MAP_H - 1) map[y][x] = '.';
+            }
+          };
+          const carveVCorridor = (y1, y2, x) => {
+            const from = Math.min(y1, y2);
+            const to = Math.max(y1, y2);
+            for (let y = from; y <= to; y += 1) {
+              if (x > 0 && x < MAP_W - 1 && y > 0 && y < MAP_H - 1) map[y][x] = '.';
+            }
+          };
+          for (let i = 1; i < rooms.length; i += 1) {
+            const a = centerOf(rooms[i - 1]);
+            const b = centerOf(rooms[i]);
+            if (Math.random() < 0.5) {
+              carveHCorridor(a.gx, b.gx, a.gy);
+              carveVCorridor(a.gy, b.gy, b.gx);
+            } else {
+              carveVCorridor(a.gy, b.gy, a.gx);
+              carveHCorridor(a.gx, b.gx, b.gy);
+            }
+          }
+          const startNear = centerOf(rooms[0]);
+          carveHCorridor(START_TILE.gx, startNear.gx, START_TILE.gy);
+          carveVCorridor(START_TILE.gy, startNear.gy, startNear.gx);
           map[START_TILE.gy][START_TILE.gx] = '.';
+
+          const stairsRoom = rooms[rooms.length - 1];
+          const stairsCenter = centerOf(stairsRoom);
+          const stairs = {
+            gx: Phaser.Math.Clamp(stairsCenter.gx, 1, MAP_W - 2),
+            gy: Phaser.Math.Clamp(stairsCenter.gy, 1, MAP_H - 2),
+          };
           map[stairs.gy][stairs.gx] = '.';
           return { map: map.map((r) => r.join('')), stairs };
         };
         const refreshMapVisuals = () => {
+          const floorA = 0x121a2e;
+          const floorB = 0x182238;
+          const wall = 0x2a3d58;
           for (let y = 0; y < MAP_H; y += 1) {
             for (let x = 0; x < MAP_W; x += 1) {
               const isWall = currentMap[y][x] === '#';
-              mapTiles[y][x].setFillStyle(isWall ? 0x2f3a4a : 0x1a2534, 1);
+              mapTiles[y][x].setFillStyle(isWall ? wall : (((x + y) & 1) === 0 ? floorA : floorB), 1);
             }
           }
         };
@@ -2077,11 +2387,101 @@ function startGame(configPlayer) {
           creatures.length = 0;
 
           const group = currentLevelGroup;
-          const levelPool = (group && group.creatures && group.creatures.length > 0)
+          const basePool = (group && group.creatures && group.creatures.length > 0)
             ? group.creatures.filter((c) => c.type_primary === group.type_primary)
             : [{ id: 1116, title: 'Rat', type_primary: 'Glires', experience: 5, hitpoints: 20, maxDamage: 8, image: 'creature/Rat.gif' }];
+          const earlyLevels = 12;
+          let levelPool = basePool.slice();
+          // Single-type-primary guarantee per floor:
+          // we only use creatures from the selected group's type_primary.
+          if (level <= earlyLevels) {
+            const phase = (level - 1) / Math.max(1, earlyLevels - 1); // 0..1
+            const values = (arr, pick) => arr
+              .map((x) => Number(pick(x)))
+              .filter((v) => Number.isFinite(v) && v > 0)
+              .sort((a, b) => a - b);
+            const pct = (sorted, p, fallback) => {
+              if (!sorted || sorted.length === 0) return fallback;
+              const clamped = Phaser.Math.Clamp(Number(p) || 0, 0, 1);
+              const pos = Math.min(sorted.length - 1, Math.floor((sorted.length - 1) * clamped));
+              return sorted[pos];
+            };
+            const baseHpSorted = values(basePool, (c) => c.hitpoints);
+            const baseDmgSorted = values(basePool, (c) => c.maxDamage);
+            const baseExpSorted = values(basePool, (c) => c.experience);
+            const hpBase = pct(baseHpSorted, 0.72, 30);
+            const dmgBase = pct(baseDmgSorted, 0.72, 8);
+            const expBase = pct(baseExpSorted, 0.72, 15);
+            const hpCap = Math.max(20, Math.floor(hpBase * (1.04 + phase * 0.30) + 5));
+            const dmgCap = Math.max(4, Math.floor(dmgBase * (1.04 + phase * 0.34) + 1));
+            const expCap = Math.max(8, Math.floor(expBase * (1.04 + phase * 0.36) + 3));
+            const difficultyFiltered = levelPool.filter((c) => {
+              const hp = Number(c && c.hitpoints);
+              const dmg = Number(c && c.maxDamage);
+              const exp = Number(c && c.experience);
+              if (!Number.isFinite(hp) || !Number.isFinite(dmg) || !Number.isFinite(exp)) return false;
+              return hp <= hpCap && dmg <= dmgCap && exp <= expCap;
+            });
+            if (difficultyFiltered.length >= 8) {
+              levelPool = difficultyFiltered;
+            } else {
+              levelPool = basePool.slice();
+            }
+            // Progression hard-gate by floor (very conservative for first floors).
+            const strictHpCapByFloor = (floor) => {
+              if (floor <= 1) return 42;
+              if (floor === 2) return 55;
+              if (floor === 3) return 72;
+              if (floor === 4) return 92;
+              if (floor === 5) return 118;
+              return Math.floor(118 + (floor - 5) * 20);
+            };
+            const strictDmgCapByFloor = (floor) => {
+              if (floor <= 1) return 10;
+              if (floor === 2) return 13;
+              if (floor === 3) return 17;
+              if (floor === 4) return 22;
+              if (floor === 5) return 28;
+              return Math.floor(28 + (floor - 5) * 4);
+            };
+            const strictExpCapByFloor = (floor) => {
+              if (floor <= 1) return 22;
+              if (floor === 2) return 36;
+              if (floor === 3) return 54;
+              if (floor === 4) return 78;
+              if (floor === 5) return 110;
+              return Math.floor(110 + (floor - 5) * 28);
+            };
+            const hpStrict = strictHpCapByFloor(level);
+            const dmgStrict = strictDmgCapByFloor(level);
+            const expStrict = strictExpCapByFloor(level);
+            const strictFiltered = levelPool.filter((c) => {
+              const hp = Number(c && c.hitpoints);
+              const dmg = Number(c && c.maxDamage);
+              const exp = Number(c && c.experience);
+              if (!Number.isFinite(hp) || !Number.isFinite(dmg) || !Number.isFinite(exp)) return false;
+              return hp <= hpStrict && dmg <= dmgStrict && exp <= expStrict;
+            });
+            if (strictFiltered.length >= 8) {
+              levelPool = strictFiltered;
+            }
+            const recentSet = new Set(recentEarlyCreatureIds);
+            const filtered = levelPool.filter((c) => !recentSet.has(Number(c.id)));
+            if (filtered.length >= 12) levelPool = filtered;
+            Phaser.Utils.Array.Shuffle(levelPool);
+          }
           creaturesTargetCount = Phaser.Math.Between(MIN_CREATURES_PER_LEVEL, MAX_CREATURES_PER_LEVEL);
           const templates = pickRandomCreatures(levelPool, creaturesTargetCount);
+          if (level <= earlyLevels) {
+            for (const t of templates) {
+              const cid = Number(t && t.id);
+              if (!Number.isFinite(cid)) continue;
+              recentEarlyCreatureIds.push(cid);
+            }
+            if (recentEarlyCreatureIds.length > 40) {
+              recentEarlyCreatureIds.splice(0, recentEarlyCreatureIds.length - 40);
+            }
+          }
           const floorsForSpawn = currentFloors.filter(
             (t) =>
               !(t.gx === START_TILE.gx && t.gy === START_TILE.gy)
@@ -2100,6 +2500,7 @@ function startGame(configPlayer) {
             const damageMul = Number(CREATURE_DAMAGE_MULTIPLIER_BY_ID.get(creatureId) || 1);
             const baseMaxDamage = Math.max(1, Number(template.maxDamage || 1));
             const adjustedMaxDamage = Math.max(1, Math.floor(baseMaxDamage * damageMul));
+            sprite.setDepth(15);
             creatures.push({
               id: creatureId,
               sprite,
@@ -2120,7 +2521,11 @@ function startGame(configPlayer) {
               hpBar: makeHealthBar(0xef4444),
               nameTag: makeNameLabel(template.title, '#f3f4f6'),
             });
-            updateCreatureBar(creatures[creatures.length - 1]);
+            const spawned = creatures[creatures.length - 1];
+            spawned.hpBar.bg.setDepth(16);
+            spawned.hpBar.fill.setDepth(17);
+            spawned.nameTag.setDepth(18);
+            updateCreatureBar(spawned);
           }
           const first = templates[0] || levelPool[0];
           addCombatLog(
@@ -2179,9 +2584,13 @@ function startGame(configPlayer) {
         const equipmentPanelEl = document.querySelector('.equipment-panel');
         const equipmentAccordionEl = document.getElementById('equipmentAccordion');
         const lootPanelEl = document.querySelector('.loot-panel');
+        const statsPanelEl = document.getElementById('statsPanel');
         const spellsPanelEl = document.querySelector('.spells-panel');
         const spellsAccordionEl = document.getElementById('spellsAccordion');
         const learnedSpellsPanelEl = document.getElementById('learnedSpellsPanel');
+        const itemsShopPanelEl = document.getElementById('itemsShopPanel');
+        const itemsShopAccordionEl = document.getElementById('itemsShopAccordion');
+        const itemsShopSearchInputEl = document.getElementById('itemsShopSearchInput');
         const hideSpellTooltip = () => {
           if (!spellTooltipEl) return;
           spellTooltipEl.style.display = 'none';
@@ -2246,6 +2655,15 @@ function startGame(configPlayer) {
           equipmentAccordionEl.addEventListener('toggle', syncLootPanelPosition);
         }
         window.addEventListener('resize', syncLootPanelPosition);
+        const syncStatsPanelPosition = () => {
+          if (!lootPanelEl || !statsPanelEl) return;
+          const rect = lootPanelEl.getBoundingClientRect();
+          const nextTop = Math.round(rect.bottom + 6);
+          statsPanelEl.style.top = `${nextTop}px`;
+        };
+        const lootAccordionEl = document.getElementById('lootAccordion');
+        if (lootAccordionEl) lootAccordionEl.addEventListener('toggle', syncStatsPanelPosition);
+        window.addEventListener('resize', syncStatsPanelPosition);
         const syncLearnedPanelPosition = () => {
           if (!spellsPanelEl || !learnedSpellsPanelEl) return;
           const rect = spellsPanelEl.getBoundingClientRect();
@@ -2256,9 +2674,22 @@ function startGame(configPlayer) {
           spellsAccordionEl.addEventListener('toggle', syncLearnedPanelPosition);
         }
         window.addEventListener('resize', syncLearnedPanelPosition);
+        const syncItemsShopPanelPosition = () => {
+          if (!learnedSpellsPanelEl || !itemsShopPanelEl) return;
+          const rect = learnedSpellsPanelEl.getBoundingClientRect();
+          const nextTop = Math.round(rect.bottom + 6);
+          itemsShopPanelEl.style.top = `${nextTop}px`;
+        };
+        if (learnedSpellsPanelEl && learnedSpellsPanelEl.querySelector('details')) {
+          learnedSpellsPanelEl.querySelector('details').addEventListener('toggle', syncItemsShopPanelPosition);
+        }
+        if (itemsShopAccordionEl) {
+          itemsShopAccordionEl.addEventListener('toggle', syncItemsShopPanelPosition);
+        }
+        window.addEventListener('resize', syncItemsShopPanelPosition);
         const isBlockedSpellTitle = (titleRaw) => {
           const title = String(titleRaw || '').trim().toLowerCase();
-          return title === 'find person' || title === 'magic rope';
+          return title === 'find person' || title === 'magic rope' || title === 'cure poison';
         };
         const renderLearnedSpells = () => {
           const learnedGrid = document.getElementById('learnedSpellsGrid');
@@ -2291,6 +2722,7 @@ function startGame(configPlayer) {
           learnedFoot.textContent = `Total: ${learned.length}`;
           syncLootPanelPosition();
           syncLearnedPanelPosition();
+          syncItemsShopPanelPosition();
         };
         const renderSpellShop = () => {
           const spellsGrid = document.getElementById('spellsGrid');
@@ -2397,7 +2829,225 @@ function startGame(configPlayer) {
           spellsFoot.textContent = `Gold: ${currentGold} | Learned: ${learnedSpellIds.size}`;
           renderLearnedSpells();
         };
+        const formatItemShopTooltip = (item) => {
+          if (!item) return '';
+          const lines = [];
+          lines.push(`${item.title || `Item ${item.id}`}`);
+          lines.push(`────────────────────`);
+          lines.push(`Shop`);
+          lines.push(`- Price: ${Math.max(0, Number(item.price || 0))} gp`);
+          lines.push(``);
+          lines.push(`Type`);
+          lines.push(`- Class: ${item.item_class || 'Unknown'}`);
+          lines.push(`- Type: ${item.item_type || 'Unknown'}`);
+          if (item.type_secondary) lines.push(`- Secondary: ${item.type_secondary}`);
+          const attrs = Array.isArray(item.attributes) ? item.attributes : [];
+          if (attrs.length > 0) {
+            lines.push(``);
+            lines.push(`Attributes`);
+            for (const a of attrs.slice(0, 8)) {
+              const n = String((a && a.name) || '').trim();
+              const v = String((a && a.value) || '').trim();
+              if (!n) continue;
+              lines.push(`- ${n}: ${v || '-'}`);
+            }
+          }
+          const desc = String(item.description || '').trim();
+          if (desc) {
+            lines.push(``);
+            lines.push(`Description`);
+            lines.push(desc);
+          }
+          return lines.join('\n');
+        };
+        const bindItemShopTooltip = (el, item) => {
+          if (!el || !spellTooltipEl) return;
+          const place = (ev) => {
+            const pad = 12;
+            const x = Math.min(window.innerWidth - 440, ev.clientX + pad);
+            const y = Math.min(window.innerHeight - 240, ev.clientY + pad);
+            spellTooltipEl.style.left = `${Math.max(6, x)}px`;
+            spellTooltipEl.style.top = `${Math.max(6, y)}px`;
+          };
+          el.addEventListener('mouseenter', (ev) => {
+            spellTooltipEl.textContent = formatItemShopTooltip(item);
+            spellTooltipEl.style.display = 'block';
+            spellTooltipEl.style.overflow = 'auto';
+            spellTooltipEl.style.maxHeight = '42vh';
+            place(ev);
+          });
+          el.addEventListener('mousemove', place);
+          el.addEventListener('mouseleave', hideSpellTooltip);
+        };
+        let itemsShopQuery = '';
+        const renderItemsShop = (queryRaw = itemsShopQuery) => {
+          itemsShopQuery = String(queryRaw || '').trim();
+          const gridEl = document.getElementById('itemsShopGrid');
+          const footEl = document.getElementById('itemsShopFoot');
+          if (!gridEl || !footEl) return;
+          const currentGold = window.debugInventory && typeof window.debugInventory.getGold === 'function'
+            ? Math.max(0, Number(window.debugInventory.getGold() || 0))
+            : 0;
+          gridEl.innerHTML = '';
+          if (itemsShopQuery.length < 3) {
+            footEl.textContent = `Type at least 3 chars | Gold: ${currentGold}`;
+            return;
+          }
+          const q = itemsShopQuery.toLowerCase();
+          const matches = (itemsShopCatalog || [])
+            .filter((it) => {
+              if (!String(it.title || '').toLowerCase().includes(q)) return false;
+              const itemType = String(it.item_type || '').toLowerCase();
+              const itemTypeNorm = itemType.replace(/\s+/g, ' ').trim();
+              const itemClass = String(it.item_class || '').toLowerCase();
+              if (/^exercise\s*weapons?$/.test(itemTypeNorm)) return false;
+              // Shop scope: Ammunition + Weapons + Body Equipment.
+              if (itemTypeNorm !== 'ammunition' && itemClass !== 'weapons' && itemClass !== 'body equipment') return false;
+              if (itemTypeNorm === 'rods') return playerClassKey === 'druid';
+              if (itemTypeNorm === 'wands') return playerClassKey === 'sorcerer';
+              return true;
+            })
+            .slice(0, 10);
+          if (matches.length === 0) {
+            footEl.textContent = `No items found for "${itemsShopQuery}"`;
+            return;
+          }
+          const frag = document.createDocumentFragment();
+          for (const item of matches) {
+            const row = document.createElement('div');
+            row.className = 'item-shop-row';
+            bindItemShopTooltip(row, item);
+            const head = document.createElement('div');
+            head.className = 'item-shop-head';
+            if (item.image) {
+              const img = document.createElement('img');
+              img.src = `./data/images/${item.image}`;
+              img.alt = item.title || 'Item';
+              head.appendChild(img);
+            }
+            const nameEl = document.createElement('span');
+            nameEl.className = 'item-shop-name';
+            nameEl.textContent = item.title || `Item ${item.id}`;
+            const priceEl = document.createElement('span');
+            priceEl.className = 'item-shop-price';
+            priceEl.textContent = `${Math.max(0, Number(item.price || 0))} gp`;
+            head.appendChild(nameEl);
+            head.appendChild(priceEl);
+            const price = Math.max(0, Number(item.price || 0));
+            const isStackable = Number((item.raw && item.raw.is_stackable) || 0) === 1;
+            const buyWrap = document.createElement('div');
+            buyWrap.style.display = 'grid';
+            buyWrap.style.gridTemplateColumns = isStackable ? '1fr 1fr' : '1fr';
+            buyWrap.style.gap = '4px';
+            const makeBuyButton = (qty) => {
+              const totalPrice = price * qty;
+              const btn = document.createElement('button');
+              btn.type = 'button';
+              const canGold = currentGold >= totalPrice;
+              if (!canGold) {
+                btn.textContent = `Need ${totalPrice} gp`;
+                btn.disabled = true;
+                return btn;
+              }
+              btn.textContent = qty === 1 ? 'Buy x1' : 'Buy x100';
+              btn.disabled = false;
+              btn.addEventListener('mousedown', (ev) => {
+                if (ev.button !== 0) return;
+                ev.preventDefault();
+                ev.stopPropagation();
+                if (btn.disabled) return;
+                const spent = window.debugInventory && typeof window.debugInventory.spendGold === 'function'
+                  ? window.debugInventory.spendGold(totalPrice)
+                  : false;
+                if (!spent) {
+                  addCombatLog(`Not enough gold to buy ${item.title} x${qty}.`);
+                  renderItemsShop(itemsShopQuery);
+                  return;
+                }
+                const stored = window.debugInventory && typeof window.debugInventory.addLoot === 'function'
+                  ? window.debugInventory.addLoot({
+                    id: item.id,
+                    title: item.title,
+                    image: item.image,
+                    item_type: item.item_type,
+                    item_class: item.item_class,
+                    type_secondary: item.type_secondary,
+                    armor_value: item.armor_value,
+                    shielding_value: item.shielding_value,
+                    attack_value: item.attack_value,
+                    range_value: item.range_value,
+                    throwable: item.throwable,
+                    attributes: item.attributes,
+                    raw: item.raw,
+                    isStackable,
+                    count: qty,
+                  })
+                  : false;
+                if (!stored) {
+                  if (window.debugInventory && typeof window.debugInventory.addGold === 'function') {
+                    window.debugInventory.addGold(totalPrice);
+                  }
+                  addCombatLog(`Cannot carry ${item.title}.`);
+                  renderItemsShop(itemsShopQuery);
+                  return;
+                }
+                addCombatLog(`Bought item: ${item.title} x${qty} for ${totalPrice} gp.`);
+                updateHud();
+                renderItemsShop(itemsShopQuery);
+              });
+              return btn;
+            };
+            buyWrap.appendChild(makeBuyButton(1));
+            if (isStackable) buyWrap.appendChild(makeBuyButton(100));
+            row.appendChild(head);
+            row.appendChild(buyWrap);
+            frag.appendChild(row);
+          }
+          gridEl.appendChild(frag);
+          footEl.textContent = `Results: ${matches.length} | Gold: ${currentGold}`;
+        };
         window.addEventListener('coins-changed', renderSpellShop);
+        window.addEventListener('coins-changed', () => renderItemsShop(itemsShopQuery));
+        if (itemsShopSearchInputEl) {
+          itemsShopSearchInputEl.addEventListener('input', () => {
+            renderItemsShop(itemsShopSearchInputEl.value || '');
+          });
+        }
+        const renderTopStatsPanel = () => {
+          const statsGridEl = document.getElementById('statsGrid');
+          const statsFootEl = document.getElementById('statsFoot');
+          if (!statsGridEl || !statsFootEl) return;
+          const stats = [
+            { key: 'Magic Level', level: Math.max(0, Number(playerMagicLevel || 0)) },
+            { key: 'Fist Fighting', level: Math.max(10, Number(playerFistLevel || 10)) },
+            { key: 'Shielding', level: Math.max(10, Number(playerShieldingLevel || 10)) },
+          ];
+          for (const [typeKey, level] of weaponSkillLevelByType.entries()) {
+            stats.push({
+              key: `${weaponSkillLabel(typeKey)} Fighting`,
+              level: Math.max(10, Number(level || 10)),
+            });
+          }
+          stats.sort((a, b) => {
+            if (b.level !== a.level) return b.level - a.level;
+            return String(a.key).localeCompare(String(b.key));
+          });
+          const top = stats.slice(0, 5);
+          statsGridEl.innerHTML = '';
+          for (const s of top) {
+            const row = document.createElement('div');
+            row.className = 'stats-row';
+            const left = document.createElement('span');
+            left.textContent = s.key;
+            const right = document.createElement('strong');
+            right.textContent = String(s.level);
+            row.appendChild(left);
+            row.appendChild(right);
+            statsGridEl.appendChild(row);
+          }
+          statsFootEl.textContent = `Showing top ${top.length} of ${stats.length} stats`;
+          syncStatsPanelPosition();
+        };
         const updateHud = () => {
           const group = currentLevelGroup;
           const typeName = group ? group.type_primary : 'Creature';
@@ -2408,9 +3058,16 @@ function startGame(configPlayer) {
           const capCurrent = invState ? Number(invState.carriedWeight || 0) : 0;
           const capCurrentText = Number.isFinite(capCurrent) ? capCurrent.toFixed(1) : '0.0';
           const capTotalText = Number.isFinite(capTotal) ? capTotal.toFixed(0) : '0';
-          nameLabel.setText(`${configPlayer.name} (${playerClassKey}) | Player Lv ${playerLevel}`);
+          const handEq = invState && invState.equipped ? invState.equipped.hand : null;
+          const skillType = weaponSkillTypeKey(handEq);
+          const skillLevel = getWeaponSkillLevelByType(skillType);
+          const skillUses = getWeaponSkillUsesByType(skillType);
+          const skillNeed = weaponUsesToNextLevel(skillLevel);
+          const skillPct = skillNeed > 0 ? Math.floor((skillUses / skillNeed) * 100) : 0;
+          const skillLabel = weaponSkillLabel(skillType || 'Unarmed');
+          nameLabel.setText(`${configPlayer.name} (${playerClassKey}) | Player Lv ${playerLevel} | ML ${playerMagicLevel} | ${skillLabel} ${skillLevel}`);
           levelHud.setText(`Floor ${currentLevel} | ${typeName} ${aliveCreatures().length}/${creaturesTargetCount}`);
-          combatHud.setText(`HP ${playerHp}/${playerMaxHp} MP ${playerMana}/${playerMaxMana} CAP ${capCurrentText}/${capTotalText}`);
+          combatHud.setText(`HP ${playerHp}/${playerMaxHp} MP ${playerMana}/${playerMaxMana} ML ${playerMagicLevel} ${skillLabel} ${skillLevel} (${skillPct}%) Fist ${playerFistLevel} Shield ${playerShieldingLevel} CAP ${capCurrentText}/${capTotalText}`);
           const xpNeeded = xpToNextLevel(playerLevel);
           const safeXp = Number.isFinite(playerXp) ? playerXp : 0;
           const progress = xpNeeded > 0 && Number.isFinite(safeXp) ? safeXp / xpNeeded : 0;
@@ -2419,6 +3076,8 @@ function startGame(configPlayer) {
           levelProgressFill.width = Math.max(2, totalWidth * safeProgress);
           levelProgressText.setText(`XP ${Math.floor(safeXp)} / ${xpNeeded}`);
           renderSpellShop();
+          renderItemsShop(itemsShopQuery);
+          renderTopStatsPanel();
         };
         const pickCreatureDamage = () => {
           const max = Math.max(1, Number(this._activeAttackerMaxDamage || 1));
@@ -2444,21 +3103,115 @@ function startGame(configPlayer) {
             : null;
           return state && state.equipped ? state.equipped.hand : null;
         };
-        const currentPlayerDamage = () => {
-          const hand = getEquippedHandWeapon();
+        const getEquippedAmmo = () => {
+          const state = window.debugInventory && typeof window.debugInventory.state === 'function'
+            ? window.debugInventory.state()
+            : null;
+          return state && state.equipped ? state.equipped.ammunition : null;
+        };
+        const getEquippedShield = () => {
+          const state = window.debugInventory && typeof window.debugInventory.state === 'function'
+            ? window.debugInventory.state()
+            : null;
+          return state && state.equipped ? state.equipped.shield : null;
+        };
+        const applyShieldingReduction = (incomingDamage) => {
+          const raw = Math.max(1, Math.floor(Number(incomingDamage) || 1));
+          const shield = getEquippedShield();
+          if (!shield || String(shield.item_type || '').toLowerCase() !== 'shields') return raw;
+          const attrs = Array.isArray(shield.attributes) ? shield.attributes : [];
+          const defenseAttr = attrs.find((a) => (
+            a
+            && String(a.name || '').toLowerCase() === 'defense'
+          ));
+          const defenseValue = Math.max(0, Number((defenseAttr && defenseAttr.value) || 0));
+          const shieldValue = Math.max(0, Number(shield.shielding_value || 0)) + defenseValue;
+          const skillValue = Math.max(10, Number(playerShieldingLevel || 10));
+          // Mitigacion fuerte: combina reduccion porcentual + plana.
+          const percentReduction = Phaser.Math.Clamp(
+            0.14 + (shieldValue * 0.012) + ((skillValue - 10) * 0.005),
+            0.14,
+            0.72
+          );
+          const flatReduction = Math.floor((shieldValue * 0.22) + ((skillValue - 10) * 0.10));
+          const reducedByPercent = Math.floor(raw * (1 - percentReduction));
+          const reduced = Math.max(1, reducedByPercent - flatReduction);
+          return reduced;
+        };
+        const ammoAttackBonus = () => {
+          const ammo = getEquippedAmmo();
+          return Math.max(0, Number((ammo && ammo.attack_value) || 0));
+        };
+        const isMagicRangedWeapon = (item) => {
+          if (!item) return false;
+          const t = String(item.item_type || '').toLowerCase();
+          return t === 'rods' || t === 'wands';
+        };
+        const magicWeaponDamage = (weapon) => {
+          const ml = Math.max(0, Number(playerMagicLevel || 0));
+          const lv = Math.max(1, Number(playerLevel || 1));
+          const weaponAttack = Math.max(0, Number((weapon && weapon.attack_value) || 0));
+          const typeKey = weaponSkillTypeKey(weapon);
+          const skillLevel = getWeaponSkillLevelByType(typeKey);
+          const skillBonus = Math.max(0, Math.floor((skillLevel - 10) * 0.35));
+          return Math.max(5, Math.floor(3 + lv * 0.55 + ml * 3.0 + weaponAttack * 0.65 + skillBonus));
+        };
+        const currentPlayerDamage = (handOverride = null) => {
+          const hand = handOverride || getEquippedHandWeapon();
+          if (isMagicRangedWeapon(hand)) return magicWeaponDamage(hand);
+          if (!hand) {
+            // Intentionally low unarmed damage so weapon upgrades matter a lot.
+            const fistBonus = Math.max(0, Math.floor((playerFistLevel - 10) * 0.35));
+            return Math.max(1, Math.floor(2 + playerLevel * 0.12 + fistBonus));
+          }
           const weaponAttack = Math.max(0, Number((hand && hand.attack_value) || 0));
-          return Math.max(1, playerBaseDamage + weaponAttack);
+          const rangedAmmoBonus = requiresAmmoForWeapon(hand) ? ammoAttackBonus() : 0;
+          const typeKey = weaponSkillTypeKey(hand);
+          const skillLevel = getWeaponSkillLevelByType(typeKey);
+          const weaponSkillBonus = Math.max(0, Math.floor((skillLevel - 10) * 0.8));
+          const weaponBaseBonus = 6;
+          const scaledWeaponAttack = Math.floor(weaponAttack * 1.35);
+          return Math.max(2, playerBaseDamage + weaponBaseBonus + scaledWeaponAttack + rangedAmmoBonus + weaponSkillBonus);
         };
         const isThrowableWeapon = (item) => {
           if (!item) return false;
           if (item.throwable) return true;
           return String(item.type_secondary || '').toLowerCase() === 'throwing weapons';
         };
-        const isDistanceWeapon = (item) => (
+        const isClassicDistanceWeapon = (item) => (
           item
           && String(item.item_class || '').toLowerCase() === 'weapons'
           && String(item.item_type || '').toLowerCase() === 'distance weapons'
         );
+        const isDistanceWeapon = (item) => isClassicDistanceWeapon(item) || isMagicRangedWeapon(item);
+        const requiresAmmoForWeapon = (item) => Boolean(
+          item
+          && isClassicDistanceWeapon(item)
+          && !isThrowableWeapon(item)
+        );
+        const hasAmmoForWeapon = (item) => {
+          if (!requiresAmmoForWeapon(item)) return true;
+          const ammo = getEquippedAmmo();
+          if (!ammo) return false;
+          const count = Math.max(0, Number(ammo.count || 0));
+          return count > 0;
+        };
+        const spendOneAmmo = (weapon) => {
+          if (!requiresAmmoForWeapon(weapon)) return true;
+          const ammo = getEquippedAmmo();
+          if (!ammo) return false;
+          const currentCount = Math.max(0, Number(ammo.count || 0));
+          if (currentCount <= 0) return false;
+          if (currentCount > 1) {
+            const nextAmmo = { ...ammo, count: currentCount - 1 };
+            if (typeof inventorySetEquippedSlotVisual !== 'function') return false;
+            inventorySetEquippedSlotVisual('ammunition', nextAmmo, `${ammo.title}: ${currentCount - 1} left.`);
+          } else {
+            if (typeof inventoryClearEquippedSlotVisual !== 'function') return false;
+            inventoryClearEquippedSlotVisual('ammunition', 'Out of ammunition.');
+          }
+          return true;
+        };
         const rangeFromAttributes = (item) => {
           const attrs = Array.isArray(item && item.attributes) ? item.attributes : [];
           const row = attrs.find((a) => a && String(a.name || '').toLowerCase() === 'range');
@@ -2468,6 +3221,7 @@ function startGame(configPlayer) {
         };
         const effectiveWeaponRange = (item) => {
           if (!item) return 1;
+          if (isMagicRangedWeapon(item)) return 5;
           const fromAttrs = rangeFromAttributes(item);
           if (fromAttrs != null) return fromAttrs;
           const raw = Number(item.range_value || 1);
@@ -2526,14 +3280,16 @@ function startGame(configPlayer) {
         };
         const inferHealingAmount = (spell) => {
           const title = String((spell && spell.title) || '').toLowerCase();
-          if (title.includes('ultimate')) return 75 + playerLevel * 4;
-          if (title.includes('intense')) return 45 + playerLevel * 3;
-          if (title.includes('light')) return 20 + playerLevel * 2;
-          return 30 + playerLevel * 2;
+          const ml = Math.max(0, Number(playerMagicLevel || 0));
+          if (title.includes('ultimate')) return Math.max(20, Math.floor(36 + playerLevel * 1.2 + ml * 6.2));
+          if (title.includes('intense')) return Math.max(14, Math.floor(24 + playerLevel * 1.0 + ml * 4.6));
+          if (title.includes('light')) return Math.max(8, Math.floor(12 + playerLevel * 0.7 + ml * 3.0));
+          return Math.max(10, Math.floor(16 + playerLevel * 0.9 + ml * 3.8));
         };
         const inferAttackDamage = (spell) => {
           const manaCost = Math.max(0, Number((spell && spell.mana) || 0));
-          return Math.max(8, Math.floor(6 + playerLevel * 1.5 + manaCost * 0.35));
+          const ml = Math.max(0, Number(playerMagicLevel || 0));
+          return Math.max(6, Math.floor(4 + playerLevel * 0.8 + ml * 3.4 + manaCost * 0.18));
         };
         const showSpellTileEffect = (tiles, color = 0xf59e0b, opts = {}) => {
           const duration = opts.duration != null ? opts.duration : 300;
@@ -2551,30 +3307,10 @@ function startGame(configPlayer) {
           list.forEach((t, i) => {
             const delay = i * delayStep;
             const spawnFx = () => {
-              const fx = this.add.rectangle(centerX(t.gx), centerY(t.gy), tileSize * 0.95, tileSize * 0.95, color, 0.42);
-              fx.setStrokeStyle(2, color, 0.85);
-              const slash = this.add.text(centerX(t.gx), centerY(t.gy), glyphChar, {
-                color: glyphColor,
-                fontSize: '16px',
-                fontStyle: 'bold',
-              });
-              slash.setOrigin(0.5, 0.5);
-              this.tweens.add({
-                targets: fx,
-                alpha: 0,
-                scaleX: 1.18,
-                scaleY: 1.18,
+              tileSpellBurst(this, centerX(t.gx), centerY(t.gy), tileSize, color, {
                 duration,
-                ease: 'Sine.easeOut',
-                onComplete: () => fx.destroy(),
-              });
-              this.tweens.add({
-                targets: slash,
-                alpha: 0,
-                y: slash.y - 10,
-                duration: duration + 20,
-                ease: 'Sine.easeOut',
-                onComplete: () => slash.destroy(),
+                glyph: glyphChar,
+                glyphColor,
               });
             };
             if (delay > 0) this.time.delayedCall(delay, spawnFx);
@@ -2595,52 +3331,13 @@ function startGame(configPlayer) {
         };
         const showSpellAuraEffect = (x, y, spell, scale = 1) => {
           const fx = spellFxProfile(spell);
-          const ring = this.add.circle(x, y, Math.max(8, tileSize * 0.24 * scale), fx.color, 0.35);
-          ring.setStrokeStyle(2, fx.color, 0.85);
-          const glyph = this.add.text(x, y, fx.glyph, {
-            color: '#f8fafc',
-            fontSize: `${Math.floor(14 * scale)}px`,
-            fontStyle: 'bold',
-          });
-          glyph.setOrigin(0.5, 0.5);
-          this.tweens.add({
-            targets: ring,
-            alpha: 0,
-            scaleX: 1.45,
-            scaleY: 1.45,
-            duration: 300,
-            ease: 'Sine.easeOut',
-            onComplete: () => ring.destroy(),
-          });
-          this.tweens.add({
-            targets: glyph,
-            alpha: 0,
-            y: glyph.y - 8,
-            duration: 320,
-            ease: 'Sine.easeOut',
-            onComplete: () => glyph.destroy(),
-          });
+          spellAuraBurst(this, x, y, tileSize, fx.color, fx.glyph, scale);
         };
         const showSpellProjectileEffect = (spell, target) => {
           if (!spell || !target || !target.sprite) return;
           const fx = spellFxProfile(spell);
-          const shot = this.add.text(player.x, player.y - 4, fx.glyph, {
-            color: `#${fx.color.toString(16).padStart(6, '0')}`,
-            fontSize: '16px',
-            fontStyle: 'bold',
-          });
-          shot.setOrigin(0.5, 0.5);
-          shot.setDepth(55);
-          this.tweens.add({
-            targets: shot,
-            x: target.sprite.x,
-            y: target.sprite.y - 4,
-            duration: 170,
-            ease: 'Linear',
-            onComplete: () => {
-              shot.destroy();
-              showSpellAuraEffect(target.sprite.x, target.sprite.y, spell, 0.9);
-            },
+          spellProjectileLine(this, player.x, player.y, target.sprite.x, target.sprite.y, fx.color, fx.glyph, () => {
+            showSpellAuraEffect(target.sprite.x, target.sprite.y, spell, 0.9);
           });
         };
         const frontSweepTiles = () => {
@@ -2861,7 +3558,7 @@ function startGame(configPlayer) {
             const gained = Math.max(0, playerHp - prev);
             addCombatLog(`Cast [${slotNumber}] ${spell.title}: +${gained} HP.`, LOG_COLORS.SPELL);
             showSpellAuraEffect(player.x, player.y, spell, 1.1);
-            showDrinkEffect(`+${gained} HP`, 0x60a5fa);
+            showDrinkEffect(`+${gained} HP`, '#60a5fa');
           } else if (group === 'attack') {
             if (castPatternAttackSpell(spell, slotNumber)) {
               updatePlayerBar();
@@ -2940,15 +3637,32 @@ function startGame(configPlayer) {
         };
         const performPlayerAttack = (targetCreature, handWeapon, usedRangedShot, now) => {
           if (!targetCreature) return false;
-          if (handWeapon && isDistanceWeapon(handWeapon)) {
-            showRangedProjectileEffect(handWeapon, targetCreature);
+          let activeWeapon = handWeapon;
+          if (activeWeapon && requiresAmmoForWeapon(activeWeapon) && !hasAmmoForWeapon(activeWeapon)) {
+            addCombatLog(`Out of ammo for ${activeWeapon.title}. Attacking with base melee.`);
+            activeWeapon = null;
+          }
+          if (activeWeapon && requiresAmmoForWeapon(activeWeapon)) {
+            const consumed = spendOneAmmo(activeWeapon);
+            if (!consumed) {
+              addCombatLog(`Out of ammo for ${activeWeapon.title}. Attacking with base melee.`);
+              activeWeapon = null;
+            }
+          }
+          if (activeWeapon && isDistanceWeapon(activeWeapon)) {
+            showRangedProjectileEffect(activeWeapon, targetCreature);
+            gainWeaponSkillUse(activeWeapon, 1);
+          } else if (activeWeapon && String(activeWeapon.item_class || '').toLowerCase() === 'weapons') {
+            gainWeaponSkillUse(activeWeapon, 1);
+          } else if (!handWeapon) {
+            gainFistSkillUse(1);
           }
           if (didAttackMiss()) {
             showMissSmoke(targetCreature.sprite.x, targetCreature.sprite.y);
             addCombatLog(`You miss your hit against ${targetCreature.title}.`);
           } else {
             const isCrit = didAttackCrit();
-            const baseDamage = currentPlayerDamage();
+            const baseDamage = currentPlayerDamage(activeWeapon);
             const damage = isCrit ? applyCriticalDamage(baseDamage) : baseDamage;
             targetCreature.hp = Math.max(0, targetCreature.hp - damage);
             showCreatureHitEffect(targetCreature, damage);
@@ -3039,14 +3753,16 @@ function startGame(configPlayer) {
               );
             }
           }
-          if (handWeapon && isDistanceWeapon(handWeapon) && isThrowableWeapon(handWeapon) && Math.random() < 0.1) {
-            const currentCount = Math.max(1, Number(handWeapon.count || 1));
+          if (activeWeapon && isDistanceWeapon(activeWeapon) && isThrowableWeapon(activeWeapon) && Math.random() < 0.1) {
+            const currentCount = Math.max(1, Number(activeWeapon.count || 1));
             if (currentCount > 1) {
-              setEquippedSlotVisual('hand', { ...handWeapon, count: currentCount - 1 }, `${handWeapon.title} consumed on throw (${currentCount - 1} left).`);
+              if (typeof inventorySetEquippedSlotVisual === 'function') {
+                inventorySetEquippedSlotVisual('hand', { ...activeWeapon, count: currentCount - 1 }, `${activeWeapon.title} consumed on throw (${currentCount - 1} left).`);
+              }
             } else if (window.debugInventory && typeof window.debugInventory.unequipHand === 'function') {
               window.debugInventory.unequipHand();
             }
-            addCombatLog(`${handWeapon.title} was consumed after the throw.`);
+            addCombatLog(`${activeWeapon.title} was consumed after the throw.`);
           }
           updateCreatureBar(targetCreature);
           updateHud();
@@ -3065,7 +3781,10 @@ function startGame(configPlayer) {
         const applyCriticalDamage = (baseDamage) => Math.max(1, Math.round(baseDamage * 2.5)); // +150%
         const projectileVisualForWeapon = (weapon) => {
           const title = String((weapon && weapon.title) || '').toLowerCase();
+          const itemType = String((weapon && weapon.item_type) || '').toLowerCase();
           const secondary = String((weapon && weapon.type_secondary) || '').toLowerCase();
+          if (itemType === 'wands') return { glyph: '✦', color: '#a78bfa', size: 18 };
+          if (itemType === 'rods') return { glyph: '✧', color: '#60a5fa', size: 18 };
           if (title.includes('ethereal spear')) return { glyph: '➤', color: '#7dd3fc', size: 18 };
           if (title.includes('star')) return { glyph: '✶', color: '#fde047', size: 16 };
           if (title.includes('knife')) return { glyph: '†', color: '#e5e7eb', size: 16 };
@@ -3080,76 +3799,28 @@ function startGame(configPlayer) {
         const showRangedProjectileEffect = (weapon, target) => {
           if (!weapon || !target || !target.sprite) return;
           const visual = projectileVisualForWeapon(weapon);
-          const shot = this.add.text(player.x, player.y - 4, visual.glyph, {
-            color: visual.color,
-            fontSize: `${visual.size}px`,
-            fontStyle: 'bold',
-          });
-          shot.setOrigin(0.5, 0.5);
-          shot.setDepth(50);
-          this.tweens.add({
-            targets: shot,
-            x: target.sprite.x,
-            y: target.sprite.y - 4,
-            duration: 150,
-            ease: 'Linear',
-            onComplete: () => shot.destroy(),
-          });
+          if (isMagicRangedWeapon(weapon)) {
+            const colorHex = Number(
+              String(visual.color || '#a78bfa').replace('#', '0x')
+            );
+            spellProjectileLine(this, player.x, player.y, target.sprite.x, target.sprite.y, colorHex, visual.glyph, () => {
+              spellAuraBurst(this, target.sprite.x, target.sprite.y, tileSize, colorHex, visual.glyph, 0.9);
+            });
+            return;
+          }
+          rangedProjectileLine(this, player.x, player.y, target.sprite.x, target.sprite.y, visual, 150);
         };
         const showCritText = (x, y) => {
-          const crit = this.add.text(x, y - tileSize * 0.9, 'CRIT!', {
-            color: '#ff0000',
-            fontSize: '14px',
-            fontStyle: 'bold',
-          });
-          crit.setOrigin(0.5, 0.5);
-          this.tweens.add({
-            targets: crit,
-            y: crit.y - 22,
-            alpha: 0,
-            duration: 900,
-            ease: 'Sine.easeOut',
-            onComplete: () => crit.destroy(),
-          });
+          critBanner(this, x, y, tileSize);
         };
         const showMissSmoke = (x, y) => {
-          const puffs = [
-            { dx: -7, dy: -4, r: 7 },
-            { dx: 0, dy: -7, r: 8 },
-            { dx: 7, dy: -3, r: 7 },
-            { dx: -3, dy: 3, r: 6 },
-            { dx: 4, dy: 4, r: 6 },
-          ];
-          for (const puff of puffs) {
-            const cloud = this.add.circle(x + puff.dx, y + puff.dy, puff.r, 0x9ca3af, 0.55);
-            this.tweens.add({
-              targets: cloud,
-              y: cloud.y - 10,
-              alpha: 0,
-              scaleX: 1.25,
-              scaleY: 1.25,
-              duration: 260,
-              ease: 'Sine.easeOut',
-              onComplete: () => cloud.destroy(),
-            });
-          }
-          const miss = this.add.text(x, y - tileSize * 0.75, 'MISS', {
-            color: '#e5e7eb',
-            fontSize: '14px',
-            fontStyle: 'bold',
-          });
-          miss.setOrigin(0.5, 0.5);
-          this.tweens.add({
-            targets: miss,
-            y: miss.y - 14,
-            alpha: 0,
-            duration: 320,
-            ease: 'Sine.easeOut',
-            onComplete: () => miss.destroy(),
-          });
+          missEffect(this, x, y, tileSize);
         };
         const showPlayerHitEffect = (dmg) => {
           if (playerDead) return;
+          flashCamera(this, 55, 90, 18, 24);
+          radialSparkBurst(this, player.x, player.y - 4, 0xff6b6b, 12);
+          shockwaveRing(this, player.x, player.y, 0xff5555, { startR: 10, endScale: 2, duration: 220 });
           player.setTint(0xff4d4d);
           this.tweens.add({
             targets: player,
@@ -3166,23 +3837,14 @@ function startGame(configPlayer) {
               updatePlayerBar();
             },
           });
-          const pop = this.add.text(player.x, player.y - tileSize * 0.65, `-${dmg}`, {
-            color: '#ff7b7b',
-            fontSize: '16px',
-            fontStyle: 'bold',
-          });
-          pop.setOrigin(0.5, 0.5);
-          this.tweens.add({
-            targets: pop,
-            y: pop.y - 18,
-            alpha: 0,
-            duration: 350,
-            ease: 'Sine.easeOut',
-            onComplete: () => pop.destroy(),
+          floatingCombatText(this, player.x, player.y - tileSize * 0.65, `-${dmg}`, {
+            color: '#ff9b9b',
+            fontSize: '17px',
           });
         };
         const showCreatureHitEffect = (creature, dmg) => {
           if (!creature || !creature.sprite || !creature.sprite.scene) return;
+          radialSparkBurst(this, creature.sprite.x, creature.sprite.y - 4, 0xff6b6b, 10);
           creature.sprite.setTint(0xff4d4d);
           this.tweens.add({
             targets: creature.sprite,
@@ -3197,19 +3859,9 @@ function startGame(configPlayer) {
               updateCreatureBar(creature);
             },
           });
-          const pop = this.add.text(creature.sprite.x, creature.sprite.y - tileSize * 0.65, `-${dmg}`, {
-            color: '#ff7b7b',
-            fontSize: '16px',
-            fontStyle: 'bold',
-          });
-          pop.setOrigin(0.5, 0.5);
-          this.tweens.add({
-            targets: pop,
-            y: pop.y - 16,
-            alpha: 0,
-            duration: 320,
-            ease: 'Sine.easeOut',
-            onComplete: () => pop.destroy(),
+          floatingCombatText(this, creature.sprite.x, creature.sprite.y - tileSize * 0.65, `-${dmg}`, {
+            color: '#ff9b9b',
+            fontSize: '17px',
           });
         };
         const parseAbilityDamage = (ability, fallbackMax) => {
@@ -3408,49 +4060,25 @@ function startGame(configPlayer) {
         };
         const showCreatureAbilityEffect = (creature, ability, affectedTiles = null) => {
           const style = abilityStyle(ability);
-          void affectedTiles; // reservado: dibujar highlight por casilla cuando definamos estilos
+          void affectedTiles;
           const dist = Math.max(Math.abs(creature.gx - gridX), Math.abs(creature.gy - gridY));
           const ranged = dist > 1 && !String((ability && ability.name) || '').toLowerCase().includes('melee');
           if (ranged) {
-            const shot = this.add.text(creature.sprite.x, creature.sprite.y - 4, style.glyph, {
-              color: `#${style.color.toString(16).padStart(6, '0')}`,
-              fontSize: '16px',
-              fontStyle: 'bold',
-            });
-            shot.setOrigin(0.5, 0.5);
-            this.tweens.add({
-              targets: shot,
-              x: player.x,
-              y: player.y - 4,
-              duration: 190,
-              ease: 'Linear',
-              onComplete: () => {
-                shot.destroy();
-                const hit = this.add.circle(player.x, player.y, tileSize * 0.22, style.color, 0.35);
-                hit.setStrokeStyle(2, style.color, 0.8);
-                this.tweens.add({
-                  targets: hit,
-                  alpha: 0,
-                  scaleX: 1.35,
-                  scaleY: 1.35,
-                  duration: 240,
-                  ease: 'Sine.easeOut',
-                  onComplete: () => hit.destroy(),
-                });
-              },
-            });
+            spellProjectileLine(
+              this,
+              creature.sprite.x,
+              creature.sprite.y,
+              player.x,
+              player.y,
+              style.color,
+              style.glyph,
+              () => {
+                spellAuraBurst(this, player.x, player.y, tileSize, style.color, style.glyph, 0.85);
+              }
+            );
           } else {
-            const aura = this.add.circle(player.x, player.y, tileSize * 0.25, style.color, 0.28);
-            aura.setStrokeStyle(2, style.color, 0.8);
-            this.tweens.add({
-              targets: aura,
-              alpha: 0,
-              scaleX: 1.3,
-              scaleY: 1.3,
-              duration: 220,
-              ease: 'Sine.easeOut',
-              onComplete: () => aura.destroy(),
-            });
+            radialSparkBurst(this, player.x, player.y, style.color, 14);
+            spellAuraBurst(this, player.x, player.y, tileSize, style.color, style.glyph, 0.95);
           }
         };
         const abilityType = (ability) => {
@@ -3512,8 +4140,10 @@ function startGame(configPlayer) {
           const scaledBase = Math.max(1, Math.floor(base * floorMultiplier));
           const rawDamage = crit ? applyCriticalDamage(scaledBase) : scaledBase;
           const dmg = clampIncomingCreatureDamage(rawDamage, creature.maxDamage);
-          playerHp = Math.max(0, playerHp - dmg);
-          showPlayerHitEffect(dmg);
+          const reduced = applyShieldingReduction(dmg);
+          playerHp = Math.max(0, playerHp - reduced);
+          if (reduced < dmg && getEquippedShield()) gainShieldingSkillUse(1);
+          showPlayerHitEffect(reduced);
           addCombatLog(
             crit
               ? `${creature.title} CRITICAL ${ability.name} for ${dmg}.`
@@ -3673,13 +4303,15 @@ function startGame(configPlayer) {
                 const isCrit = didAttackCrit();
                 const rawDamage = isCrit ? applyCriticalDamage(baseDamage) : baseDamage;
                 const dmg = clampIncomingCreatureDamage(rawDamage, creature.maxDamage);
-                playerHp = Math.max(0, playerHp - dmg);
-                showPlayerHitEffect(dmg);
+                const reduced = applyShieldingReduction(dmg);
+                playerHp = Math.max(0, playerHp - reduced);
+                if (reduced < dmg && getEquippedShield()) gainShieldingSkillUse(1);
+                showPlayerHitEffect(reduced);
                 if (isCrit) {
                   showCritText(player.x, player.y);
-                  addCombatLog(`${creature.title} lands a CRITICAL hit for ${dmg}.`);
+                  addCombatLog(`${creature.title} lands a CRITICAL hit for ${reduced}.`);
                 } else {
-                  addCombatLog(`${creature.title} hits you for ${dmg}.`);
+                  addCombatLog(`${creature.title} hits you for ${reduced}.`);
                 }
                 acted = true;
               }
@@ -3736,6 +4368,7 @@ function startGame(configPlayer) {
         this.events.on('update', () => {
           updateAllHealthBars();
           if (moving || gameOver) return;
+          if (isTypingInInput()) return;
           const now = this.time.now;
           if (now < nextPlayerActionAt) return;
           const spellSlotToCast = (
@@ -3783,7 +4416,11 @@ function startGame(configPlayer) {
           }
 
           const handWeapon = getEquippedHandWeapon();
-          const handIsDistance = isDistanceWeapon(handWeapon);
+          const handIsDistance = Boolean(
+            handWeapon
+            && isDistanceWeapon(handWeapon)
+            && (!requiresAmmoForWeapon(handWeapon) || hasAmmoForWeapon(handWeapon))
+          );
           if (dx === 0 && dy === 0) {
             if (handIsDistance && handWeapon) {
               const autoTarget = findNearestRangedTarget(effectiveWeaponRange(handWeapon));

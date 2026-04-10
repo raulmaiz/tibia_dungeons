@@ -5,18 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Tibia Dungeons</title>
     <style>
-      html, body { height: 100%; margin: 0; overflow: hidden; background: #0d1117; color: #c9d1d9; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, sans-serif; }
-      #phaser { width: 100vw; height: 100vh; }
+      html, body { height: 100%; margin: 0; overflow: hidden; background: radial-gradient(120% 100% at 50% 0%, #152238 0%, #0a0f18 55%, #050810 100%); color: #e2e8f0; font-family: "Segoe UI", system-ui, -apple-system, Roboto, Ubuntu, sans-serif; }
+      #phaser { width: 100vw; height: 100vh; position: relative; }
+      #phaser::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 4;
+        background: repeating-linear-gradient(180deg, transparent, transparent 2px, rgba(0, 0, 0, 0.04) 2px, rgba(0, 0, 0, 0.04) 4px);
+        mix-blend-mode: multiply;
+      }
       .equipment-panel {
         position: fixed;
         right: 206px;
         top: 14px;
         width: 250px;
         padding: 10px;
-        border: 1px solid #3c4857;
-        border-radius: 10px;
-        background: linear-gradient(180deg, rgba(19, 29, 42, 0.92) 0%, rgba(10, 17, 28, 0.92) 100%);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+        border: 1px solid rgba(56, 189, 248, 0.22);
+        border-radius: 12px;
+        background: linear-gradient(165deg, rgba(22, 36, 58, 0.88) 0%, rgba(8, 14, 26, 0.94) 100%);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset, 0 0 28px rgba(56, 189, 248, 0.08);
         z-index: 6;
       }
       .loot-panel {
@@ -25,10 +36,12 @@
         top: 340px;
         width: 250px;
         padding: 10px;
-        border: 1px solid #3c4857;
-        border-radius: 10px;
-        background: linear-gradient(180deg, rgba(19, 29, 42, 0.92) 0%, rgba(10, 17, 28, 0.92) 100%);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+        border: 1px solid rgba(56, 189, 248, 0.22);
+        border-radius: 12px;
+        background: linear-gradient(165deg, rgba(22, 36, 58, 0.88) 0%, rgba(8, 14, 26, 0.94) 100%);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset, 0 0 28px rgba(56, 189, 248, 0.08);
         z-index: 6;
       }
       .spells-panel {
@@ -37,10 +50,12 @@
         top: 14px;
         width: 198px;
         padding: 8px;
-        border: 1px solid #3c4857;
-        border-radius: 10px;
-        background: linear-gradient(180deg, rgba(19, 29, 42, 0.92) 0%, rgba(10, 17, 28, 0.92) 100%);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+        border: 1px solid rgba(56, 189, 248, 0.22);
+        border-radius: 12px;
+        background: linear-gradient(165deg, rgba(22, 36, 58, 0.88) 0%, rgba(8, 14, 26, 0.94) 100%);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset, 0 0 28px rgba(56, 189, 248, 0.08);
         z-index: 6;
       }
       .equipment-title {
@@ -163,6 +178,50 @@
         font-size: 11px;
         color: #94a3b8;
       }
+      .stats-panel {
+        position: fixed;
+        right: 206px;
+        top: 620px;
+        width: 250px;
+        padding: 10px;
+        border: 1px solid rgba(56, 189, 248, 0.22);
+        border-radius: 12px;
+        background: linear-gradient(165deg, rgba(22, 36, 58, 0.88) 0%, rgba(8, 14, 26, 0.94) 100%);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset, 0 0 28px rgba(56, 189, 248, 0.08);
+        z-index: 6;
+      }
+      .stats-title {
+        margin: 0;
+        color: #cbd5e1;
+        font-size: 12px;
+        letter-spacing: 0.3px;
+      }
+      .stats-grid {
+        margin-top: 8px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 4px;
+        max-height: 150px;
+        overflow: auto;
+      }
+      .stats-row {
+        border: 1px solid #445469;
+        border-radius: 6px;
+        background: linear-gradient(180deg, #334155 0%, #1f2937 100%);
+        padding: 4px 6px;
+        color: #dbeafe;
+        font-size: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .stats-foot {
+        margin-top: 6px;
+        font-size: 10px;
+        color: #94a3b8;
+      }
       .spells-title {
         margin: 0;
         color: #cbd5e1;
@@ -242,10 +301,12 @@
         top: 484px;
         width: 198px;
         padding: 8px;
-        border: 1px solid #3c4857;
-        border-radius: 10px;
-        background: linear-gradient(180deg, rgba(19, 29, 42, 0.92) 0%, rgba(10, 17, 28, 0.92) 100%);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+        border: 1px solid rgba(56, 189, 248, 0.22);
+        border-radius: 12px;
+        background: linear-gradient(165deg, rgba(22, 36, 58, 0.88) 0%, rgba(8, 14, 26, 0.94) 100%);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset, 0 0 28px rgba(56, 189, 248, 0.08);
         z-index: 6;
       }
       .learned-spells-title {
@@ -292,6 +353,107 @@
       }
       .learned-spells-foot {
         margin-top: 8px;
+        font-size: 10px;
+        color: #94a3b8;
+      }
+      .items-shop-panel {
+        position: fixed;
+        right: -8px;
+        top: 676px;
+        width: 198px;
+        padding: 8px;
+        border: 1px solid rgba(56, 189, 248, 0.22);
+        border-radius: 12px;
+        background: linear-gradient(165deg, rgba(22, 36, 58, 0.88) 0%, rgba(8, 14, 26, 0.94) 100%);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset, 0 0 28px rgba(56, 189, 248, 0.08);
+        z-index: 6;
+      }
+      .items-shop-title {
+        margin: 0;
+        color: #cbd5e1;
+        font-size: 12px;
+        letter-spacing: 0.3px;
+      }
+      .items-shop-accordion summary {
+        list-style: none;
+        cursor: pointer;
+        user-select: none;
+      }
+      .items-shop-accordion summary::-webkit-details-marker {
+        display: none;
+      }
+      .items-shop-accordion summary::after {
+        content: '▸';
+        float: right;
+        color: #94a3b8;
+        transition: transform 120ms ease;
+      }
+      .items-shop-accordion[open] summary::after {
+        transform: rotate(90deg);
+      }
+      .items-shop-content {
+        margin-top: 8px;
+      }
+      .items-shop-search {
+        width: 100%;
+        box-sizing: border-box;
+        margin-bottom: 6px;
+        padding: 5px 6px;
+        border-radius: 6px;
+        border: 1px solid #445469;
+        background: #0b1425;
+        color: #dbeafe;
+        font-size: 10px;
+      }
+      .items-shop-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 4px;
+        max-height: 240px;
+        overflow: auto;
+        padding-right: 2px;
+      }
+      .item-shop-row {
+        border: 1px solid #445469;
+        border-radius: 6px;
+        background: linear-gradient(180deg, #334155 0%, #1f2937 100%);
+        padding: 4px;
+        color: #dbeafe;
+        font-size: 10px;
+      }
+      .item-shop-head {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .item-shop-head img {
+        width: 22px;
+        height: 22px;
+        object-fit: contain;
+        image-rendering: pixelated;
+      }
+      .item-shop-name {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .item-shop-price {
+        color: #fbbf24;
+        font-weight: bold;
+      }
+      .item-shop-row button {
+        margin-top: 4px;
+        width: 100%;
+        font-size: 9px;
+        padding: 3px 4px;
+        border-radius: 5px;
+        line-height: 1.05;
+      }
+      .items-shop-foot {
+        margin-top: 6px;
         font-size: 10px;
         color: #94a3b8;
       }
@@ -342,9 +504,11 @@
         .equipment-slot { height: 56px; }
         .equipment-panel { right: 182px; }
         .loot-panel { width: 210px; top: 330px; right: 182px; }
+        .stats-panel { width: 210px; top: 620px; right: 182px; }
         .spells-panel { width: 176px; top: 14px; right: -8px; }
         .spells-content { height: auto; max-height: 62vh; }
         .learned-spells-panel { width: 176px; top: 484px; right: -8px; }
+        .items-shop-panel { width: 176px; top: 676px; right: -8px; }
       }
       .overlay {
         position: fixed;
@@ -488,6 +652,11 @@
         </div>
       </details>
     </aside>
+    <aside class="stats-panel" id="statsPanel" aria-label="Stats panel">
+      <h3 class="stats-title">Top Stats</h3>
+      <div class="stats-grid" id="statsGrid"></div>
+      <div class="stats-foot" id="statsFoot">Showing top 5 by level</div>
+    </aside>
     <aside class="spells-panel" aria-label="Spells panel">
       <details class="spells-accordion" id="spellsAccordion">
         <summary class="spells-title">Spells Shop</summary>
@@ -503,6 +672,16 @@
         <div class="learned-spells-content">
           <div class="learned-spells-grid" id="learnedSpellsGrid"></div>
           <div class="learned-spells-foot" id="learnedSpellsFoot">Total: 0</div>
+        </div>
+      </details>
+    </aside>
+    <aside class="items-shop-panel" id="itemsShopPanel" aria-label="Items shop panel">
+      <details class="items-shop-accordion" id="itemsShopAccordion">
+        <summary class="items-shop-title">Items Shop</summary>
+        <div class="items-shop-content">
+          <input id="itemsShopSearchInput" class="items-shop-search" type="text" maxlength="64" placeholder="Search item (3+ chars)" />
+          <div class="items-shop-grid" id="itemsShopGrid"></div>
+          <div class="items-shop-foot" id="itemsShopFoot">Type at least 3 chars</div>
         </div>
       </details>
     </aside>

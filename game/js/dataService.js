@@ -230,6 +230,70 @@ export async function getSpellsCatalogWithPrices() {
   return out;
 }
 
+let itemShopCatalogPromise = null;
+export async function getItemShopCatalog() {
+  if (itemShopCatalogPromise) return itemShopCatalogPromise;
+  itemShopCatalogPromise = (async () => {
+    const [items, manifest, attrsByItemId, armorByItemId, shieldingByItemId, attackByItemId, rangeByItemId] = await Promise.all([
+      getJSON('./data/item.json'),
+      getManifest(),
+      getItemAttributesById(),
+      getItemArmorValueById(),
+      getItemShieldingValueById(),
+      getItemAttackValueById(),
+      getItemRangeValueById(),
+    ]);
+    const manifestImageByTitle = new Map();
+    for (const m of manifest.items || []) {
+      const key = (m.title || '').trim().toLowerCase();
+      if (!key || !m.image) continue;
+      manifestImageByTitle.set(key, m.image);
+    }
+    const out = [];
+    for (const item of items || []) {
+      const id = Number(item.article_id);
+      if (!Number.isFinite(id)) continue;
+      const buy = Number(item.value_buy);
+      if (!Number.isFinite(buy) || buy <= 0) continue;
+      if (String(item.status || '').toLowerCase() !== 'active') continue;
+      const itemTypeNorm = String(item.item_type || '').toLowerCase().replace(/\s+/g, ' ').trim();
+      if (/^exercise\s*weapons?$/.test(itemTypeNorm)) continue;
+      const title = (item.title || item.name || `Item ${id}`).trim();
+      if (!title) continue;
+      let resolvedRange = Number(rangeByItemId.get(id) || 1);
+      if (!Number.isFinite(resolvedRange) || resolvedRange <= 0) {
+        const secondary = String(item.type_secondary || '').toLowerCase();
+        const isDistance = String(item.item_type || '').toLowerCase() === 'distance weapons';
+        resolvedRange = isDistance ? (secondary === 'throwing weapons' ? 4 : 5) : 1;
+      }
+      out.push({
+        id,
+        title,
+        description: String(item.description || '').trim(),
+        price: Math.max(1, Math.floor(buy)),
+        image: manifestImageByTitle.get(title.toLowerCase()) || null,
+        item_type: item.item_type || null,
+        item_class: item.item_class || null,
+        type_secondary: item.type_secondary || null,
+        armor_value: Number(armorByItemId.get(id) || 0),
+        shielding_value: Number(shieldingByItemId.get(id) || 0),
+        attack_value: Number(attackByItemId.get(id) || 0),
+        range_value: resolvedRange,
+        throwable: String(item.type_secondary || '').toLowerCase() === 'throwing weapons',
+        attributes: attrsByItemId.get(id) || [],
+        raw: { ...item },
+      });
+    }
+    out.sort((a, b) => {
+      const ta = String(a.title || '');
+      const tb = String(b.title || '');
+      return ta.localeCompare(tb);
+    });
+    return out;
+  })();
+  return itemShopCatalogPromise;
+}
+
 export async function getItemByArticleId(articleId) {
   const [items, manifest, armorByItemId, shieldingByItemId, attackByItemId, rangeByItemId, attrsByItemId] = await Promise.all([
     getJSON('./data/item.json'),
