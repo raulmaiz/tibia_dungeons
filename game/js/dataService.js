@@ -557,6 +557,7 @@ export async function getCreatureTypeProgressionGroups() {
       runs_at: runsAt,
       image: m.image,
       type_primary: typePrimary,
+      creature_class: String(c.creature_class || '').trim(),
     };
 
     if (!byType.has(typePrimary)) byType.set(typePrimary, []);
@@ -609,6 +610,38 @@ export async function getCreatureAbilitiesById() {
     return out;
   })();
   return creatureAbilitiesByIdPromise;
+}
+
+let creatureDamageModifiersByIdPromise = null;
+/** Per creature article_id: elemental resist/vuln % (Tibia-style, 100 = neutral). */
+export async function getCreatureDamageModifiersById() {
+  if (creatureDamageModifiersByIdPromise) return creatureDamageModifiersByIdPromise;
+  creatureDamageModifiersByIdPromise = (async () => {
+    const creatures = await getJSON('./data/creature.json');
+    const out = new Map();
+    for (const c of creatures || []) {
+      const id = Number(c.article_id);
+      if (!Number.isFinite(id)) continue;
+      const row = {
+        physical: Number(c.modifier_physical),
+        earth: Number(c.modifier_earth),
+        fire: Number(c.modifier_fire),
+        ice: Number(c.modifier_ice),
+        energy: Number(c.modifier_energy),
+        death: Number(c.modifier_death),
+        holy: Number(c.modifier_holy),
+        drown: Number(c.modifier_drown),
+        lifedrain: Number(c.modifier_lifedrain),
+        healing: Number(c.modifier_healing),
+      };
+      for (const k of Object.keys(row)) {
+        if (!Number.isFinite(row[k])) row[k] = 100;
+      }
+      out.set(id, row);
+    }
+    return out;
+  })();
+  return creatureDamageModifiersByIdPromise;
 }
 
 export function imageUrl(relPath) {

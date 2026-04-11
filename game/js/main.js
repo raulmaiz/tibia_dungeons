@@ -5,6 +5,7 @@ import {
   getCreatureDropTable,
   getSpellsCatalogWithPrices,
   getCreatureAbilitiesById,
+  getCreatureDamageModifiersById,
 } from './dataService.js';
 import {
   shakeCamera,
@@ -34,9 +35,35 @@ let lastLootRejectReason = '';
 let spellsCatalog = [];
 let itemsShopCatalog = [];
 let creatureAbilitiesById = new Map();
+let creatureDamageModifiersById = new Map();
 let inventorySetEquippedSlotVisual = null;
 let inventoryClearEquippedSlotVisual = null;
 let trollSpearKillCounter = 0;
+
+/** Wand/Rod `damage_range` attribute: "70-110" or "106". */
+function parseDamageRangeString(raw) {
+  const s = String(raw == null ? '' : raw).trim();
+  if (!s) return null;
+  const m = s.match(/^(\d+)\s*-\s*(\d+)$/);
+  if (m) {
+    const a = Number(m[1]);
+    const b = Number(m[2]);
+    if (Number.isFinite(a) && Number.isFinite(b)) return { min: Math.min(a, b), max: Math.max(a, b) };
+  }
+  const n = Number(s);
+  return Number.isFinite(n) ? { min: n, max: n } : null;
+}
+
+/** Tooltip preview: average of range × ML / level scaling (matches in-game formula without random roll). */
+function averageMagicWeaponHitPreview(damageRangeRaw, ml, playerLevel) {
+  const dr = parseDamageRangeString(damageRangeRaw);
+  if (!dr) return null;
+  const avg = (dr.min + dr.max) / 2;
+  const mlN = Math.max(0, Number(ml) || 0);
+  const plN = Math.max(1, Number(playerLevel) || 1);
+  const scaled = avg * (1 + mlN * 0.045) * (1 + (plN - 1) * 0.01);
+  return Math.max(1, Math.floor(scaled));
+}
 
 const BASE_PLAYER_HP = 150;
 const BASE_PLAYER_MANA = 10;
@@ -551,6 +578,52 @@ function setupSelectorUI() {
       if (attackStat != null) statLines.push(`<div><span class="tt-label">Attack:</span> ${attackStat}</div>`);
       if (defenseStat != null) statLines.push(`<div><span class="tt-label">Defense:</span> ${defenseStat}</div>`);
       if (armorStat != null) statLines.push(`<div><span class="tt-label">Armor:</span> ${armorStat}</div>`);
+    }
+    const typeLower = String(type || '').toLowerCase();
+    if (typeLower === 'wands' || typeLower === 'rods') {
+      const attrGet = (n) => {
+        const row = attrs.find((a) => a && String(a.name || '').toLowerCase() === String(n).toLowerCase());
+        return row ? String(row.value || '').trim() : '';
+      };
+      const hud = (typeof window !== 'undefined' && window.__gameHud) ? window.__gameHud : { ml: 0, pl: 1 };
+      const mlHud = Number(hud.ml) || 0;
+      const plHud = Number(hud.pl) || 1;
+      const rangeStr = attrGet('range');
+      const dmgType = attrGet('damage_type');
+      const dmgRange = attrGet('damage_range');
+      const manaCost = attrGet('mana_cost');
+      const levelReq = attrGet('level');
+      const vocation = attrGet('vocation');
+      const hands = attrGet('hands');
+      const magicBonus = attrGet('magic');
+      const previewAvg = averageMagicWeaponHitPreview(dmgRange, mlHud, plHud);
+      statLines.push('<div class="tt-sep"></div>');
+      statLines.push('<div><span class="tt-label">Magic weapon</span></div>');
+      if (rangeStr) statLines.push(`<div><span class="tt-label">Range:</span> ${escapeHtml(rangeStr)} tiles</div>`);
+      if (dmgType) statLines.push(`<div><span class="tt-label">Damage type:</span> ${escapeHtml(dmgType)}</div>`);
+      if (dmgRange) statLines.push(`<div><span class="tt-label">Damage (data):</span> ${escapeHtml(dmgRange)}</div>`);
+      if (previewAvg != null) {
+        statLines.push(
+          `<div><span class="tt-label">Est. hit (avg, ML ${mlHud}):</span> ~${previewAvg}</div>`
+        );
+      }
+      if (manaCost) statLines.push(`<div><span class="tt-label">Mana / shot:</span> ${escapeHtml(manaCost)}</div>`);
+      if (levelReq) statLines.push(`<div><span class="tt-label">Required level:</span> ${escapeHtml(levelReq)}</div>`);
+      if (vocation) statLines.push(`<div><span class="tt-label">Vocation:</span> ${escapeHtml(vocation)}</div>`);
+      if (hands) statLines.push(`<div><span class="tt-label">Hands:</span> ${escapeHtml(hands)}</div>`);
+      if (magicBonus) statLines.push(`<div><span class="tt-label">Magic:</span> ${escapeHtml(magicBonus)}</div>`);
+      const skipNames = new Set(['is_walkable', 'upgrade_classification', 'weapon_type', 'range', 'damage_type', 'damage_range', 'mana_cost', 'level', 'vocation', 'hands', 'magic']);
+      const extra = attrs.filter((a) => a && a.name && !skipNames.has(String(a.name).toLowerCase()));
+      const showExtra = extra.slice(0, 10);
+      if (showExtra.length > 0) {
+        statLines.push('<div class="tt-space"></div>');
+        statLines.push('<div><span class="tt-label">Other</span></div>');
+        for (const a of showExtra) {
+          const vn = escapeHtml(String(a.name || ''));
+          const vv = escapeHtml(String(a.value != null ? a.value : ''));
+          statLines.push(`<div><span class="tt-label">${vn}:</span> ${vv}</div>`);
+        }
+      }
     }
     return [
       `<div class="tt-title">${safeTitle}</div>`,
@@ -1328,6 +1401,7 @@ function setupSelectorUI() {
       equipBagByArticleId(START_BAG_ARTICLE_ID),
       (async () => { creatureDropTable = await getCreatureDropTable(); })(),
       (async () => { creatureAbilitiesById = await getCreatureAbilitiesById(); })(),
+      (async () => { creatureDamageModifiersById = await getCreatureDamageModifiersById(); })(),
       ensureCoinTemplatesLoaded(),
       (async () => { spellsCatalog = await getSpellsCatalogWithPrices(); })(),
       (async () => { itemsShopCatalog = await getItemShopCatalog(); })(),
@@ -1696,6 +1770,7 @@ function startGame(configPlayer) {
         const spellCooldownUntil = new Map();
         let gameOver = false;
         let playerDead = false;
+        let godModeEnabled = false;
         let currentLevel = 1;
         let currentLevelGroup = null;
         const recentGroupIndices = [];
@@ -1917,6 +1992,10 @@ function startGame(configPlayer) {
         };
         const isWalkable = (gx, gy) => !isWallTile(gx, gy);
         const isAdjacent = (ax, ay, bx, by) => Math.abs(ax - bx) + Math.abs(ay - by) === 1;
+        /** Casillas a distancia 1 en 8 direcciones (incluye diagonal) para melé criatura → jugador. */
+        const isCreatureMeleeAdjacent = (ax, ay, bx, by) => (
+          Math.max(Math.abs(ax - bx), Math.abs(ay - by)) === 1
+        );
         const aliveCreatures = () => creatures.filter((c) => c.alive);
         const creatureAt = (gx, gy) => aliveCreatures().find((c) => c.gx === gx && c.gy === gy) || null;
         const groundTileKey = (gx, gy) => `${gx},${gy}`;
@@ -2296,17 +2375,21 @@ function startGame(configPlayer) {
           const forcedTypeByLevel = {
             4: 'trolls',
             5: 'skeletons',
-            6: 'goblins',
-            7: 'humans',
-            8: 'dwarves',
-            9: 'minotaurs',
-            10: 'vampires',
-            11: 'arachnids',
-            12: 'dragons',
-            13: 'orcs',
-            14: 'pirats',
-            15: 'demon overlords',
-            16: 'demon overlords',
+            6: 'humans',
+            7: 'dwarves',
+            8: 'minotaurs',
+            9: 'vampires',
+            10: 'outlaws',
+            11: 'goblins',
+            12: 'dwarves',
+            13: 'minotaurs',
+            14: 'vampires',
+            15: 'arachnids',
+            16: 'dragons',
+            17: 'orcs',
+            18: 'cobra',
+            19: 'giants',
+            20: 'demons',
           };
           const forcedType = forcedTypeByLevel[Number(level)];
           if (forcedType) {
@@ -2531,20 +2614,23 @@ function startGame(configPlayer) {
             ? group.creatures.filter((c) => c.type_primary === group.type_primary)
             : [{ id: 1116, title: 'Rat', type_primary: 'Glires', experience: 5, hitpoints: 20, maxDamage: 8, image: 'creature/Rat.gif' }];
           const earlyLevels = 12;
-          let levelPool = basePool.slice();
-          let hasForcedPoolRestriction = false;
-          if (String((group && group.type_primary) || '').toLowerCase().includes('troll')) {
-            const trollAllowedIds = new Set([1166, 1167]);
-            levelPool = levelPool.filter((c) => trollAllowedIds.has(Number(c && c.id)));
-            hasForcedPoolRestriction = true;
-          }
           const forcedCreatureIdByLevel = {
             1: 1116,
             2: 1261,
             3: 1141,
+            10: 742,
           };
           const forcedCreatureIdsByLevel = {
             5: [1457, 1547],
+            6: [1243, 1248],
+            7: [1355, 1358],
+            8: [1235, 1236],
+            9: [1150, 1541],
+            15: [1483],
+            16: [1318, 1377],
+            18: [41735, 88676],
+            19: [1253],
+            20: [1176],
           };
           const forcedCreatureTemplateByLevel = {
             1: {
@@ -2580,13 +2666,254 @@ function startGame(configPlayer) {
               speed: 58,
               runs_at: 0,
             },
+            10: {
+              id: 742,
+              title: 'Hero',
+              type_primary: 'Outlaws',
+              experience: 1200,
+              hitpoints: 1400,
+              maxDamage: 60,
+              image: 'creature/Hero.gif',
+              speed: 140,
+              runs_at: 0,
+            },
           };
+          const forcedCreatureTemplatesByLevel = {
+            5: [
+              {
+                id: 1457,
+                title: 'Ghoul',
+                type_primary: 'Undead Humanoids',
+                experience: 85,
+                hitpoints: 100,
+                maxDamage: 20,
+                image: 'creature/Ghoul.gif',
+                speed: 72,
+                runs_at: 0,
+              },
+              {
+                id: 1547,
+                title: 'Skeleton',
+                type_primary: 'Skeletons',
+                experience: 35,
+                hitpoints: 50,
+                maxDamage: 12,
+                image: 'creature/Skeleton.gif',
+                speed: 77,
+                runs_at: 0,
+              },
+            ],
+            6: [
+              {
+                id: 1243,
+                title: 'Hunter',
+                type_primary: 'Outlaws',
+                experience: 150,
+                hitpoints: 150,
+                maxDamage: 35,
+                image: 'creature/Hunter.gif',
+                speed: 105,
+                runs_at: 10,
+              },
+              {
+                id: 1248,
+                title: 'Valkyrie',
+                type_primary: 'Amazons',
+                experience: 85,
+                hitpoints: 190,
+                maxDamage: 14,
+                image: 'creature/Valkyrie.gif',
+                speed: 88,
+                runs_at: 10,
+              },
+            ],
+            7: [
+              {
+                id: 1355,
+                title: 'Dwarf',
+                type_primary: 'Dwarves',
+                experience: 45,
+                hitpoints: 90,
+                maxDamage: 10,
+                image: 'creature/Dwarf.gif',
+                speed: 85,
+                runs_at: 0,
+              },
+              {
+                id: 1358,
+                title: 'Dwarf Soldier',
+                type_primary: 'Dwarves',
+                experience: 70,
+                hitpoints: 135,
+                maxDamage: 20,
+                image: 'creature/Dwarf Soldier.gif',
+                speed: 88,
+                runs_at: 0,
+              },
+            ],
+            8: [
+              {
+                id: 1235,
+                title: 'Minotaur',
+                type_primary: 'Minotaurs',
+                experience: 50,
+                hitpoints: 100,
+                maxDamage: 12,
+                image: 'creature/Minotaur.gif',
+                speed: 84,
+                runs_at: 0,
+              },
+              {
+                id: 1236,
+                title: 'Minotaur Archer',
+                type_primary: 'Minotaurs',
+                experience: 65,
+                hitpoints: 100,
+                maxDamage: 24,
+                image: 'creature/Minotaur Archer.gif',
+                speed: 80,
+                runs_at: 0,
+              },
+            ],
+            9: [
+              {
+                id: 1150,
+                title: 'Vampire',
+                type_primary: 'Vampires',
+                experience: 305,
+                hitpoints: 475,
+                maxDamage: 40,
+                image: 'creature/Vampire.gif',
+                speed: 119,
+                runs_at: 0,
+              },
+              {
+                id: 1541,
+                title: 'Demon Skeleton',
+                type_primary: 'Skeletons',
+                experience: 240,
+                hitpoints: 400,
+                maxDamage: 45,
+                image: 'creature/Demon Skeleton.gif',
+                speed: 90,
+                runs_at: 0,
+              },
+            ],
+            15: [
+              {
+                id: 1483,
+                title: 'Giant Spider',
+                type_primary: 'Arachnids',
+                experience: 900,
+                hitpoints: 1300,
+                maxDamage: 38,
+                image: 'creature/Giant Spider.gif',
+                speed: 120,
+                runs_at: 0,
+              },
+            ],
+            16: [
+              {
+                id: 1318,
+                title: 'Dragon',
+                type_primary: 'Dragons',
+                experience: 700,
+                hitpoints: 1000,
+                maxDamage: 45,
+                image: 'creature/Dragon.gif',
+                speed: 86,
+                runs_at: 300,
+              },
+              {
+                id: 1377,
+                title: 'Dragon Lord',
+                type_primary: 'Dragons',
+                experience: 2100,
+                hitpoints: 1900,
+                maxDamage: 67,
+                image: 'creature/Dragon Lord.gif',
+                speed: 100,
+                runs_at: 300,
+              },
+            ],
+            18: [
+              {
+                id: 41735,
+                title: 'Lizard Zaogun',
+                type_primary: 'High Class Lizards',
+                experience: 1700,
+                hitpoints: 2955,
+                maxDamage: 52,
+                image: 'creature/Lizard Zaogun.gif',
+                speed: 138,
+                runs_at: 0,
+              },
+              {
+                id: 88676,
+                title: 'Cobra Scout',
+                type_primary: 'Members of the Order of the Cobra',
+                experience: 7310,
+                hitpoints: 8500,
+                maxDamage: 70,
+                image: 'creature/Cobra Scout.gif',
+                speed: 150,
+                runs_at: 0,
+              },
+            ],
+            19: [
+              {
+                id: 1253,
+                title: 'Behemoth',
+                type_primary: 'Giants',
+                experience: 2500,
+                hitpoints: 4000,
+                maxDamage: 64,
+                image: 'creature/Behemoth.gif',
+                speed: 170,
+                runs_at: 0,
+              },
+            ],
+            20: [
+              {
+                id: 1176,
+                title: 'Demon',
+                type_primary: 'Demons',
+                experience: 6000,
+                hitpoints: 8200,
+                maxDamage: 95,
+                image: 'creature/Demon.gif',
+                speed: 128,
+                runs_at: 0,
+              },
+            ],
+          };
+          let levelPool;
+          let hasForcedPoolRestriction = false;
+          const templateDeck = forcedCreatureTemplatesByLevel[Number(level)];
+          if (Array.isArray(templateDeck) && templateDeck.length > 0) {
+            levelPool = templateDeck.map((x) => ({ ...x }));
+            hasForcedPoolRestriction = true;
+          } else {
+            levelPool = basePool.slice();
+          }
+          if (String((group && group.type_primary) || '').toLowerCase().includes('troll')) {
+            const trollAllowedIds = new Set([1166, 1167]);
+            levelPool = levelPool.filter((c) => trollAllowedIds.has(Number(c && c.id)));
+            hasForcedPoolRestriction = true;
+          }
           const forcedCreatureId = forcedCreatureIdByLevel[Number(level)];
           const forcedCreatureIds = forcedCreatureIdsByLevel[Number(level)];
           if (Array.isArray(forcedCreatureIds) && forcedCreatureIds.length > 0) {
             const allowed = new Set(forcedCreatureIds.map((id) => Number(id)));
             levelPool = levelPool.filter((c) => allowed.has(Number(c && c.id)));
             hasForcedPoolRestriction = true;
+            if (levelPool.length === 0) {
+              if (Array.isArray(forcedCreatureTemplatesByLevel[Number(level)])) {
+                levelPool = forcedCreatureTemplatesByLevel[Number(level)].map((x) => ({ ...x }));
+              } else if (forcedCreatureTemplateByLevel[Number(level)]) {
+                levelPool = [{ ...forcedCreatureTemplateByLevel[Number(level)] }];
+              }
+            }
           }
           if (forcedCreatureId != null) {
             levelPool = levelPool.filter((c) => Number(c && c.id) === forcedCreatureId);
@@ -2677,6 +3004,11 @@ function startGame(configPlayer) {
             ? 10
             : Phaser.Math.Between(MIN_CREATURES_PER_LEVEL, MAX_CREATURES_PER_LEVEL);
           const templates = pickRandomCreatures(levelPool, creaturesTargetCount);
+          if (!templates || templates.length === 0) {
+            addCombatLog(`Floor ${level}: no valid creature templates found.`);
+            creaturesTargetCount = 0;
+            return;
+          }
           if (level <= earlyLevels) {
             for (const t of templates) {
               const cid = Number(t && t.id);
@@ -2723,6 +3055,7 @@ function startGame(configPlayer) {
               nextActionAt: 0,
               aggroLocked: false,
               abilities: (creatureAbilitiesById.get(creatureId) || []).slice(0, 16),
+              elementMods: mergeCreatureElementModsForId(creatureId),
               hpBar: makeHealthBar(0xef4444),
               nameTag: makeNameLabel(template.title, '#f3f4f6'),
             });
@@ -2784,6 +3117,49 @@ function startGame(configPlayer) {
           player.x = centerX(gridX);
           player.y = centerY(gridY);
           updatePlayerBar();
+        };
+        const setGodMode = (enabled) => {
+          godModeEnabled = Boolean(enabled);
+          if (godModeEnabled) {
+            gameOver = false;
+            playerDead = false;
+            playerHp = playerMaxHp;
+            playerMana = playerMaxMana;
+            addCombatLog('God Mode enabled.');
+          } else {
+            addCombatLog('God Mode disabled.');
+          }
+          updatePlayerBar();
+          updateHud();
+          return godModeEnabled;
+        };
+        window.debugGod = {
+          enable() {
+            return setGodMode(true);
+          },
+          disable() {
+            return setGodMode(false);
+          },
+          toggle() {
+            return setGodMode(!godModeEnabled);
+          },
+          isEnabled() {
+            return Boolean(godModeEnabled);
+          },
+          goToFloor(level) {
+            const target = Math.max(1, Math.floor(Number(level) || 1));
+            currentLevel = target;
+            descendLevel(false);
+            addCombatLog(`Teleported to floor ${target}.`);
+            updateHud();
+            return target;
+          },
+          nextFloor() {
+            return this.goToFloor(currentLevel + 1);
+          },
+          prevFloor() {
+            return this.goToFloor(Math.max(1, currentLevel - 1));
+          },
         };
         const spellTooltipEl = document.getElementById('itemTooltip');
         const equipmentPanelEl = document.querySelector('.equipment-panel');
@@ -3063,6 +3439,26 @@ function startGame(configPlayer) {
           lines.push(`- Type: ${item.item_type || 'Unknown'}`);
           if (item.type_secondary) lines.push(`- Secondary: ${item.type_secondary}`);
           const attrs = Array.isArray(item.attributes) ? item.attributes : [];
+          const shopType = String(item.item_type || '').toLowerCase();
+          if (shopType === 'wands' || shopType === 'rods') {
+            const g = (n) => {
+              const row = attrs.find((a) => a && String(a.name || '').toLowerCase() === n);
+              return row ? String(row.value || '').trim() : '';
+            };
+            lines.push(``);
+            lines.push(`Wand / Rod`);
+            const r = g('range');
+            const dt = g('damage_type');
+            const dr = g('damage_range');
+            const mc = g('mana_cost');
+            if (r) lines.push(`- Range: ${r}`);
+            if (dt) lines.push(`- Damage type: ${dt}`);
+            if (dr) lines.push(`- Damage (data): ${dr}`);
+            if (mc) lines.push(`- Mana / shot: ${mc}`);
+            const hud = (typeof window !== 'undefined' && window.__gameHud) ? window.__gameHud : { ml: 0, pl: 1 };
+            const prev = averageMagicWeaponHitPreview(dr, Number(hud.ml) || 0, Number(hud.pl) || 1);
+            if (prev != null) lines.push(`- Est. hit (avg, ML ${hud.ml}): ~${prev}`);
+          }
           if (attrs.length > 0) {
             lines.push(``);
             lines.push(`Attributes`);
@@ -3299,6 +3695,9 @@ function startGame(configPlayer) {
           const skillNeed = weaponUsesToNextLevel(skillLevel);
           const skillPct = skillNeed > 0 ? Math.floor((skillUses / skillNeed) * 100) : 0;
           const skillLabel = weaponSkillLabel(skillType || 'Unarmed');
+          if (typeof window !== 'undefined') {
+            window.__gameHud = { ml: playerMagicLevel, pl: playerLevel };
+          }
           nameLabel.setText(`${configPlayer.name} (${playerClassKey}) | Player Lv ${playerLevel} | ML ${playerMagicLevel} | ${skillLabel} ${skillLevel}`);
           levelHud.setText(`Floor ${currentLevel} | ${typeName} ${aliveCreatures().length}/${creaturesTargetCount}`);
           combatHud.setText(`HP ${playerHp}/${playerMaxHp} MP ${playerMana}/${playerMaxMana} ML ${playerMagicLevel} ${skillLabel} ${skillLevel} (${skillPct}%) Fist ${playerFistLevel} Shield ${playerShieldingLevel} CAP ${capCurrentText}/${capTotalText}`);
@@ -3401,13 +3800,112 @@ function startGame(configPlayer) {
           const t = String(item.item_type || '').toLowerCase();
           return t === 'rods' || t === 'wands';
         };
+        const magicWeaponDamageTypeSuffix = (weapon) => {
+          if (!weapon || !isMagicRangedWeapon(weapon)) return '';
+          const attrs = Array.isArray(weapon.attributes) ? weapon.attributes : [];
+          const row = attrs.find((a) => a && String(a.name || '').toLowerCase() === 'damage_type');
+          const v = row ? String(row.value || '').trim() : '';
+          return v ? ` (${v})` : '';
+        };
+        const magicWeaponDamageTypeRaw = (weapon) => {
+          if (!weapon || !isMagicRangedWeapon(weapon)) return '';
+          const attrs = Array.isArray(weapon.attributes) ? weapon.attributes : [];
+          const row = attrs.find((a) => a && String(a.name || '').toLowerCase() === 'damage_type');
+          return row ? String(row.value || '').trim() : '';
+        };
+        const defaultElementMods = () => ({
+          physical: 100,
+          earth: 100,
+          fire: 100,
+          ice: 100,
+          energy: 100,
+          death: 100,
+          holy: 100,
+          drown: 100,
+          lifedrain: 100,
+          healing: 100,
+        });
+        const mergeCreatureElementModsForId = (creatureId) => {
+          const row = creatureDamageModifiersById.get(Number(creatureId));
+          const base = defaultElementMods();
+          if (!row) return base;
+          const out = { ...base };
+          for (const k of Object.keys(base)) {
+            if (row[k] != null && Number.isFinite(Number(row[k]))) out[k] = Number(row[k]);
+          }
+          return out;
+        };
+        /** Maps item/spell damage_type string to creature.elementMods key. */
+        const normalizeDamageTypeToModifierKey = (raw) => {
+          const s = String(raw || '').trim().toLowerCase();
+          if (!s) return null;
+          const direct = {
+            physical: 'physical',
+            phys: 'physical',
+            earth: 'earth',
+            terra: 'earth',
+            fire: 'fire',
+            ice: 'ice',
+            frost: 'ice',
+            energy: 'energy',
+            elec: 'energy',
+            electric: 'energy',
+            death: 'death',
+            holy: 'holy',
+            drown: 'drown',
+            lifedrain: 'lifedrain',
+            life: 'lifedrain',
+            healing: 'healing',
+            poison: 'earth',
+          };
+          if (direct[s]) return direct[s];
+          if (s.includes('earth') || s.includes('terra')) return 'earth';
+          if (s.includes('fire') || s.includes('flame')) return 'fire';
+          if (s.includes('ice') || s.includes('frost')) return 'ice';
+          if (s.includes('energy') || s.includes('lightning')) return 'energy';
+          if (s.includes('death')) return 'death';
+          if (s.includes('holy')) return 'holy';
+          if (s.includes('physical')) return 'physical';
+          return null;
+        };
+        const inferSpellDamageElementKey = (spell) => {
+          const t = String((spell && spell.title) || '').toLowerCase();
+          const e = String((spell && spell.raw && spell.raw.effect) || '').toLowerCase();
+          const both = `${t} ${e}`;
+          if (/(fire|flame|burn|great fireball|scorch)/.test(both)) return 'fire';
+          if (/(ice|frost|freeze|avalanche)/.test(both)) return 'ice';
+          if (/(earth|terra|stone|stalagmite|poison)/.test(both)) return 'earth';
+          if (/(energy|lightning|thunder|electric|great energy)/.test(both)) return 'energy';
+          if (/(death|soul|curse|decay|great death)/.test(both)) return 'death';
+          if (/(holy|divine)/.test(both)) return 'holy';
+          return 'energy';
+        };
+        const applyIncomingElementalDamage = (baseDamage, creature, elementKey) => {
+          const raw = Math.max(0, Math.floor(Number(baseDamage) || 0));
+          if (!creature || !elementKey) return raw;
+          const mods = creature.elementMods;
+          if (!mods) return raw;
+          const pct = Number(mods[elementKey]);
+          const m = Number.isFinite(pct) ? pct : 100;
+          const mult = Math.min(3, Math.max(0, m / 100));
+          return Math.max(0, Math.floor(raw * mult));
+        };
         const magicWeaponDamage = (weapon) => {
           const ml = Math.max(0, Number(playerMagicLevel || 0));
           const lv = Math.max(1, Number(playerLevel || 1));
-          const weaponAttack = Math.max(0, Number((weapon && weapon.attack_value) || 0));
+          const attrs = Array.isArray(weapon && weapon.attributes) ? weapon.attributes : [];
+          const drRow = attrs.find((a) => a && String(a.name || '').toLowerCase() === 'damage_range');
+          const dr = drRow ? parseDamageRangeString(drRow.value) : null;
           const typeKey = weaponSkillTypeKey(weapon);
           const skillLevel = getWeaponSkillLevelByType(typeKey);
-          const skillBonus = Math.max(0, Math.floor((skillLevel - 10) * 0.35));
+          const skillBonus = Math.max(0, Math.floor((skillLevel - 10) * 0.25));
+          if (dr) {
+            const rolled = Phaser.Math.Between(dr.min, dr.max);
+            const mlFactor = 1 + ml * 0.045;
+            const lvFactor = 1 + (lv - 1) * 0.01;
+            return Math.max(1, Math.floor(rolled * mlFactor * lvFactor + skillBonus));
+          }
+          const weaponAttack = Math.max(0, Number((weapon && weapon.attack_value) || 0));
           return Math.max(5, Math.floor(3 + lv * 0.55 + ml * 3.0 + weaponAttack * 0.65 + skillBonus));
         };
         const currentPlayerDamage = (handOverride = undefined) => {
@@ -3475,7 +3973,10 @@ function startGame(configPlayer) {
         };
         const effectiveWeaponRange = (item) => {
           if (!item) return 1;
-          if (isMagicRangedWeapon(item)) return 5;
+          if (isMagicRangedWeapon(item)) {
+            const fromAttrs = rangeFromAttributes(item);
+            return fromAttrs != null ? fromAttrs : 5;
+          }
           const fromAttrs = rangeFromAttributes(item);
           if (fromAttrs != null) return fromAttrs;
           const raw = Number(item.range_value || 1);
@@ -3825,12 +4326,14 @@ function startGame(configPlayer) {
           };
           showSpellTileEffect(tiles, color, fxOpts);
           const impacted = [];
+          const spellElem = inferSpellDamageElementKey(spell);
           for (const t of tiles) {
             const target = creatureAt(t.gx, t.gy);
             if (!target) continue;
             const crit = didAttackCrit();
             const base = inferAttackDamage(spell);
-            const dmg = crit ? applyCriticalDamage(base) : base;
+            const dmgRaw = crit ? applyCriticalDamage(base) : base;
+            const dmg = applyIncomingElementalDamage(dmgRaw, target, spellElem);
             target.hp = Math.max(0, target.hp - dmg);
             showCreatureHitEffect(target, dmg);
             if (crit) showCritText(target.sprite.x, target.sprite.y);
@@ -3913,7 +4416,9 @@ function startGame(configPlayer) {
                 showSpellTileEffect([front], spellFxProfile(spell).color, { duration: 220 });
                 const crit = didAttackCrit();
                 const base = inferAttackDamage(spell);
-                const dmg = crit ? applyCriticalDamage(base) : base;
+                const dmgRaw = crit ? applyCriticalDamage(base) : base;
+                const spellElem = inferSpellDamageElementKey(spell);
+                const dmg = applyIncomingElementalDamage(dmgRaw, frontTarget, spellElem);
                 frontTarget.hp = Math.max(0, frontTarget.hp - dmg);
                 showCreatureHitEffect(frontTarget, dmg);
                 if (crit) showCritText(frontTarget.sprite.x, frontTarget.sprite.y);
@@ -3943,7 +4448,9 @@ function startGame(configPlayer) {
               }
               const crit = didAttackCrit();
               const base = inferAttackDamage(spell);
-              const dmg = crit ? applyCriticalDamage(base) : base;
+              const dmgRaw = crit ? applyCriticalDamage(base) : base;
+              const spellElem = inferSpellDamageElementKey(spell);
+              const dmg = applyIncomingElementalDamage(dmgRaw, target, spellElem);
               target.hp = Math.max(0, target.hp - dmg);
               showCreatureHitEffect(target, dmg);
               if (crit) showCritText(target.sprite.x, target.sprite.y);
@@ -4001,15 +4508,21 @@ function startGame(configPlayer) {
             const isCrit = didAttackCrit();
             const baseDamage = currentPlayerDamage(activeWeapon);
             const damage = isCrit ? applyCriticalDamage(baseDamage) : baseDamage;
-            targetCreature.hp = Math.max(0, targetCreature.hp - damage);
-            showCreatureHitEffect(targetCreature, damage);
+            let elemKey = 'physical';
+            if (activeWeapon && isMagicRangedWeapon(activeWeapon)) {
+              elemKey = normalizeDamageTypeToModifierKey(magicWeaponDamageTypeRaw(activeWeapon)) || 'energy';
+            }
+            const dealt = applyIncomingElementalDamage(damage, targetCreature, elemKey);
+            targetCreature.hp = Math.max(0, targetCreature.hp - dealt);
+            showCreatureHitEffect(targetCreature, dealt);
             if (isCrit) {
               showCritText(targetCreature.sprite.x, targetCreature.sprite.y);
             }
+            const dtHit = magicWeaponDamageTypeSuffix(activeWeapon);
             addCombatLog(
               isCrit
-                ? `CRITICAL hit on ${targetCreature.title} for ${damage}.`
-                : `You hit ${targetCreature.title} for ${damage}.`,
+                ? `CRITICAL hit on ${targetCreature.title} for ${dealt}${dtHit}.`
+                : `You hit ${targetCreature.title} for ${dealt}${dtHit}.`,
               isCrit ? LOG_COLORS.CRIT : LOG_COLORS.HIT
             );
             if (targetCreature.hp <= 0) {
@@ -4019,8 +4532,8 @@ function startGame(configPlayer) {
               grantPlayerXp(effectiveXpFromCreature(targetCreature));
               addCombatLog(
                 isCrit
-                  ? `CRITICAL hit on ${targetCreature.title} for ${damage}, and it dies.`
-                  : `You hit ${targetCreature.title} and it dies.`,
+                  ? `CRITICAL hit on ${targetCreature.title} for ${dealt}${dtHit}, and it dies.`
+                  : `You hit ${targetCreature.title} for ${dealt}${dtHit} and it dies.`,
                 isCrit ? LOG_COLORS.CRIT : LOG_COLORS.HIT
               );
               const rolledDrops = rollCreatureDrops(targetCreature.id);
@@ -4084,8 +4597,8 @@ function startGame(configPlayer) {
             } else {
               addCombatLog(
                 isCrit
-                  ? `CRITICAL hit on ${targetCreature.title} for ${damage} (${targetCreature.hp} HP).`
-                  : `You hit ${targetCreature.title} for ${damage} (${targetCreature.hp} HP).`,
+                  ? `CRITICAL hit on ${targetCreature.title} for ${dealt}${dtHit} (${targetCreature.hp} HP).`
+                  : `You hit ${targetCreature.title} for ${dealt}${dtHit} (${targetCreature.hp} HP).`,
                 isCrit ? LOG_COLORS.CRIT : LOG_COLORS.HIT
               );
             }
@@ -4499,8 +5012,8 @@ function startGame(configPlayer) {
           const rawDamage = crit ? applyCriticalDamage(scaledBase) : scaledBase;
           const pressuredDamage = applyMultiAttackerPressure(rawDamage);
           const dmg = clampIncomingCreatureDamage(pressuredDamage, creature.maxDamage);
-          const reduced = applyShieldingReduction(dmg);
-          playerHp = Math.max(0, playerHp - reduced);
+          const reduced = godModeEnabled ? 0 : applyShieldingReduction(dmg);
+          if (!godModeEnabled) playerHp = Math.max(0, playerHp - reduced);
           attackersPressureInTurn += 1;
           if (reduced < dmg && getEquippedShield()) gainShieldingSkillUse(1);
           showPlayerHitEffect(reduced);
@@ -4513,9 +5026,23 @@ function startGame(configPlayer) {
         };
         const tileKey = (x, y) => `${x},${y}`;
         const findNextStepToPlayer = (fromX, fromY) => {
-          const targetKey = tileKey(gridX, gridY);
           const startKey = tileKey(fromX, fromY);
-          if (startKey === targetKey) return null;
+          if (isCreatureMeleeAdjacent(fromX, fromY, gridX, gridY)) return null;
+
+          const goalKeys = new Set();
+          const neigh = [
+            [1, 0], [-1, 0], [0, 1], [0, -1],
+            [1, 1], [1, -1], [-1, 1], [-1, -1],
+          ];
+          for (const [dx, dy] of neigh) {
+            const px = gridX + dx;
+            const py = gridY + dy;
+            if (!isWalkable(px, py)) continue;
+            const blocker = creatureAt(px, py);
+            if (blocker && (px !== fromX || py !== fromY)) continue;
+            goalKeys.add(tileKey(px, py));
+          }
+          if (goalKeys.size === 0) return null;
 
           const queue = [{ x: fromX, y: fromY }];
           const visited = new Set([startKey]);
@@ -4529,25 +5056,27 @@ function startGame(configPlayer) {
 
           while (queue.length > 0) {
             const cur = queue.shift();
+            const curKey = tileKey(cur.x, cur.y);
+            if (goalKeys.has(curKey)) {
+              if (curKey === startKey) return null;
+              let step = { x: cur.x, y: cur.y };
+              let stepPrev = prev.get(curKey);
+              while (stepPrev && tileKey(stepPrev.x, stepPrev.y) !== startKey) {
+                step = stepPrev;
+                stepPrev = prev.get(tileKey(stepPrev.x, stepPrev.y));
+              }
+              return step;
+            }
             for (const d of directions) {
               const nx = cur.x + d.x;
               const ny = cur.y + d.y;
               const key = tileKey(nx, ny);
               if (visited.has(key)) continue;
               if (!isWalkable(nx, ny)) continue;
-              if (key !== targetKey && isOccupiedByActor(nx, ny)) continue;
+              if (key !== startKey && isOccupiedByActor(nx, ny)) continue;
 
               visited.add(key);
               prev.set(key, cur);
-              if (key === targetKey) {
-                let step = { x: nx, y: ny };
-                let stepPrev = prev.get(key);
-                while (stepPrev && tileKey(stepPrev.x, stepPrev.y) !== startKey) {
-                  step = stepPrev;
-                  stepPrev = prev.get(tileKey(stepPrev.x, stepPrev.y));
-                }
-                return step;
-              }
               queue.push({ x: nx, y: ny });
             }
           }
@@ -4649,10 +5178,10 @@ function startGame(configPlayer) {
             if (distToPlayer <= 4 && Math.random() < 0.5) {
               acted = tryUseCreatureAbility(creature) || acted;
             }
-            if (!isAdjacent(creature.gx, creature.gy, gridX, gridY)) {
+            if (!isCreatureMeleeAdjacent(creature.gx, creature.gy, gridX, gridY)) {
               acted = tryMoveCreature(creature) || acted;
             }
-            if (!acted && isAdjacent(creature.gx, creature.gy, gridX, gridY)) {
+            if (!acted && isCreatureMeleeAdjacent(creature.gx, creature.gy, gridX, gridY)) {
               orientCreatureSprite(creature, gridX - creature.gx, gridY - creature.gy);
               if (didAttackMiss()) {
                 showMissSmoke(player.x, player.y);
@@ -4665,8 +5194,8 @@ function startGame(configPlayer) {
                 const rawDamage = isCrit ? applyCriticalDamage(baseDamage) : baseDamage;
                 const pressuredDamage = applyMultiAttackerPressure(rawDamage);
                 const dmg = clampIncomingCreatureDamage(pressuredDamage, creature.maxDamage);
-                const reduced = applyShieldingReduction(dmg);
-                playerHp = Math.max(0, playerHp - reduced);
+                const reduced = godModeEnabled ? 0 : applyShieldingReduction(dmg);
+                if (!godModeEnabled) playerHp = Math.max(0, playerHp - reduced);
                 attackersPressureInTurn += 1;
                 if (reduced < dmg && getEquippedShield()) gainShieldingSkillUse(1);
                 showPlayerHitEffect(reduced);
@@ -4678,7 +5207,7 @@ function startGame(configPlayer) {
                 }
                 acted = true;
               }
-              if (playerHp <= 0) {
+              if (!godModeEnabled && playerHp <= 0) {
                 gameOver = true;
                 playerDead = true;
                 this.tweens.killTweensOf(player);
@@ -4708,6 +5237,32 @@ function startGame(configPlayer) {
           delay: 90,
           loop: true,
           callback: creatureTurn,
+        });
+        this.time.addEvent({
+          delay: 90,
+          loop: true,
+          callback: () => {
+            if (moving || gameOver || playerDead) return;
+            if (isTypingInInput()) return;
+            const now = this.time.now;
+            if (now < nextPlayerActionAt) return;
+            const w = getEquippedHandWeapon();
+            if (!w || !isMagicRangedWeapon(w)) return;
+            const anyMoveKey = (
+              (cursors.left && cursors.left.isDown)
+              || (cursors.right && cursors.right.isDown)
+              || (cursors.up && cursors.up.isDown)
+              || (cursors.down && cursors.down.isDown)
+              || keys.A.isDown
+              || keys.D.isDown
+              || keys.W.isDown
+              || keys.S.isDown
+            );
+            if (anyMoveKey) return;
+            const t = findNearestRangedTarget(effectiveWeaponRange(w));
+            if (!t) return;
+            performPlayerAttack(t, w, true, now);
+          },
         });
         this.time.addEvent({
           delay: 1000,
@@ -4785,7 +5340,8 @@ function startGame(configPlayer) {
             && (!requiresAmmoForWeapon(handWeapon) || hasAmmoForWeapon(handWeapon))
           );
           if (dx === 0 && dy === 0) {
-            if (handIsDistance && handWeapon) {
+            // Wands/rods: auto-fire via dedicated timer (see wandRodAutoFireEvent) to avoid missed ticks.
+            if (handIsDistance && handWeapon && !isMagicRangedWeapon(handWeapon)) {
               const autoTarget = findNearestRangedTarget(effectiveWeaponRange(handWeapon));
               if (autoTarget) {
                 performPlayerAttack(autoTarget, handWeapon, true, now);
