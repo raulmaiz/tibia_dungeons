@@ -288,6 +288,18 @@ function creatureKey(template) {
   return `creature_${template.id}`;
 }
 
+/**
+ * Todas las criaturas usan el mismo escalado cuadrado (como los Dwarf con fallback anterior).
+ * Escalar por bbox opaco (fw×k, fh×k) desplazaba el dibujo respecto al ancla en GIF/Phaser.
+ */
+const CREATURE_FILL_TARGET = 0.96;
+
+function applyCreatureNormalizedDisplaySize(sprite, scene, tileSize) {
+  void scene;
+  const fillPx = tileSize * CREATURE_FILL_TARGET;
+  if (sprite) sprite.setDisplaySize(fillPx, fillPx);
+}
+
 function creaturePlural(name, count) {
   return `${name}${count === 1 ? '' : 's'}`;
 }
@@ -3032,7 +3044,9 @@ function startGame(configPlayer) {
 
             const sprite = this.add.sprite(centerX(spawn.gx), centerY(spawn.gy), creatureKey(template));
             sprite.setOrigin(0.5, 0.5);
-            sprite.setDisplaySize(tileSize * 0.9, tileSize * 0.9);
+            applyCreatureNormalizedDisplaySize(sprite, this, tileSize);
+            sprite.x = centerX(spawn.gx);
+            sprite.y = centerY(spawn.gy);
             const creatureId = Number(template.id);
             const damageMul = Number(CREATURE_DAMAGE_MULTIPLIER_BY_ID.get(creatureId) || 1);
             const baseMaxDamage = Math.max(1, Number(template.maxDamage || 1));
@@ -4709,7 +4723,9 @@ function startGame(configPlayer) {
             ease: 'Sine.easeOut',
             onComplete: () => {
               creature.sprite.clearTint();
-              creature.sprite.setDisplaySize(tileSize * 0.9, tileSize * 0.9);
+              applyCreatureNormalizedDisplaySize(creature.sprite, this, tileSize);
+              creature.sprite.x = centerX(creature.gx);
+              creature.sprite.y = centerY(creature.gy);
               updateCreatureBar(creature);
             },
           });
