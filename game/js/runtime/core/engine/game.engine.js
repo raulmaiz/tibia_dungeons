@@ -4908,6 +4908,7 @@ function startGame(configPlayer) {
               if (!godModeEnabled && playerHp <= 0) {
                 gameOver = true;
                 playerDead = true;
+                const killedByTitle = creature.title || 'Unknown';
                 this.tweens.killTweensOf(player);
                 const deathKey = deathTextureName(configPlayer.sex === 'female' ? 'female' : 'male');
                 player.setTexture(deathKey);
@@ -4928,6 +4929,7 @@ function startGame(configPlayer) {
                     kills: runKills,
                     playerLevel,
                     gold: window.debugInventory ? window.debugInventory.getGold() : 0,
+                    killedBy: killedByTitle,
                   });
                 });
                 break;
@@ -5235,6 +5237,7 @@ function showHallOfFame() {
       #hofOverlay .col-class { color: #94a3b8; }
       #hofOverlay .col-floor { font-weight: 800; font-size: 1rem; color: #e2e8f0; }
       #hofOverlay .col-gold { color: #fbbf24; font-weight: 600; }
+      #hofOverlay .col-killedby { color: #f87171; font-size: 0.82rem; }
       #hofOverlay .col-date { color: #334155; font-size: 0.78rem; }
       #hofOverlay .rank-medal { font-size: 1.1rem; }
       #hofOverlay .hof-loading, #hofOverlay .hof-empty, #hofOverlay .hof-error {
@@ -5299,6 +5302,7 @@ function showHallOfFame() {
             <td class="col-num2">${run.kills}</td>
             <td class="col-num2">${run.playerLevel}</td>
             <td class="col-gold col-num2">${fmtGold(run.gold || 0)}</td>
+            <td class="col-killedby">${escHtml(run.killedBy || '—')}</td>
             <td class="col-date col-num2">${fmtDate(run.ts || 0)}</td>
           </tr>`;
       }).join('');
@@ -5314,6 +5318,7 @@ function showHallOfFame() {
               <th class="col-num2">Kills</th>
               <th class="col-num2">Level</th>
               <th class="col-num2">Gold</th>
+              <th>Killed by</th>
               <th class="col-num2">Date</th>
             </tr>
           </thead>
@@ -5330,12 +5335,12 @@ function escHtml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function showDeathSummary({ name, classKey, sex, floor, kills, playerLevel, gold }) {
+function showDeathSummary({ name, classKey, sex, floor, kills, playerLevel, gold, killedBy }) {
   const existing = document.getElementById('deathSummaryOverlay');
   if (existing) existing.remove();
 
   // Save run to leaderboard silently
-  saveRun({ name, classKey, sex, floor, kills, playerLevel, gold });
+  saveRun({ name, classKey, sex, floor, kills, playerLevel, gold, killedBy });
 
   const cls = CLASS_META[String(classKey).toLowerCase()] || { label: classKey, icon: '' };
 
@@ -5407,6 +5412,7 @@ function showDeathSummary({ name, classKey, sex, floor, kills, playerLevel, gold
     <div class="death-title">You Died</div>
     <div class="death-subtitle">${cls.icon} ${escHtml(name)} &mdash; ${cls.label}</div>
     <div class="stats-card">
+      <div class="stat-row"><span class="stat-label">Killed by</span><span class="stat-value" style="color:#f87171;">${escHtml(killedBy || 'Unknown')}</span></div>
       <div class="stat-row"><span class="stat-label">Floor reached</span><span class="stat-value">${floor}</span></div>
       <div class="stat-row"><span class="stat-label">Creatures killed</span><span class="stat-value">${kills}</span></div>
       <div class="stat-row"><span class="stat-label">Player level</span><span class="stat-value">${playerLevel}</span></div>

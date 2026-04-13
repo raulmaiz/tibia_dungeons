@@ -72,6 +72,7 @@ export default async function handler(req, res) {
         kills:       Math.max(0, Math.floor(Number(body.kills) || 0)),
         playerLevel: Math.max(1, Math.min(9999, Math.floor(Number(body.playerLevel) || 1))),
         gold:        Math.max(0, Math.floor(Number(body.gold) || 0)),
+        killedBy:    body.killedBy ? String(body.killedBy).trim().slice(0, 40) : 'Unknown',
         ts:          Date.now(),
       };
       // Score: floor is primary (×10⁶), kills secondary (×10³), level tertiary
