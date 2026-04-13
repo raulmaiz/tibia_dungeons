@@ -1228,21 +1228,56 @@ function setupSelectorUI() {
     });
   }
 
+  window._resetInventoryForNewRun = () => {
+    bagLootItems = [];
+    for (const slotKey of Object.keys(equippedSlots)) {
+      equippedSlots[slotKey] = null;
+      clearEquippedSlotVisual(slotKey);
+    }
+    currentBagCapacity = 0;
+    currentBagItem = null;
+    lastLootRejectReason = '';
+    renderLootSlots(0);
+    startBtn.disabled = false;
+  };
+
   startBtn.addEventListener('click', async () => {
     startBtn.disabled = true;
     const playerName = (playerNameInput.value || '').trim() || 'Adventurer';
     currentPlayerCapacity = progressionStatsForLevel(1, selectedClass).capacity;
     playerConfig = { name: playerName, sex: selectedSex, classKey: selectedClass };
+
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    if (loadingOverlay) loadingOverlay.style.display = 'flex';
+    setLoadingProgress(0, 'Loading creature data...');
+
+    let jsonsDone = 0;
+    const JSON_TASKS = 8;
+    const jsonLabels = [
+      'Loading creature data...', 'Preparing inventory...', 'Loading loot tables...',
+      'Loading abilities...', 'Loading damage data...', 'Loading currencies...',
+      'Loading spells...', 'Loading items...',
+    ];
+    const onJsonDone = () => {
+      jsonsDone += 1;
+      setLoadingProgress(
+        Math.round((jsonsDone / JSON_TASKS) * 45),
+        jsonLabels[jsonsDone] || 'Finalizing data...',
+      );
+    };
+
     await Promise.all([
-      loadProgressionDatabase(),
-      equipBagByArticleId(START_BAG_ARTICLE_ID),
-      (async () => { creatureDropTable = await getCreatureDropTable(); })(),
-      (async () => { creatureAbilitiesById = await getCreatureAbilitiesById(); })(),
-      (async () => { creatureDamageModifiersById = await getCreatureDamageModifiersById(); })(),
-      ensureCoinTemplatesLoaded(),
-      (async () => { spellsCatalog = await getSpellsCatalogWithPrices(); })(),
-      (async () => { itemsShopCatalog = await getItemShopCatalog(); })(),
+      loadProgressionDatabase().then(onJsonDone),
+      equipBagByArticleId(START_BAG_ARTICLE_ID).then(onJsonDone),
+      (async () => { creatureDropTable = await getCreatureDropTable(); })().then(onJsonDone),
+      (async () => { creatureAbilitiesById = await getCreatureAbilitiesById(); })().then(onJsonDone),
+      (async () => { creatureDamageModifiersById = await getCreatureDamageModifiersById(); })().then(onJsonDone),
+      ensureCoinTemplatesLoaded().then(onJsonDone),
+      (async () => { spellsCatalog = await getSpellsCatalogWithPrices(); })().then(onJsonDone),
+      (async () => { itemsShopCatalog = await getItemShopCatalog(); })().then(onJsonDone),
     ]);
+
+    setLoadingProgress(45, 'Starting game engine...');
     // Testing seed: start each run with 0 gp.
     addCoinsToInventory(0);
     document.getElementById('startOverlay').style.display = 'none';
@@ -1287,6 +1322,9 @@ function startGame(configPlayer) {
     physics: { default: 'arcade', arcade: { debug: false } },
     scene: {
       preload() {
+        this.load.on('progress', (value) => {
+          setLoadingProgress(45 + Math.floor(value * 50), 'Loading images...');
+        });
         for (let i = 0; i < 4; i += 1) {
           this.load.image(frameTextureName('male', i), `./data/images/outfit_frames/male_${i}.png`);
           this.load.image(frameTextureName('female', i), `./data/images/outfit_frames/female_${i}.png`);
@@ -1304,6 +1342,14 @@ function startGame(configPlayer) {
         }
       },
       create() {
+        setLoadingProgress(100, 'Ready!');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        if (loadingOverlay) {
+          loadingOverlay.style.transition = 'opacity 0.4s ease';
+          loadingOverlay.style.opacity = '0';
+          setTimeout(() => { loadingOverlay.style.display = 'none'; loadingOverlay.style.opacity = '1'; }, 420);
+        }
+
         const mapTiles = [];
         for (let y = 0; y < MAP_H; y += 1) {
           mapTiles[y] = [];
@@ -1627,6 +1673,7 @@ function startGame(configPlayer) {
         const spellCooldownUntil = new Map();
         let gameOver = false;
         let playerDead = false;
+        let runKills = 0;
         let godModeEnabled = false;
         let currentLevel = 1;
         let currentLevelGroup = null;
@@ -3995,6 +4042,7 @@ function startGame(configPlayer) {
               target.sprite.setVisible(false);
               updateCreatureBar(target);
               grantPlayerXp(effectiveXpFromCreature(target));
+              runKills += 1;
             }
           }
           if (impacted.length === 0) {
@@ -4125,6 +4173,7 @@ function startGame(configPlayer) {
                 target.sprite.setVisible(false);
                 updateCreatureBar(target);
                 grantPlayerXp(effectiveXpFromCreature(target));
+                runKills += 1;
                 addCombatLog(`${target.title} dies from ${spell.title}.`);
               }
             }
@@ -4205,6 +4254,7 @@ function startGame(configPlayer) {
               targetCreature.sprite.setVisible(false);
               updateCreatureBar(targetCreature);
               grantPlayerXp(effectiveXpFromCreature(targetCreature));
+              runKills += 1;
               addCombatLog(
                 isCrit
                   ? `CRITICAL hit on ${targetCreature.title} for ${dealt}${dtHit}, and it dies.`
@@ -4866,7 +4916,18 @@ function startGame(configPlayer) {
                 player.setDisplaySize(tileSize, tileSize);
                 deathCaption.setPosition(player.x, player.y + tileSize * 0.72);
                 deathCaption.setVisible(true);
-                addCombatLog('You are dead. Reload to restart.');
+                addCombatLog('You are dead.');
+                this.time.delayedCall(3000, () => {
+                  showDeathSummary({
+                    name: configPlayer.name,
+                    classKey: configPlayer.classKey,
+                    sex: configPlayer.sex || 'male',
+                    floor: currentLevel,
+                    kills: runKills,
+                    playerLevel,
+                    gold: window.debugInventory ? window.debugInventory.getGold() : 0,
+                  });
+                });
                 break;
               }
             }
@@ -5056,6 +5117,322 @@ function startGame(configPlayer) {
 }
 
 setupSelectorUI();
+
+function setLoadingProgress(pct, label) {
+  const bar = document.getElementById('loadingBar');
+  const lbl = document.getElementById('loadingLabel');
+  const num = document.getElementById('loadingPct');
+  const p = Math.min(100, Math.max(0, Math.round(pct)));
+  if (bar) bar.style.width = `${p}%`;
+  if (num) num.textContent = `${p}%`;
+  if (lbl && label) lbl.textContent = label;
+}
+
+const CLASS_META = {
+  knight:   { label: 'Elite Knight',    icon: '⚔️' },
+  paladin:  { label: 'Royal Paladin',   icon: '🏹' },
+  sorcerer: { label: 'Master Sorcerer', icon: '🔥' },
+  druid:    { label: 'Elder Druid',     icon: '🌿' },
+};
+
+function fmtGold(g) {
+  if (g >= 1_000_000) return `${(g / 1_000_000).toFixed(1)}M gp`;
+  if (g >= 1_000)     return `${(g / 1_000).toFixed(1)}k gp`;
+  return `${g} gp`;
+}
+
+function fmtDate(ts) {
+  const d = new Date(ts);
+  const now = Date.now();
+  const diff = now - ts;
+  if (diff < 60_000)          return 'just now';
+  if (diff < 3_600_000)       return `${Math.floor(diff / 60_000)}m ago`;
+  if (diff < 86_400_000)      return `${Math.floor(diff / 3_600_000)}h ago`;
+  if (diff < 7 * 86_400_000)  return `${Math.floor(diff / 86_400_000)}d ago`;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+async function saveRun(run) {
+  try {
+    await fetch('/api/runs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(run),
+    });
+  } catch { /* silent — local dev or offline */ }
+}
+
+function showHallOfFame() {
+  const existing = document.getElementById('hofOverlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'hofOverlay';
+  overlay.style.cssText = `
+    position: fixed; inset: 0; z-index: 10001;
+    background: radial-gradient(ellipse at 50% 20%, rgba(12,20,42,0.99) 0%, rgba(4,8,18,1) 100%);
+    display: flex; flex-direction: column; align-items: center;
+    font-family: "Segoe UI", system-ui, sans-serif; color: #e2e8f0;
+    animation: hofFadeIn 0.35s ease; overflow: hidden;
+  `;
+
+  overlay.innerHTML = `
+    <style>
+      @keyframes hofFadeIn { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+      #hofOverlay { --accent: #38bdf8; --accent2: #818cf8; }
+      #hofOverlay .hof-header {
+        width: 100%; max-width: 900px; padding: 28px 32px 0;
+        display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+      }
+      #hofOverlay .hof-title-wrap { display: flex; align-items: center; gap: 14px; }
+      #hofOverlay .hof-trophy { font-size: 2.2rem; filter: drop-shadow(0 0 12px #fbbf2488); }
+      #hofOverlay .hof-title {
+        font-size: clamp(1.3rem, 3vw, 1.8rem); font-weight: 900;
+        letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent);
+        text-shadow: 0 0 24px #38bdf855;
+      }
+      #hofOverlay .hof-subtitle { font-size: 0.72rem; color: #475569; letter-spacing: 0.2em; text-transform: uppercase; margin-top: 1px; }
+      #hofOverlay .hof-close {
+        background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px; color: #94a3b8; font-size: 1rem; padding: 7px 14px;
+        cursor: pointer; transition: background 0.15s, color 0.15s; letter-spacing: 0.06em;
+      }
+      #hofOverlay .hof-close:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; }
+      #hofOverlay .hof-divider {
+        width: 100%; max-width: 900px; height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(56,189,248,0.2), transparent);
+        margin: 18px 0 0; flex-shrink: 0;
+      }
+      #hofOverlay .hof-scroll {
+        width: 100%; max-width: 900px; flex: 1; overflow-y: auto; padding: 0 32px 28px;
+        scrollbar-width: thin; scrollbar-color: rgba(56,189,248,0.2) transparent;
+      }
+      #hofOverlay .hof-scroll::-webkit-scrollbar { width: 5px; }
+      #hofOverlay .hof-scroll::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.2); border-radius: 3px; }
+      #hofOverlay table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+      #hofOverlay thead th {
+        font-size: 0.68rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+        color: #475569; padding: 0 10px 10px; text-align: left; white-space: nowrap;
+        border-bottom: 1px solid rgba(255,255,255,0.07);
+      }
+      #hofOverlay thead th.col-num { text-align: center; width: 44px; }
+      #hofOverlay thead th.col-num2 { text-align: right; }
+      #hofOverlay tbody tr {
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+        transition: background 0.12s;
+      }
+      #hofOverlay tbody tr:hover { background: rgba(56,189,248,0.04); }
+      #hofOverlay tbody tr.hof-me { background: rgba(56,189,248,0.07); }
+      #hofOverlay tbody tr.hof-me td { color: #bae6fd; }
+      #hofOverlay tbody td {
+        padding: 11px 10px; font-size: 0.88rem; color: #cbd5e1; white-space: nowrap;
+      }
+      #hofOverlay td.col-rank { text-align: center; font-weight: 900; font-size: 1rem; width: 44px; }
+      #hofOverlay td.col-num2 { text-align: right; }
+      #hofOverlay .col-name { font-weight: 700; color: #e2e8f0; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+      #hofOverlay .col-class { color: #94a3b8; }
+      #hofOverlay .col-floor { font-weight: 800; font-size: 1rem; color: #e2e8f0; }
+      #hofOverlay .col-gold { color: #fbbf24; font-weight: 600; }
+      #hofOverlay .col-date { color: #334155; font-size: 0.78rem; }
+      #hofOverlay .rank-medal { font-size: 1.1rem; }
+      #hofOverlay .hof-loading, #hofOverlay .hof-empty, #hofOverlay .hof-error {
+        text-align: center; padding: 60px 20px; color: #475569;
+        font-size: 0.95rem; letter-spacing: 0.08em;
+      }
+      #hofOverlay .hof-error { color: #ef4444; }
+      #hofOverlay .hof-spinner {
+        display: inline-block; width: 28px; height: 28px;
+        border: 3px solid rgba(56,189,248,0.15); border-top-color: #38bdf8;
+        border-radius: 50%; animation: hofSpin 0.7s linear infinite; margin-bottom: 14px;
+      }
+      @keyframes hofSpin { to { transform: rotate(360deg); } }
+    </style>
+    <div class="hof-header">
+      <div class="hof-title-wrap">
+        <span class="hof-trophy">🏆</span>
+        <div>
+          <div class="hof-title">Hall of Fame</div>
+          <div class="hof-subtitle">Top 100 adventurers of all time</div>
+        </div>
+      </div>
+      <button class="hof-close" id="hofCloseBtn">✕ Close</button>
+    </div>
+    <div class="hof-divider"></div>
+    <div class="hof-scroll">
+      <div class="hof-loading" id="hofContent">
+        <div class="hof-spinner"></div><br>Loading leaderboard...
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById('hofCloseBtn').addEventListener('click', () => overlay.remove());
+
+  const MEDALS = ['🥇', '🥈', '🥉'];
+
+  fetch('/api/runs')
+    .then((r) => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    })
+    .then(({ runs }) => {
+      const content = document.getElementById('hofContent');
+      if (!content) return;
+      if (!runs || runs.length === 0) {
+        content.outerHTML = '<div class="hof-empty">No runs recorded yet. Be the first!</div>';
+        return;
+      }
+      const rows = runs.map((run, i) => {
+        const rank = i + 1;
+        const medal = MEDALS[i] ?? rank;
+        const cls = CLASS_META[run.classKey] || { label: run.classKey, icon: '❓' };
+        const sexIcon = run.sex === 'female' ? '♀' : '♂';
+        return `
+          <tr>
+            <td class="col-rank">${rank <= 3 ? `<span class="rank-medal">${medal}</span>` : rank}</td>
+            <td class="col-name">${sexIcon} ${escHtml(run.name)}</td>
+            <td class="col-class">${cls.icon} ${cls.label}</td>
+            <td class="col-floor col-num2">${run.floor}</td>
+            <td class="col-num2">${run.kills}</td>
+            <td class="col-num2">${run.playerLevel}</td>
+            <td class="col-gold col-num2">${fmtGold(run.gold || 0)}</td>
+            <td class="col-date col-num2">${fmtDate(run.ts || 0)}</td>
+          </tr>`;
+      }).join('');
+
+      content.outerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th class="col-num">#</th>
+              <th>Name</th>
+              <th>Class</th>
+              <th class="col-num2">Floor</th>
+              <th class="col-num2">Kills</th>
+              <th class="col-num2">Level</th>
+              <th class="col-num2">Gold</th>
+              <th class="col-num2">Date</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    })
+    .catch(() => {
+      const content = document.getElementById('hofContent');
+      if (content) content.outerHTML = '<div class="hof-error">Could not load leaderboard.<br><small>Hall of Fame requires the deployed version.</small></div>';
+    });
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function showDeathSummary({ name, classKey, sex, floor, kills, playerLevel, gold }) {
+  const existing = document.getElementById('deathSummaryOverlay');
+  if (existing) existing.remove();
+
+  // Save run to leaderboard silently
+  saveRun({ name, classKey, sex, floor, kills, playerLevel, gold });
+
+  const cls = CLASS_META[String(classKey).toLowerCase()] || { label: classKey, icon: '' };
+
+  const overlay = document.createElement('div');
+  overlay.id = 'deathSummaryOverlay';
+  overlay.style.cssText = `
+    position: fixed; inset: 0; z-index: 9999;
+    background: radial-gradient(ellipse at center, rgba(10,15,30,0.97) 0%, rgba(5,8,18,0.99) 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: "Segoe UI", system-ui, sans-serif; color: #e2e8f0;
+    animation: fadeInOverlay 0.6s ease;
+  `;
+
+  overlay.innerHTML = `
+    <style>
+      @keyframes fadeInOverlay { from { opacity:0; transform:scale(0.97); } to { opacity:1; transform:scale(1); } }
+      @keyframes pulseRed { 0%,100% { text-shadow:0 0 30px #ef4444,0 0 60px #ef444488; } 50% { text-shadow:0 0 50px #ef4444,0 0 100px #ef444455; } }
+      #deathSummaryOverlay .death-title {
+        font-size: clamp(2.5rem,6vw,4.5rem); font-weight:900; letter-spacing:0.15em;
+        color:#ef4444; text-transform:uppercase;
+        animation:pulseRed 2s ease-in-out infinite; margin-bottom:0.2em;
+      }
+      #deathSummaryOverlay .death-subtitle {
+        font-size:clamp(0.85rem,2vw,1.05rem); color:#64748b; letter-spacing:0.18em;
+        text-transform:uppercase; margin-bottom:2em;
+      }
+      #deathSummaryOverlay .stats-card {
+        background:linear-gradient(165deg,rgba(22,36,58,0.9) 0%,rgba(8,14,26,0.95) 100%);
+        border:1px solid rgba(56,189,248,0.18); border-radius:16px;
+        padding:1.6em 2.8em; min-width:min(400px,90vw);
+        box-shadow:0 20px 60px rgba(0,0,0,0.6); margin-bottom:2em;
+      }
+      #deathSummaryOverlay .stat-row {
+        display:flex; justify-content:space-between; align-items:center;
+        padding:0.5em 0; border-bottom:1px solid rgba(255,255,255,0.06);
+        font-size:clamp(0.88rem,1.8vw,1rem);
+      }
+      #deathSummaryOverlay .stat-row:last-child { border-bottom:none; }
+      #deathSummaryOverlay .stat-label { color:#64748b; }
+      #deathSummaryOverlay .stat-value { color:#e2e8f0; font-weight:700; }
+      #deathSummaryOverlay .btn-row { display:flex; gap:12px; }
+      #deathSummaryOverlay .btn-hof {
+        background:linear-gradient(135deg,rgba(99,102,241,0.2),rgba(99,102,241,0.3));
+        color:#a5b4fc; border:1px solid rgba(99,102,241,0.4); border-radius:10px;
+        padding:0.85em 1.6em; font-size:clamp(0.88rem,1.8vw,1rem);
+        font-weight:700; letter-spacing:0.06em; cursor:pointer;
+        transition:transform 0.15s,box-shadow 0.15s,background 0.15s;
+      }
+      #deathSummaryOverlay .btn-hof:hover {
+        background:linear-gradient(135deg,rgba(99,102,241,0.35),rgba(99,102,241,0.45));
+        transform:translateY(-2px); box-shadow:0 6px 20px rgba(99,102,241,0.25);
+      }
+      #deathSummaryOverlay .btn-play {
+        background:linear-gradient(135deg,#1e40af,#1d4ed8);
+        color:#fff; border:none; border-radius:10px;
+        padding:0.85em 2em; font-size:clamp(0.88rem,1.8vw,1rem);
+        font-weight:700; letter-spacing:0.08em; cursor:pointer;
+        box-shadow:0 6px 24px rgba(29,78,216,0.4);
+        transition:transform 0.15s,box-shadow 0.15s,background 0.15s;
+        text-transform:uppercase;
+      }
+      #deathSummaryOverlay .btn-play:hover {
+        background:linear-gradient(135deg,#2563eb,#3b82f6);
+        transform:translateY(-2px); box-shadow:0 10px 32px rgba(59,130,246,0.5);
+      }
+      #deathSummaryOverlay .btn-play:active,
+      #deathSummaryOverlay .btn-hof:active { transform:translateY(0); }
+    </style>
+    <div class="death-title">You Died</div>
+    <div class="death-subtitle">${cls.icon} ${escHtml(name)} &mdash; ${cls.label}</div>
+    <div class="stats-card">
+      <div class="stat-row"><span class="stat-label">Floor reached</span><span class="stat-value">${floor}</span></div>
+      <div class="stat-row"><span class="stat-label">Creatures killed</span><span class="stat-value">${kills}</span></div>
+      <div class="stat-row"><span class="stat-label">Player level</span><span class="stat-value">${playerLevel}</span></div>
+      <div class="stat-row"><span class="stat-label">Gold earned</span><span class="stat-value">${fmtGold(gold)}</span></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-hof" id="hofBtn">🏆 Hall of Fame</button>
+      <button class="btn-play" id="playAgainBtn">▶ Play Again</button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById('hofBtn').addEventListener('click', () => showHallOfFame());
+
+  document.getElementById('playAgainBtn').addEventListener('click', () => {
+    overlay.remove();
+    if (game) {
+      game.destroy(true);
+      game = null;
+    }
+    if (typeof window._resetInventoryForNewRun === 'function') {
+      window._resetInventoryForNewRun();
+    }
+    const startOverlay = document.getElementById('startOverlay');
+    if (startOverlay) startOverlay.style.display = '';
+  });
+}
 
 async function loadProgressionDatabase() {
   if (typeProgressionGroups.length > 0) return;
