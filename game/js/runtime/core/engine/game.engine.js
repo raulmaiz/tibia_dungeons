@@ -1321,19 +1321,18 @@ function startGame(configPlayer) {
     physics: { default: 'arcade', arcade: { debug: false } },
     scene: {
       preload() {
-        // this.textures.exists(key) es true si la textura ya está cargada de un run anterior
-        // (scene.restart() no limpia el texture manager global de Phaser)
-        const tryLoad = (key, url) => {
-          if (this.textures.exists(key)) return;
-          this.load.image(key, url);
-        };
+        // Registrar progress ANTES de encolar imágenes para que Phaser lo capture desde el inicio
+        setLoadingProgress(45, 'Loading creatures...');
+        this.load.on('progress', (value) => {
+          setLoadingProgress(45 + Math.floor(value * 50), 'Loading creatures...');
+        });
 
         for (let i = 0; i < 4; i += 1) {
-          tryLoad(frameTextureName('male', i), `./data/images/outfit_frames/male_${i}.png`);
-          tryLoad(frameTextureName('female', i), `./data/images/outfit_frames/female_${i}.png`);
+          this.load.image(frameTextureName('male', i), `./data/images/outfit_frames/male_${i}.png`);
+          this.load.image(frameTextureName('female', i), `./data/images/outfit_frames/female_${i}.png`);
         }
-        tryLoad(deathTextureName('male'), './data/images/other/you_are_death_male.jpg');
-        tryLoad(deathTextureName('female'), './data/images/other/you_are_death_female.jpg');
+        this.load.image(deathTextureName('male'), './data/images/other/you_are_death_male.jpg');
+        this.load.image(deathTextureName('female'), './data/images/other/you_are_death_female.jpg');
         const unique = new Map();
         for (const tier of typeProgressionGroups) {
           for (const c of tier.creatures) {
@@ -1341,16 +1340,7 @@ function startGame(configPlayer) {
           }
         }
         for (const c of unique.values()) {
-          tryLoad(creatureKey(c), `./data/images/${c.image}`);
-        }
-
-        if (this.load.totalToLoad === 0) {
-          // Todo cacheado — progreso instantáneo
-          setLoadingProgress(95, 'Loading creatures...');
-        } else {
-          this.load.on('progress', (value) => {
-            setLoadingProgress(40 + Math.floor(value * 55), 'Loading creatures...');
-          });
+          this.load.image(creatureKey(c), `./data/images/${c.image}`);
         }
       },
       create() {
