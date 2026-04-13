@@ -6,8 +6,6 @@ __pycache__/
 
 # Datos pesados y locales
 *.db
-data/images/
-images/
 
 # Sistema
 .DS_Store
