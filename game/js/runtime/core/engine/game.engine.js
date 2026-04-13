@@ -1239,9 +1239,13 @@ function setupSelectorUI() {
     lastLootRejectReason = '';
     renderLootSlots(0);
     startBtn.disabled = false;
+    _starting = false;
   };
 
+  let _starting = false;
   startBtn.addEventListener('click', async () => {
+    if (_starting) return;
+    _starting = true;
     startBtn.disabled = true;
     const playerName = (playerNameInput.value || '').trim() || 'Adventurer';
     currentPlayerCapacity = progressionStatsForLevel(1, selectedClass).capacity;
@@ -1281,20 +1285,15 @@ function setupSelectorUI() {
     addCoinsToInventory(0);
     document.getElementById('startOverlay').style.display = 'none';
     startGame(playerConfig);
+    // _starting stays true — the game is now running, no more starts needed
   });
 
+  // Un único listener de Enter para el input (el document listener era redundante y causaba doble disparo)
   playerNameInput.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
       event.preventDefault();
-      if (!startBtn.disabled) startBtn.click();
+      if (!startBtn.disabled && !_starting) startBtn.click();
     }
-  });
-  document.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter') return;
-    const overlay = document.getElementById('startOverlay');
-    if (!overlay || overlay.style.display === 'none') return;
-    event.preventDefault();
-    if (!startBtn.disabled) startBtn.click();
   });
 }
 
@@ -5431,8 +5430,10 @@ function showDeathSummary({ name, classKey, sex, floor, kills, playerLevel, gold
   document.getElementById('playAgainBtn').addEventListener('click', () => {
     overlay.remove();
     if (game) {
-      game.destroy(true);
+      game.destroy(false);  // false = no eliminar el canvas del DOM (evita errores de WebGL context nulo)
       game = null;
+      const phaserDiv = document.getElementById('phaser');
+      if (phaserDiv) phaserDiv.innerHTML = '';  // limpiar canvas manualmente
     }
     if (typeof window._resetInventoryForNewRun === 'function') {
       window._resetInventoryForNewRun();
