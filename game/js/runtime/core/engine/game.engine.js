@@ -1249,75 +1249,35 @@ function setupSelectorUI() {
 
     const loadingOverlay = document.getElementById('loadingOverlay');
     if (loadingOverlay) loadingOverlay.style.display = 'flex';
+    setLoadingProgress(0, 'Loading creature data...');
 
-    const isFirstRun = !window._gameDataCached;
+    let jsonsDone = 0;
+    const JSON_TASKS = 8;
+    const jsonLabels = [
+      'Loading creature data...', 'Preparing inventory...', 'Loading loot tables...',
+      'Loading abilities...', 'Loading damage data...', 'Loading currencies...',
+      'Loading spells...', 'Loading items...',
+    ];
+    const onJsonDone = () => {
+      jsonsDone += 1;
+      setLoadingProgress(
+        Math.round((jsonsDone / JSON_TASKS) * 45),
+        jsonLabels[jsonsDone] || 'Finalizing data...',
+      );
+    };
 
-    if (isFirstRun) {
-      // Fase 0: mensajes "falsos" mientras arranca el fetch
-      const flavourMessages = [
-        'Generating dungeon layouts...',
-        'Placing torches on the walls...',
-        'Summoning monsters from the deep...',
-        'Sharpening blades...',
-        'Mixing health potions...',
-        'Bribing the dungeon master...',
-        'Waking up the skeletons...',
-        'Polishing armors...',
-        'Charging mana crystals...',
-        'Drawing dungeon maps...',
-        'Feeding the rats...',
-      ];
-      let flavourIdx = 0;
-      setLoadingProgress(0, flavourMessages[0]);
-      const flavourTimer = setInterval(() => {
-        flavourIdx = (flavourIdx + 1) % flavourMessages.length;
-        setLoadingProgress(null, flavourMessages[flavourIdx]);
-      }, 900);
+    await Promise.all([
+      loadProgressionDatabase().then(onJsonDone),
+      equipBagByArticleId(START_BAG_ARTICLE_ID).then(onJsonDone),
+      (async () => { creatureDropTable = await getCreatureDropTable(); })().then(onJsonDone),
+      (async () => { creatureAbilitiesById = await getCreatureAbilitiesById(); })().then(onJsonDone),
+      (async () => { creatureDamageModifiersById = await getCreatureDamageModifiersById(); })().then(onJsonDone),
+      ensureCoinTemplatesLoaded().then(onJsonDone),
+      (async () => { spellsCatalog = await getSpellsCatalogWithPrices(); })().then(onJsonDone),
+      (async () => { itemsShopCatalog = await getItemShopCatalog(); })().then(onJsonDone),
+    ]);
 
-      let jsonsDone = 0;
-      const JSON_TASKS = 8;
-      const jsonLabels = [
-        null, 'Loading loot tables...', 'Loading abilities...',
-        'Loading damage data...', 'Loading currencies...', 'Loading spells...',
-        'Loading items...', 'Finalizing data...',
-      ];
-      const onJsonDone = () => {
-        jsonsDone += 1;
-        const pct = Math.round((jsonsDone / JSON_TASKS) * 40);
-        if (jsonLabels[jsonsDone]) setLoadingProgress(pct, jsonLabels[jsonsDone]);
-        else setLoadingProgress(pct, null);
-      };
-
-      await Promise.all([
-        loadProgressionDatabase().then(onJsonDone),
-        equipBagByArticleId(START_BAG_ARTICLE_ID).then(onJsonDone),
-        (async () => { creatureDropTable = await getCreatureDropTable(); })().then(onJsonDone),
-        (async () => { creatureAbilitiesById = await getCreatureAbilitiesById(); })().then(onJsonDone),
-        (async () => { creatureDamageModifiersById = await getCreatureDamageModifiersById(); })().then(onJsonDone),
-        ensureCoinTemplatesLoaded().then(onJsonDone),
-        (async () => { spellsCatalog = await getSpellsCatalogWithPrices(); })().then(onJsonDone),
-        (async () => { itemsShopCatalog = await getItemShopCatalog(); })().then(onJsonDone),
-      ]);
-
-      clearInterval(flavourTimer);
-      window._gameDataCached = true;
-    } else {
-      // Segunda run en adelante: los datos JSON ya están en memoria (dataService.js los cachea)
-      // Relanzamos las mismas llamadas — son instantáneas desde cache — solo para actualizar estado interno
-      await Promise.all([
-        loadProgressionDatabase(),
-        equipBagByArticleId(START_BAG_ARTICLE_ID),
-        (async () => { creatureDropTable = await getCreatureDropTable(); })(),
-        (async () => { creatureAbilitiesById = await getCreatureAbilitiesById(); })(),
-        (async () => { creatureDamageModifiersById = await getCreatureDamageModifiersById(); })(),
-        ensureCoinTemplatesLoaded(),
-        (async () => { spellsCatalog = await getSpellsCatalogWithPrices(); })(),
-        (async () => { itemsShopCatalog = await getItemShopCatalog(); })(),
-      ]);
-      setLoadingProgress(40, 'Data ready.');
-    }
-
-    setLoadingProgress(40, 'Starting game engine...');
+    setLoadingProgress(45, 'Starting game engine...');
     addCoinsToInventory(0);
     document.getElementById('startOverlay').style.display = 'none';
     startGame(playerConfig);
@@ -1343,12 +1303,7 @@ function isWalkableTile(gx, gy) {
 }
 
 function startGame(configPlayer) {
-  // En runs posteriores reutilizamos el game existente reiniciando la escena
-  if (game) {
-    window._pendingConfigPlayer = configPlayer;
-    game.scene.scenes[0].scene.restart();
-    return;
-  }
+  if (game) return;
 
   const tileSize = 40;
   const mapWidth = MAP_W * tileSize;
@@ -1399,12 +1354,6 @@ function startGame(configPlayer) {
         }
       },
       create() {
-        // En runs posteriores, configPlayer llega via _pendingConfigPlayer
-        if (window._pendingConfigPlayer) {
-          configPlayer = window._pendingConfigPlayer;
-          window._pendingConfigPlayer = null;
-        }
-
         setLoadingProgress(100, 'Ready!');
         const loadingOverlay = document.getElementById('loadingOverlay');
         if (loadingOverlay) {
@@ -5485,6 +5434,10 @@ function showDeathSummary({ name, classKey, sex, floor, kills, playerLevel, gold
 
   document.getElementById('playAgainBtn').addEventListener('click', () => {
     overlay.remove();
+    if (game) {
+      game.destroy(true);
+      game = null;
+    }
     if (typeof window._resetInventoryForNewRun === 'function') {
       window._resetInventoryForNewRun();
     }
