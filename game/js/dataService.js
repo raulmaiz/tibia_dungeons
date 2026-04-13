@@ -395,7 +395,6 @@ export async function getCreatureDropTable() {
     if (itemType === 'rubish' || itemType === 'rubbish') continue;
     if (itemType === 'creature products') continue;
     if (itemType === 'light sources') continue;
-    if (itemType === 'tools') continue;
     const title = (item.title || item.name || '').trim();
     if (!title) continue;
     const dropMin = Number(row.min);

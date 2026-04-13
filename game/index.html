@@ -180,10 +180,10 @@
       }
       .stats-panel {
         position: fixed;
-        right: 206px;
-        top: 620px;
-        width: 250px;
-        padding: 10px;
+        right: -8px;
+        top: 760px;
+        width: 198px;
+        padding: 8px;
         border: 1px solid rgba(56, 189, 248, 0.22);
         border-radius: 12px;
         background: linear-gradient(165deg, rgba(22, 36, 58, 0.88) 0%, rgba(8, 14, 26, 0.94) 100%);
@@ -198,8 +198,27 @@
         font-size: 12px;
         letter-spacing: 0.3px;
       }
-      .stats-grid {
+      .stats-accordion summary {
+        list-style: none;
+        cursor: pointer;
+        user-select: none;
+      }
+      .stats-accordion summary::-webkit-details-marker {
+        display: none;
+      }
+      .stats-accordion summary::after {
+        content: '▸';
+        float: right;
+        color: #94a3b8;
+        transition: transform 120ms ease;
+      }
+      .stats-accordion[open] summary::after {
+        transform: rotate(90deg);
+      }
+      .stats-content {
         margin-top: 8px;
+      }
+      .stats-grid {
         display: grid;
         grid-template-columns: 1fr;
         gap: 4px;
@@ -528,7 +547,7 @@
         .equipment-slot { height: 56px; }
         .equipment-panel { right: 182px; }
         .loot-panel { width: 210px; top: 330px; right: 182px; }
-        .stats-panel { width: 210px; top: 620px; right: 182px; }
+        .stats-panel { width: 176px; top: 760px; right: -8px; }
         .spells-panel { width: 176px; top: 14px; right: -8px; }
         .spells-content { height: auto; max-height: 62vh; }
         .learned-spells-panel { width: 176px; top: 484px; right: -8px; }
@@ -677,9 +696,13 @@
       </details>
     </aside>
     <aside class="stats-panel" id="statsPanel" aria-label="Stats panel">
-      <h3 class="stats-title">Top Stats</h3>
-      <div class="stats-grid" id="statsGrid"></div>
-      <div class="stats-foot" id="statsFoot">Showing top 5 by level</div>
+      <details class="stats-accordion" id="statsAccordion" open>
+        <summary class="stats-title">Top Stats</summary>
+        <div class="stats-content">
+          <div class="stats-grid" id="statsGrid"></div>
+          <div class="stats-foot" id="statsFoot">Showing top 5 by level</div>
+        </div>
+      </details>
     </aside>
     <aside class="spells-panel" aria-label="Spells panel">
       <details class="spells-accordion" id="spellsAccordion">
