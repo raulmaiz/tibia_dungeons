@@ -1249,36 +1249,75 @@ function setupSelectorUI() {
 
     const loadingOverlay = document.getElementById('loadingOverlay');
     if (loadingOverlay) loadingOverlay.style.display = 'flex';
-    setLoadingProgress(0, 'Loading creature data...');
 
-    let jsonsDone = 0;
-    const JSON_TASKS = 8;
-    const jsonLabels = [
-      'Loading creature data...', 'Preparing inventory...', 'Loading loot tables...',
-      'Loading abilities...', 'Loading damage data...', 'Loading currencies...',
-      'Loading spells...', 'Loading items...',
-    ];
-    const onJsonDone = () => {
-      jsonsDone += 1;
-      setLoadingProgress(
-        Math.round((jsonsDone / JSON_TASKS) * 45),
-        jsonLabels[jsonsDone] || 'Finalizing data...',
-      );
-    };
+    const isFirstRun = !window._gameDataCached;
 
-    await Promise.all([
-      loadProgressionDatabase().then(onJsonDone),
-      equipBagByArticleId(START_BAG_ARTICLE_ID).then(onJsonDone),
-      (async () => { creatureDropTable = await getCreatureDropTable(); })().then(onJsonDone),
-      (async () => { creatureAbilitiesById = await getCreatureAbilitiesById(); })().then(onJsonDone),
-      (async () => { creatureDamageModifiersById = await getCreatureDamageModifiersById(); })().then(onJsonDone),
-      ensureCoinTemplatesLoaded().then(onJsonDone),
-      (async () => { spellsCatalog = await getSpellsCatalogWithPrices(); })().then(onJsonDone),
-      (async () => { itemsShopCatalog = await getItemShopCatalog(); })().then(onJsonDone),
-    ]);
+    if (isFirstRun) {
+      // Fase 0: mensajes "falsos" mientras arranca el fetch
+      const flavourMessages = [
+        'Generating dungeon layouts...',
+        'Placing torches on the walls...',
+        'Summoning monsters from the deep...',
+        'Sharpening blades...',
+        'Mixing health potions...',
+        'Bribing the dungeon master...',
+        'Waking up the skeletons...',
+        'Polishing armors...',
+        'Charging mana crystals...',
+        'Drawing dungeon maps...',
+        'Feeding the rats...',
+      ];
+      let flavourIdx = 0;
+      setLoadingProgress(0, flavourMessages[0]);
+      const flavourTimer = setInterval(() => {
+        flavourIdx = (flavourIdx + 1) % flavourMessages.length;
+        setLoadingProgress(null, flavourMessages[flavourIdx]);
+      }, 900);
 
-    setLoadingProgress(45, 'Starting game engine...');
-    // Testing seed: start each run with 0 gp.
+      let jsonsDone = 0;
+      const JSON_TASKS = 8;
+      const jsonLabels = [
+        null, 'Loading loot tables...', 'Loading abilities...',
+        'Loading damage data...', 'Loading currencies...', 'Loading spells...',
+        'Loading items...', 'Finalizing data...',
+      ];
+      const onJsonDone = () => {
+        jsonsDone += 1;
+        const pct = Math.round((jsonsDone / JSON_TASKS) * 40);
+        if (jsonLabels[jsonsDone]) setLoadingProgress(pct, jsonLabels[jsonsDone]);
+        else setLoadingProgress(pct, null);
+      };
+
+      await Promise.all([
+        loadProgressionDatabase().then(onJsonDone),
+        equipBagByArticleId(START_BAG_ARTICLE_ID).then(onJsonDone),
+        (async () => { creatureDropTable = await getCreatureDropTable(); })().then(onJsonDone),
+        (async () => { creatureAbilitiesById = await getCreatureAbilitiesById(); })().then(onJsonDone),
+        (async () => { creatureDamageModifiersById = await getCreatureDamageModifiersById(); })().then(onJsonDone),
+        ensureCoinTemplatesLoaded().then(onJsonDone),
+        (async () => { spellsCatalog = await getSpellsCatalogWithPrices(); })().then(onJsonDone),
+        (async () => { itemsShopCatalog = await getItemShopCatalog(); })().then(onJsonDone),
+      ]);
+
+      clearInterval(flavourTimer);
+      window._gameDataCached = true;
+    } else {
+      // Segunda run en adelante: los datos JSON ya están en memoria (dataService.js los cachea)
+      // Relanzamos las mismas llamadas — son instantáneas desde cache — solo para actualizar estado interno
+      await Promise.all([
+        loadProgressionDatabase(),
+        equipBagByArticleId(START_BAG_ARTICLE_ID),
+        (async () => { creatureDropTable = await getCreatureDropTable(); })(),
+        (async () => { creatureAbilitiesById = await getCreatureAbilitiesById(); })(),
+        (async () => { creatureDamageModifiersById = await getCreatureDamageModifiersById(); })(),
+        ensureCoinTemplatesLoaded(),
+        (async () => { spellsCatalog = await getSpellsCatalogWithPrices(); })(),
+        (async () => { itemsShopCatalog = await getItemShopCatalog(); })(),
+      ]);
+      setLoadingProgress(40, 'Data ready.');
+    }
+
+    setLoadingProgress(40, 'Starting game engine...');
     addCoinsToInventory(0);
     document.getElementById('startOverlay').style.display = 'none';
     startGame(playerConfig);
@@ -1304,7 +1343,12 @@ function isWalkableTile(gx, gy) {
 }
 
 function startGame(configPlayer) {
-  if (game) return;
+  // En runs posteriores reutilizamos el game existente reiniciando la escena
+  if (game) {
+    window._pendingConfigPlayer = configPlayer;
+    game.scene.scenes[0].scene.restart();
+    return;
+  }
 
   const tileSize = 40;
   const mapWidth = MAP_W * tileSize;
@@ -1322,15 +1366,19 @@ function startGame(configPlayer) {
     physics: { default: 'arcade', arcade: { debug: false } },
     scene: {
       preload() {
-        this.load.on('progress', (value) => {
-          setLoadingProgress(45 + Math.floor(value * 50), 'Loading images...');
-        });
+        // this.textures.exists(key) es true si la textura ya está cargada de un run anterior
+        // (scene.restart() no limpia el texture manager global de Phaser)
+        const tryLoad = (key, url) => {
+          if (this.textures.exists(key)) return;
+          this.load.image(key, url);
+        };
+
         for (let i = 0; i < 4; i += 1) {
-          this.load.image(frameTextureName('male', i), `./data/images/outfit_frames/male_${i}.png`);
-          this.load.image(frameTextureName('female', i), `./data/images/outfit_frames/female_${i}.png`);
+          tryLoad(frameTextureName('male', i), `./data/images/outfit_frames/male_${i}.png`);
+          tryLoad(frameTextureName('female', i), `./data/images/outfit_frames/female_${i}.png`);
         }
-        this.load.image(deathTextureName('male'), './data/images/other/you_are_death_male.jpg');
-        this.load.image(deathTextureName('female'), './data/images/other/you_are_death_female.jpg');
+        tryLoad(deathTextureName('male'), './data/images/other/you_are_death_male.jpg');
+        tryLoad(deathTextureName('female'), './data/images/other/you_are_death_female.jpg');
         const unique = new Map();
         for (const tier of typeProgressionGroups) {
           for (const c of tier.creatures) {
@@ -1338,10 +1386,25 @@ function startGame(configPlayer) {
           }
         }
         for (const c of unique.values()) {
-          this.load.image(creatureKey(c), `./data/images/${c.image}`);
+          tryLoad(creatureKey(c), `./data/images/${c.image}`);
+        }
+
+        if (this.load.totalToLoad === 0) {
+          // Todo cacheado — progreso instantáneo
+          setLoadingProgress(95, 'Loading creatures...');
+        } else {
+          this.load.on('progress', (value) => {
+            setLoadingProgress(40 + Math.floor(value * 55), 'Loading creatures...');
+          });
         }
       },
       create() {
+        // En runs posteriores, configPlayer llega via _pendingConfigPlayer
+        if (window._pendingConfigPlayer) {
+          configPlayer = window._pendingConfigPlayer;
+          window._pendingConfigPlayer = null;
+        }
+
         setLoadingProgress(100, 'Ready!');
         const loadingOverlay = document.getElementById('loadingOverlay');
         if (loadingOverlay) {
@@ -5422,10 +5485,6 @@ function showDeathSummary({ name, classKey, sex, floor, kills, playerLevel, gold
 
   document.getElementById('playAgainBtn').addEventListener('click', () => {
     overlay.remove();
-    if (game) {
-      game.destroy(true);
-      game = null;
-    }
     if (typeof window._resetInventoryForNewRun === 'function') {
       window._resetInventoryForNewRun();
     }
