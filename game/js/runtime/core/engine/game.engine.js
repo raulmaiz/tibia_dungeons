@@ -3983,7 +3983,7 @@ function startGame(configPlayer) {
             const target = creatureAt(t.gx, t.gy);
             if (!target) continue;
             const crit = didAttackCrit();
-            const base = inferKnightAdjustedSpellDamage(spell, { area: isAreaPattern });
+            const base = inferClassAdjustedSpellDamage(spell, { area: isAreaPattern });
             const dmgRaw = crit ? applyCriticalDamage(base) : base;
             const dmg = applyIncomingElementalDamage(dmgRaw, target, spellElem);
             target.hp = Math.max(0, target.hp - dmg);
@@ -4934,7 +4934,11 @@ function startGame(configPlayer) {
           if (moving || gameOver) return;
           if (isTypingInInput()) return;
           const now = this.time.now;
-          if (now < nextPlayerActionAt) return;
+          const canMageCastWithMagicWeapon = () => {
+            if (playerClassKey !== 'druid' && playerClassKey !== 'sorcerer') return false;
+            const equippedHand = getEquippedHandWeapon();
+            return Boolean(equippedHand && isMagicRangedWeapon(equippedHand));
+          };
           const spellSlotToCast = (
             Phaser.Input.Keyboard.JustDown(spellHotkeys.one) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num1) ? 1
               : Phaser.Input.Keyboard.JustDown(spellHotkeys.two) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num2) ? 2
@@ -4950,10 +4954,13 @@ function startGame(configPlayer) {
           if (spellSlotToCast > 0) {
             const casted = castLearnedSpell(spellSlotToCast, now);
             if (casted) {
-              nextPlayerActionAt = now + Math.max(140, Math.floor(playerActionDelayMs * 0.55));
+              if (!canMageCastWithMagicWeapon()) {
+                nextPlayerActionAt = now + Math.max(140, Math.floor(playerActionDelayMs * 0.55));
+              }
               return;
             }
           }
+          if (now < nextPlayerActionAt) return;
 
           let dx = 0;
           let dy = 0;
