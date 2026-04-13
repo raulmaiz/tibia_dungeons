@@ -655,15 +655,14 @@ function setupSelectorUI() {
   function tryAutoEquipWeaponUpgrade(item) {
     if (String(item.item_type || '').toLowerCase() === 'ammunition') return false;
     if ((item.item_class || '').toLowerCase() !== 'weapons') return false;
+    // Only auto-equip looted weapons when hand slot is empty.
     if (equippedSlots.hand) return false;
     const nextAttack = Number(item.attack_value || 0);
     if (!Number.isFinite(nextAttack) || nextAttack <= 0) return false;
-    const equippedAttack = Number((equippedSlots.hand && equippedSlots.hand.attack_value) || 0);
-    if (nextAttack <= equippedAttack) return false;
     return setEquippedSlotVisual(
       'hand',
       item,
-      `Auto-equipped ${item.title} (attack ${nextAttack}) > current (${equippedAttack}).`
+      `Auto-equipped ${item.title} (hand was empty).`
     );
   }
 
@@ -2210,11 +2209,9 @@ function startGame(configPlayer) {
           updateHud();
           return true;
         };
-        onUseTool = (item) => {
-          if (!item || playerDead || gameOver) return false;
-          if (Number(item.id) !== 2253) return false;
+        const tryClimbUpFloor = (sourceName = 'rope') => {
           if (!hasRopeUpAtPlayer()) {
-            addCombatLog('Use item 2253 on the entry tile (where you appear on this floor).');
+            addCombatLog('Use it on the entry tile (where you appear on this floor).');
             return true;
           }
           if (currentLevel <= 1) {
@@ -2223,9 +2220,14 @@ function startGame(configPlayer) {
           }
           currentLevel = Math.max(1, currentLevel - 1);
           descendLevel(false);
-          addCombatLog(`You climbed to floor ${currentLevel} using ${item.title || 'item 2253'}.`);
+          addCombatLog(`You climbed to floor ${currentLevel} using ${sourceName}.`);
           updateHud();
           return true;
+        };
+        onUseTool = (item) => {
+          if (!item || playerDead || gameOver) return false;
+          if (Number(item.id) !== 2253) return false;
+          return tryClimbUpFloor(item.title || 'item 2253');
         };
         const updateCreatureBar = (creature) => {
           if (!creature.hpBar) return;
@@ -2870,11 +2872,18 @@ function startGame(configPlayer) {
           const learnedFoot = document.getElementById('learnedSpellsFoot');
           if (!learnedGrid || !learnedFoot) return;
           learnedGrid.innerHTML = '';
+          const slotBySpellId = new Map();
+          for (let i = 0; i < learnedSpellSlots.length; i += 1) {
+            const id = learnedSpellSlots[i];
+            if (id != null) slotBySpellId.set(Number(id), i + 1);
+          }
           const learned = (spellsCatalog || [])
             .filter((s) => learnedSpellIds.has(Number(s.article_id)))
             .filter((s) => !isBlockedSpellTitle(s.title))
             .sort((a, b) => {
-              if (a.level !== b.level) return a.level - b.level;
+              const aSlot = Number(slotBySpellId.get(Number(a.article_id)) || 999);
+              const bSlot = Number(slotBySpellId.get(Number(b.article_id)) || 999);
+              if (aSlot !== bSlot) return aSlot - bSlot;
               return String(a.title || '').localeCompare(String(b.title || ''));
             });
           if (learned.length === 0) {
@@ -2886,7 +2895,7 @@ function startGame(configPlayer) {
             for (const spell of learned) {
               const row = document.createElement('div');
               row.className = 'learned-spell-row';
-              const slotIdx = learnedSpellSlots.findIndex((id) => Number(id) === Number(spell.article_id));
+              const slotIdx = Number(slotBySpellId.get(Number(spell.article_id)) || 0) - 1;
               const slotPrefix = slotIdx >= 0 ? `[${slotIdx + 1}] ` : '';
               row.textContent = `${slotPrefix}${spell.title} (Lv ${Math.max(0, Number(spell.level || 0))})`;
               bindSpellTooltip(row, spell);
@@ -3381,8 +3390,10 @@ function startGame(configPlayer) {
           const reduced = Math.max(1, reducedByPercent - flatReduction);
           return reduced;
         };
-        const ammoAttackBonus = () => {
+        const ammoAttackBonus = (weapon = null) => {
           const ammo = getEquippedAmmo();
+          if (!ammo) return 0;
+          if (weapon && !isAmmoCompatibleWithWeapon(weapon, ammo)) return 0;
           return Math.max(0, Number((ammo && ammo.attack_value) || 0));
         };
         const isMagicRangedWeapon = (item) => {
@@ -3507,7 +3518,7 @@ function startGame(configPlayer) {
             return Math.max(1, Math.floor(3 + playerLevel * 0.22 + fistBonus));
           }
           const weaponAttack = Math.max(0, Number((hand && hand.attack_value) || 0));
-          const rangedAmmoBonus = requiresAmmoForWeapon(hand) ? ammoAttackBonus() : 0;
+          const rangedAmmoBonus = requiresAmmoForWeapon(hand) ? ammoAttackBonus(hand) : 0;
           const typeKey = weaponSkillTypeKey(hand);
           const skillLevel = getWeaponSkillLevelByType(typeKey);
           const weaponSkillBonus = Math.max(0, Math.floor((skillLevel - 10) * 0.8));
@@ -3526,6 +3537,26 @@ function startGame(configPlayer) {
           && String(item.item_type || '').toLowerCase() === 'distance weapons'
         );
         const isDistanceWeapon = (item) => isClassicDistanceWeapon(item) || isMagicRangedWeapon(item);
+        const ammoKindForWeapon = (weapon) => {
+          const secondary = String((weapon && weapon.type_secondary) || '').toLowerCase();
+          if (secondary.includes('crossbow')) return 'bolt';
+          if (secondary.includes('bow')) return 'arrow';
+          return null;
+        };
+        const ammoKindForItem = (ammoItem) => {
+          if (!ammoItem) return null;
+          if (String(ammoItem.item_type || '').toLowerCase() !== 'ammunition') return null;
+          const title = String(ammoItem.title || '').toLowerCase();
+          if (title.includes('bolt')) return 'bolt';
+          if (title.includes('arrow')) return 'arrow';
+          return null;
+        };
+        const isAmmoCompatibleWithWeapon = (weapon, ammoItem) => {
+          const needed = ammoKindForWeapon(weapon);
+          if (!needed) return true;
+          const has = ammoKindForItem(ammoItem);
+          return has === needed;
+        };
         const requiresAmmoForWeapon = (item) => Boolean(
           item
           && isClassicDistanceWeapon(item)
@@ -3536,12 +3567,14 @@ function startGame(configPlayer) {
           const ammo = getEquippedAmmo();
           if (!ammo) return false;
           const count = Math.max(0, Number(ammo.count || 0));
-          return count > 0;
+          if (count <= 0) return false;
+          return isAmmoCompatibleWithWeapon(item, ammo);
         };
         const spendOneAmmo = (weapon) => {
           if (!requiresAmmoForWeapon(weapon)) return true;
           const ammo = getEquippedAmmo();
           if (!ammo) return false;
+          if (!isAmmoCompatibleWithWeapon(weapon, ammo)) return false;
           const currentCount = Math.max(0, Number(ammo.count || 0));
           if (currentCount <= 0) return false;
           if (currentCount > 1) {
@@ -3635,6 +3668,34 @@ function startGame(configPlayer) {
           const manaCost = Math.max(0, Number((spell && spell.mana) || 0));
           const ml = Math.max(0, Number(playerMagicLevel || 0));
           return Math.max(6, Math.floor(4 + playerLevel * 0.8 + ml * 3.4 + manaCost * 0.18));
+        };
+        const isSingleTargetAttackPattern = (pattern) => {
+          if (!pattern || typeof pattern !== 'object') return true;
+          if (pattern.kind === 'projectile') return true;
+          if (pattern.kind === 'front_box') {
+            const width = Math.max(1, Number(pattern.width || 1));
+            const depth = Math.max(1, Number(pattern.depth || 1));
+            return width === 1 && depth === 1;
+          }
+          return false;
+        };
+        const inferClassAdjustedSpellDamage = (spell, opts = {}) => {
+          const baseSpellDamage = inferAttackDamage(spell);
+          const spellTitle = String((spell && spell.title) || '').toLowerCase();
+          if (playerClassKey === 'paladin' && spellTitle === 'lesser ethereal spear') {
+            const equippedWeaponDamage = Math.max(1, Number(currentPlayerDamage()) || 1);
+            const distanceFighting = Math.max(10, Number(getWeaponSkillLevelByType('distance weapons')) || 10);
+            return Math.max(1, (equippedWeaponDamage + distanceFighting) * 10);
+          }
+          if (playerClassKey !== 'knight') return baseSpellDamage;
+          const currentWeaponDamage = Math.max(1, Number(currentPlayerDamage()) || 1);
+          const area = Boolean(opts.area);
+          if (area) {
+            // Knight AoE attack spells also include current weapon damage.
+            return Math.max(1, baseSpellDamage + currentWeaponDamage);
+          }
+          // Knight single-target attack spells hit for double current weapon damage.
+          return Math.max(1, currentWeaponDamage * 2);
         };
         const conjureArrowPayloadFromSpell = (spell) => {
           const effectRaw = String((spell && spell.raw && spell.raw.effect) || '').trim();
@@ -3917,11 +3978,12 @@ function startGame(configPlayer) {
           showSpellTileEffect(tiles, color, fxOpts);
           const impacted = [];
           const spellElem = inferSpellDamageElementKey(spell);
+          const isAreaPattern = !isSingleTargetAttackPattern(pattern);
           for (const t of tiles) {
             const target = creatureAt(t.gx, t.gy);
             if (!target) continue;
             const crit = didAttackCrit();
-            const base = inferAttackDamage(spell);
+            const base = inferKnightAdjustedSpellDamage(spell, { area: isAreaPattern });
             const dmgRaw = crit ? applyCriticalDamage(base) : base;
             const dmg = applyIncomingElementalDamage(dmgRaw, target, spellElem);
             target.hp = Math.max(0, target.hp - dmg);
@@ -3949,6 +4011,16 @@ function startGame(configPlayer) {
           const spell = (spellsCatalog || []).find((s) => Number(s.article_id) === Number(articleId));
           if (!spell) return false;
           if (isBlockedSpellTitle(spell.title)) return false;
+          const title = String(spell.title || '').toLowerCase();
+          const isMagicRopeSpell = title === 'magic rope';
+          if (isMagicRopeSpell && !hasRopeUpAtPlayer()) {
+            addCombatLog('Cast Magic Rope on the entry tile (where you appear on this floor).');
+            return true;
+          }
+          if (isMagicRopeSpell && currentLevel <= 1) {
+            addCombatLog('You are already on floor 1.');
+            return true;
+          }
           const manaCost = Math.max(0, Number(spell.mana || 0));
           if (playerMana < manaCost) {
             addCombatLog(`Not enough mana for ${spell.title}.`);
@@ -3963,7 +4035,10 @@ function startGame(configPlayer) {
           playerMana = Math.max(0, playerMana - manaCost);
           spellCooldownUntil.set(articleId, now + (cdSec * 1000));
           const group = String(spell.group_spell || '').toLowerCase();
-          const title = String(spell.title || '').toLowerCase();
+          if (isMagicRopeSpell) {
+            updatePlayerBar();
+            return tryClimbUpFloor(spell.title || 'Magic Rope');
+          }
           const conjuredArrow = conjureArrowPayloadFromSpell(spell);
           if (conjuredArrow) {
             const ammoItem = resolveConjuredArrowItem(conjuredArrow.title);
@@ -4005,7 +4080,7 @@ function startGame(configPlayer) {
               } else {
                 showSpellTileEffect([front], spellFxProfile(spell).color, { duration: 220 });
                 const crit = didAttackCrit();
-                const base = inferAttackDamage(spell);
+                const base = inferClassAdjustedSpellDamage(spell, { area: false });
                 const dmgRaw = crit ? applyCriticalDamage(base) : base;
                 const spellElem = inferSpellDamageElementKey(spell);
                 const dmg = applyIncomingElementalDamage(dmgRaw, frontTarget, spellElem);
@@ -4037,7 +4112,7 @@ function startGame(configPlayer) {
                 showSpellProjectileEffect(spell, target);
               }
               const crit = didAttackCrit();
-              const base = inferAttackDamage(spell);
+              const base = inferClassAdjustedSpellDamage(spell, { area: false });
               const dmgRaw = crit ? applyCriticalDamage(base) : base;
               const spellElem = inferSpellDamageElementKey(spell);
               const dmg = applyIncomingElementalDamage(dmgRaw, target, spellElem);
@@ -4073,13 +4148,23 @@ function startGame(configPlayer) {
           if (!targetCreature) return false;
           let activeWeapon = handWeapon;
           if (activeWeapon && requiresAmmoForWeapon(activeWeapon) && !hasAmmoForWeapon(activeWeapon)) {
-            addCombatLog(`Out of ammo for ${activeWeapon.title}. Attacking with base melee.`);
+            const equippedAmmo = getEquippedAmmo();
+            if (equippedAmmo && !isAmmoCompatibleWithWeapon(activeWeapon, equippedAmmo)) {
+              addCombatLog(`Wrong ammo for ${activeWeapon.title}. Attacking with base melee.`);
+            } else {
+              addCombatLog(`Out of ammo for ${activeWeapon.title}. Attacking with base melee.`);
+            }
             activeWeapon = null;
           }
           if (activeWeapon && requiresAmmoForWeapon(activeWeapon)) {
             const consumed = spendOneAmmo(activeWeapon);
             if (!consumed) {
-              addCombatLog(`Out of ammo for ${activeWeapon.title}. Attacking with base melee.`);
+              const equippedAmmo = getEquippedAmmo();
+              if (equippedAmmo && !isAmmoCompatibleWithWeapon(activeWeapon, equippedAmmo)) {
+                addCombatLog(`Wrong ammo for ${activeWeapon.title}. Attacking with base melee.`);
+              } else {
+                addCombatLog(`Out of ammo for ${activeWeapon.title}. Attacking with base melee.`);
+              }
               activeWeapon = null;
             }
           }
