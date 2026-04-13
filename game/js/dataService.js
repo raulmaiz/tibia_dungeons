@@ -383,11 +383,8 @@ export async function getCreatureDropTable() {
   for (const row of dropRows || []) {
     const creatureId = Number(row.creature_id);
     const itemId = Number(row.item_id);
-    let chance = Number(row.chance);
+    const chance = Number(row.chance);
     if (!Number.isFinite(creatureId) || !Number.isFinite(itemId)) continue;
-    if ((creatureId === 1166 || creatureId === 1167) && itemId === 1658) {
-      chance = 50;
-    }
     if (itemId === 1666) continue;
     if (!Number.isFinite(chance) || chance <= 0) continue;
     const item = itemById.get(itemId);
@@ -401,10 +398,14 @@ export async function getCreatureDropTable() {
     if (itemType === 'tools') continue;
     const title = (item.title || item.name || '').trim();
     if (!title) continue;
+    const dropMin = Number(row.min);
+    const dropMax = Number(row.max);
     const drop = {
       itemId,
       itemTitle: title,
       chance,
+      dropMin: Number.isFinite(dropMin) ? dropMin : 1,
+      dropMax: Number.isFinite(dropMax) ? dropMax : 1,
       itemImage: manifestImageByTitle.get(title.toLowerCase()) || null,
       isStackable: Number(item.is_stackable || 0) === 1,
       itemClass: item.item_class || null,

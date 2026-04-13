@@ -38,8 +38,6 @@ let creatureAbilitiesById = new Map();
 let creatureDamageModifiersById = new Map();
 let inventorySetEquippedSlotVisual = null;
 let inventoryClearEquippedSlotVisual = null;
-let trollSpearKillCounter = 0;
-
 /** Wand/Rod `damage_range` attribute: "70-110" or "106". */
 function parseDamageRangeString(raw) {
   const s = String(raw == null ? '' : raw).trim();
@@ -319,66 +317,24 @@ function pickRandomTileFrom(list) {
   return list[Math.floor(Math.random() * list.length)];
 }
 
+/** Cada línea de creature_drop.json tira por su `chance` (%); cantidad en [dropMin, dropMax]. */
 function rollCreatureDrops(creatureId) {
   const drops = creatureDropTable.get(Number(creatureId)) || [];
   if (drops.length === 0) return [];
-  if (Number(creatureId) === 1166 || Number(creatureId) === 1167) {
-    const spearDrop = drops.find((d) => Number(d && d.itemId) === 1658);
-    if (spearDrop) {
-      trollSpearKillCounter += 1;
-      // Exact 1-in-2 pattern for troll spear drops.
-      return (trollSpearKillCounter % 2 === 0) ? [{ ...spearDrop }] : [];
-    }
-  }
-  // Loot rework: fewer drops, biased towards rarer entries (lower chance).
-  const normalized = drops
-    .map((drop) => ({
-      drop,
-      chance: Math.max(0.01, Math.min(100, Number(drop.chance || 0))),
-    }))
-    .filter((x) => Number.isFinite(x.chance));
-  if (normalized.length === 0) return [];
-
-  const roll = Math.random();
-  const targetCount = roll < 0.42 ? 0 : 1; // Only 0 or 1 drop.
-  if (targetCount <= 0) return [];
-
-  const pickWeightedRare = (pool) => {
-    let total = 0;
-    const weighted = pool.map((x) => {
-      // Much stronger bias to rare/very rare drops.
-      const inverse = Math.max(1, 101 - x.chance);
-      const tierBoost = x.chance <= 2
-        ? 18
-        : x.chance <= 5
-          ? 10
-          : x.chance <= 10
-            ? 5
-            : x.chance <= 20
-              ? 2.5
-              : 1;
-      const rarityWeight = Math.pow(inverse, 3) * tierBoost;
-      total += rarityWeight;
-      return { ...x, w: rarityWeight };
-    });
-    if (total <= 0) return pool[0] || null;
-    let r = Math.random() * total;
-    for (const it of weighted) {
-      r -= it.w;
-      if (r <= 0) return it;
-    }
-    return weighted[weighted.length - 1] || null;
-  };
-
   const won = [];
-  const pool = normalized.slice();
-  while (won.length < targetCount && pool.length > 0) {
-    const picked = pickWeightedRare(pool);
-    if (!picked) break;
-    won.push(picked.drop);
-    const idx = pool.indexOf(picked);
-    if (idx >= 0) pool.splice(idx, 1);
-    else break;
+  for (const drop of drops) {
+    const p = Math.min(100, Math.max(0, Number(drop.chance)));
+    if (!Number.isFinite(p) || p <= 0) continue;
+    if (Math.random() * 100 >= p) continue;
+    let lo = Math.max(0, Math.floor(Number(drop.dropMin)));
+    let hi = Math.max(0, Math.floor(Number(drop.dropMax)));
+    if (!Number.isFinite(lo)) lo = 1;
+    if (!Number.isFinite(hi)) hi = lo;
+    if (hi < lo) [lo, hi] = [hi, lo];
+    const span = hi - lo + 1;
+    const count = lo + (span > 0 ? Math.floor(Math.random() * span) : 0);
+    if (count <= 0) continue;
+    won.push({ ...drop, lootCount: count });
   }
   return won;
 }
@@ -4562,6 +4518,7 @@ function startGame(configPlayer) {
               }
               if (rolledDrops.length > 0 && window.debugInventory && typeof window.debugInventory.addLoot === 'function') {
                 for (const d of rolledDrops) {
+                  const lootCount = Math.max(1, Math.floor(Number(d.lootCount) || 1));
                   const stored = window.debugInventory.addLoot({
                     id: d.itemId,
                     title: d.itemTitle,
@@ -4577,7 +4534,7 @@ function startGame(configPlayer) {
                     attributes: Array.isArray(d.attributes) ? d.attributes : [],
                     raw: (d.raw && typeof d.raw === 'object') ? d.raw : {},
                     isStackable: Boolean(d.isStackable),
-                    count: 1,
+                    count: lootCount,
                   });
                   if (stored) {
                     addCombatLog(`Stored in bag: ${d.itemTitle}.`);
@@ -4597,7 +4554,7 @@ function startGame(configPlayer) {
                         attributes: Array.isArray(d.attributes) ? d.attributes : [],
                         raw: (d.raw && typeof d.raw === 'object') ? d.raw : {},
                         isStackable: Boolean(d.isStackable),
-                        count: 1,
+                        count: lootCount,
                       };
                       dropItemOnGround(targetCreature.gx, targetCreature.gy, droppedItem);
                       if (lastLootRejectReason === 'capacity') {
