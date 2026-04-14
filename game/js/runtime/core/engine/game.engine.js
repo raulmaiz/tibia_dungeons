@@ -2749,13 +2749,21 @@ function startGame(configPlayer) {
 
           // --- Sistema de counts exactos por floor fijo ---
           // Busca la plantilla de una criatura por ID en todas las fuentes conocidas.
+          // Lookup ranged/range from typeProgressionGroups by creature ID.
+          const lookupRangedFields = (id) => {
+            for (const g of typeProgressionGroups) {
+              const c = (g.creatures || []).find((x) => Number(x.id) === id);
+              if (c) return { ranged: Number(c.ranged || 0), range: Math.max(1, Number(c.range || 1)) };
+            }
+            return { ranged: 0, range: 1 };
+          };
           const findTemplateById = (id) => {
             for (const arr of Object.values(FORCED_CREATURE_TEMPLATES_BY_LEVEL)) {
               const t = arr.find((x) => Number(x.id) === id);
-              if (t) return t;
+              if (t) return { ...t, ...lookupRangedFields(id) };
             }
             const t2 = Object.values(FORCED_CREATURE_TEMPLATE_BY_LEVEL).find((x) => Number(x.id) === id);
-            if (t2) return t2;
+            if (t2) return { ...t2, ...lookupRangedFields(id) };
             for (const g of typeProgressionGroups) {
               const c = (g.creatures || []).find((x) => Number(x.id) === id);
               if (c) return c;

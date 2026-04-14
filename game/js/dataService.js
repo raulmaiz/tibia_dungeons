@@ -558,6 +558,8 @@ export async function getCreatureTypeProgressionGroups() {
       image: m.image,
       type_primary: typePrimary,
       creature_class: String(c.creature_class || '').trim(),
+      ranged: Number(c.ranged || 0),
+      range: Math.max(1, Number(c.range || 1)),
     };
 
     if (!byType.has(typePrimary)) byType.set(typePrimary, []);
