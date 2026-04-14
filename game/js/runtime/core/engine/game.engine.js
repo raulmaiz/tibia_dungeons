@@ -12,7 +12,7 @@ import {
   averageMagicWeaponHitPreview,
   progressionStatsForLevel,
 } from '../../../mechanics/progression.js';
-import { rollCreatureDropsFromTable } from '../../../mechanics/loot.js';
+import { LootPityTracker } from '../../../mechanics/loot.js';
 import { generateLevelMap as buildDungeonLevelMap } from '../../../dungeon/generator.js';
 import { wirePanelLayoutSync } from '../../../ui/panelLayout.js';
 import { isBlockedSpellTitle } from '../../../spells/filters.js';
@@ -45,6 +45,7 @@ let selectedClass = 'knight';
 let playerConfig = null;
 let typeProgressionGroups = [];
 let creatureDropTable = new Map();
+const lootPityTracker = new LootPityTracker();
 let onConsumeFood = null;
 let onUseLiquid = null;
 let onUseTool = null;
@@ -199,9 +200,8 @@ function pickRandomTileFrom(list) {
   return list[Math.floor(Math.random() * list.length)];
 }
 
-/** Cada línea de creature_drop.json tira por su `chance` (%); cantidad en [dropMin, dropMax]. */
 function rollCreatureDrops(creatureId) {
-  return rollCreatureDropsFromTable(creatureDropTable, creatureId);
+  return lootPityTracker.roll(creatureDropTable, creatureId);
 }
 
 function setupSelectorUI() {
@@ -719,7 +719,7 @@ function setupSelectorUI() {
             onPanelLog(`Sold ${current.title} for ${totalGold} gold.`);
           }
         });
-        cell.addEventListener('mousedown', (ev) => {
+        cell.addEventListener('mousedown', async (ev) => {
           if (ev.button !== 0) return; // left click only
           const idx = i - 1;
           const current = bagLootItems[idx];
@@ -750,6 +750,26 @@ function setupSelectorUI() {
             if (!used) return;
             if (current.count > 1) {
               current.count -= 1;
+            } else {
+              bagLootItems.splice(idx, 1);
+            }
+            renderLootSlots(currentBagCapacity);
+            return;
+          }
+
+          const itemTypeLower = String((current && current.item_type) || '').toLowerCase();
+          if (itemTypeLower === 'containers') {
+            const bagArticleId = Number(
+              (current && current.id)
+              || (current && current.article_id)
+              || (current && current.raw && current.raw.article_id)
+            );
+            if (!Number.isFinite(bagArticleId) || bagArticleId <= 0) return;
+            const equippedBagCopy = currentBagItem ? { ...currentBagItem } : null;
+            const equippedOk = await equipBagByArticleId(bagArticleId);
+            if (!equippedOk) return;
+            if (equippedBagCopy) {
+              bagLootItems[idx] = equippedBagCopy;
             } else {
               bagLootItems.splice(idx, 1);
             }
@@ -1027,9 +1047,9 @@ function setupSelectorUI() {
     const bagLabel = document.getElementById('slotBagLabel');
     const bagRoot = document.getElementById('slotBag');
     const equipmentFoot = document.getElementById('equipmentFoot');
-    if (!bagImg || !bagIcon || !bagLabel || !equipmentFoot || !bagRoot) return;
+    if (!bagImg || !bagIcon || !bagLabel || !equipmentFoot || !bagRoot) return false;
     try {
-      const bag = await getItemByArticleId(articleId);
+      let bag = await getItemByArticleId(articleId);
       if (!bag) {
         bagImg.style.display = 'none';
         bagIcon.textContent = 'BAG';
@@ -1039,7 +1059,7 @@ function setupSelectorUI() {
         currentBagItem = null;
         bagLootItems = [];
         renderLootSlots(0);
-        return;
+        return false;
       }
       if ((bag.item_type || '').toLowerCase() !== 'containers') {
         bagImg.style.display = 'none';
@@ -1050,8 +1070,37 @@ function setupSelectorUI() {
         currentBagItem = null;
         bagLootItems = [];
         renderLootSlots(0);
-        return;
+        return false;
       }
+      const typeSecondary = String((bag && bag.type_secondary) || '').toLowerCase();
+      if (typeSecondary === 'backpacks') {
+        const equippedImage = bag.image;
+        const equippedTitle = bag.title;
+        const equippedName = bag.name;
+        const equippedActualName = bag.actual_name;
+        const canonicalBag = await getItemByArticleId(1589);
+        bag = {
+          ...(canonicalBag || bag),
+          article_id: Number((bag && bag.article_id) || articleId),
+          title: equippedTitle || (canonicalBag && canonicalBag.title) || 'Bag',
+          name: equippedName || (canonicalBag && canonicalBag.name) || 'Bag',
+          actual_name: equippedActualName || (canonicalBag && canonicalBag.actual_name) || 'bag',
+          item_type: 'Containers',
+          image: equippedImage || ((canonicalBag && canonicalBag.image) || null),
+          weight: 20,
+        };
+      }
+      const normalizedArticleId = Number((bag && bag.article_id) || articleId);
+      bag = {
+        ...bag,
+        id: Number.isFinite(normalizedArticleId) ? normalizedArticleId : null,
+        article_id: Number.isFinite(normalizedArticleId) ? normalizedArticleId : null,
+        raw: {
+          ...((bag && bag.raw && typeof bag.raw === 'object') ? bag.raw : {}),
+          article_id: Number.isFinite(normalizedArticleId) ? normalizedArticleId : null,
+          weight: Number(bag && bag.weight),
+        },
+      };
       if (bag.image) {
         bagImg.src = `./data/images/${bag.image}`;
         bagImg.style.display = 'block';
@@ -1061,16 +1110,17 @@ function setupSelectorUI() {
         bagIcon.textContent = 'BAG';
       }
       const nextCapacity = Math.max(0, Math.floor(Number(bag.weight) || 0));
-      const droppedCount = Math.max(0, bagLootItems.length - nextCapacity);
-      if (droppedCount > 0) bagLootItems = bagLootItems.slice(0, nextCapacity);
+      if (bagLootItems.length > nextCapacity) {
+        equipmentFoot.textContent = `Cannot equip ${bag.title}: requires ${nextCapacity} slots, carrying ${bagLootItems.length}.`;
+        return false;
+      }
       currentBagCapacity = nextCapacity;
       currentBagItem = bag;
       bagLabel.textContent = bag.title;
       bindTooltip(bagRoot, bag);
-      equipmentFoot.textContent = droppedCount > 0
-        ? `Equipped: ${bag.title} | Dropped: ${droppedCount}`
-        : `Equipped: ${bag.title}`;
+      equipmentFoot.textContent = `Equipped: ${bag.title}`;
       renderLootSlots(currentBagCapacity);
+      return true;
     } catch (_err) {
       bagImg.style.display = 'none';
       bagIcon.textContent = 'BAG';
@@ -1080,6 +1130,7 @@ function setupSelectorUI() {
       currentBagItem = null;
       bagLootItems = [];
       renderLootSlots(0);
+      return false;
     }
   }
 
