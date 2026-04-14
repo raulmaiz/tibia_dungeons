@@ -4,11 +4,11 @@
  */
 export function computeDungeonSize(totalCreatures) {
   const n = Math.max(10, totalCreatures);
-  const targetFloor = n * 12;
-  const totalTiles = Math.ceil(targetFloor / 0.42);
+  // ~10 casillas de suelo por criatura, cobertura ~42%
+  const totalTiles = Math.ceil((n * 10) / 0.42);
   const aspect = 1.65;
-  const h = Math.max(22, Math.ceil(Math.sqrt(totalTiles / aspect)));
-  const w = Math.max(32, Math.ceil(h * aspect));
+  const h = Math.max(14, Math.ceil(Math.sqrt(totalTiles / aspect)));
+  const w = Math.max(20, Math.ceil(h * aspect));
   return { w, h };
 }
 
@@ -62,20 +62,20 @@ export function generateLevelMap({
   for (let attempt = 0; attempt < maxAttempts && rooms.length < roomTarget; attempt += 1) {
     const roll = random();
     let rw, rh;
-    if (roll < 0.15) {
+    if (roll < 0.18) {
       // Gran sala
-      rw = rnd(9, Math.min(14, Math.floor(W * 0.28)));
-      rh = rnd(6, Math.min(9, Math.floor(H * 0.28)));
-    } else if (roll < 0.50) {
+      rw = rnd(11, Math.min(17, Math.floor(W * 0.32)));
+      rh = rnd(7,  Math.min(11, Math.floor(H * 0.32)));
+    } else if (roll < 0.55) {
       // Sala mediana
-      rw = rnd(5, Math.min(9, Math.floor(W * 0.20)));
-      rh = rnd(4, Math.min(6, Math.floor(H * 0.20)));
+      rw = rnd(7,  Math.min(12, Math.floor(W * 0.25)));
+      rh = rnd(5,  Math.min(8,  Math.floor(H * 0.25)));
     } else {
       // Sala pequeña
-      rw = rnd(3, Math.min(6, Math.floor(W * 0.14)));
-      rh = rnd(3, Math.min(5, Math.floor(H * 0.14)));
+      rw = rnd(4,  Math.min(7,  Math.floor(W * 0.18)));
+      rh = rnd(3,  Math.min(5,  Math.floor(H * 0.18)));
     }
-    rw = Math.max(3, rw);
+    rw = Math.max(4, rw);
     rh = Math.max(3, rh);
     const rx = rnd(1, Math.max(2, W - rw - 2));
     const ry = rnd(1, Math.max(2, H - rh - 2));
@@ -96,54 +96,41 @@ export function generateLevelMap({
     gy: Math.floor(r.y + r.h / 2),
   });
 
-  // Pasillo horizontal, opcionalmente de 2 casillas de alto
-  const carveH = (x1, x2, y, wide = false) => {
+  // Pasillo horizontal de 1 tile de alto
+  const carveH = (x1, x2, y) => {
     const from = Math.min(x1, x2);
     const to = Math.max(x1, x2);
     for (let x = from; x <= to; x += 1) {
-      if (x > 0 && x < W - 1) {
-        if (y > 0 && y < H - 1) map[y][x] = '.';
-        if (wide && y + 1 > 0 && y + 1 < H - 1) map[y + 1][x] = '.';
-      }
+      if (x > 0 && x < W - 1 && y > 0 && y < H - 1) map[y][x] = '.';
     }
   };
 
-  // Pasillo vertical, opcionalmente de 2 casillas de ancho
-  const carveV = (y1, y2, x, wide = false) => {
+  // Pasillo vertical de 1 tile de ancho
+  const carveV = (y1, y2, x) => {
     const from = Math.min(y1, y2);
     const to = Math.max(y1, y2);
     for (let y = from; y <= to; y += 1) {
-      if (y > 0 && y < H - 1) {
-        if (x > 0 && x < W - 1) map[y][x] = '.';
-        if (wide && x + 1 > 0 && x + 1 < W - 1) map[y][x + 1] = '.';
-      }
+      if (y > 0 && y < H - 1 && x > 0 && x < W - 1) map[y][x] = '.';
     }
   };
 
-  // Conecta dos centros con un pasillo en L (o recto); 25% de probabilidad de ser ancho
+  // Conecta dos centros con un pasillo en L (siempre 1 tile de ancho)
   const connect = (a, b) => {
-    const wide = random() < 0.25;
     if (random() < 0.5) {
-      carveH(a.gx, b.gx, a.gy, wide);
-      carveV(a.gy, b.gy, b.gx, wide);
+      carveH(a.gx, b.gx, a.gy);
+      carveV(a.gy, b.gy, b.gx);
     } else {
-      carveV(a.gy, b.gy, a.gx, wide);
-      carveH(a.gx, b.gx, b.gy, wide);
+      carveV(a.gy, b.gy, a.gx);
+      carveH(a.gx, b.gx, b.gy);
     }
-    // Punto de quiebre central aleatorio para dar más variedad
+    // Punto de quiebre central aleatorio para más variedad de rutas
     if (random() < 0.35) {
-      const midX = clamp(
-        Math.floor((a.gx + b.gx) / 2) + rnd(-2, 2),
-        1, W - 2,
-      );
-      const midY = clamp(
-        Math.floor((a.gy + b.gy) / 2) + rnd(-2, 2),
-        1, H - 2,
-      );
-      carveH(a.gx, midX, a.gy, false);
-      carveV(a.gy, midY, midX, false);
-      carveH(midX, b.gx, midY, false);
-      carveV(midY, b.gy, b.gx, false);
+      const midX = clamp(Math.floor((a.gx + b.gx) / 2) + rnd(-2, 2), 1, W - 2);
+      const midY = clamp(Math.floor((a.gy + b.gy) / 2) + rnd(-2, 2), 1, H - 2);
+      carveH(a.gx, midX, a.gy);
+      carveV(a.gy, midY, midX);
+      carveH(midX, b.gx, midY);
+      carveV(midY, b.gy, b.gx);
     }
   };
 
@@ -199,5 +186,5 @@ export function generateLevelMap({
   };
   map[stairs.gy][stairs.gx] = '.';
 
-  return { map: map.map((r) => r.join('')), stairs };
+  return { map: map.map((r) => r.join('')), stairs, rooms };
 }

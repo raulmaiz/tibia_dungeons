@@ -414,29 +414,35 @@ function setupSelectorUI() {
     const attackStat = attrNum('attack');
     const defenseStat = attrNum('defense');
     const armorStat = attrNum('armor');
+    const attrText = (name) => {
+      const row = attrs.find((a) => a && String(a.name || '').toLowerCase() === String(name).toLowerCase());
+      return row ? String(row.value || '').trim() : '';
+    };
+    const handsAttr = attrText('hands').toLowerCase();
+    const handsLabel = handsAttr === 'two'
+      ? 'Two-handed'
+      : (handsAttr === 'one' ? 'One-handed' : null);
+    const isWeaponClass = String(cls || '').toLowerCase() === 'weapons';
     const statLines = [];
     if (isEquippable) {
       if (attackStat != null) statLines.push(`<div><span class="tt-label">Attack:</span> ${attackStat}</div>`);
       if (defenseStat != null) statLines.push(`<div><span class="tt-label">Defense:</span> ${defenseStat}</div>`);
       if (armorStat != null) statLines.push(`<div><span class="tt-label">Armor:</span> ${armorStat}</div>`);
+      if (isWeaponClass && handsLabel) statLines.push(`<div><span class="tt-label">Hands:</span> ${handsLabel}</div>`);
     }
     const typeLower = String(type || '').toLowerCase();
     if (typeLower === 'wands' || typeLower === 'rods') {
-      const attrGet = (n) => {
-        const row = attrs.find((a) => a && String(a.name || '').toLowerCase() === String(n).toLowerCase());
-        return row ? String(row.value || '').trim() : '';
-      };
       const hud = (typeof window !== 'undefined' && window.__gameHud) ? window.__gameHud : { ml: 0, pl: 1 };
       const mlHud = Number(hud.ml) || 0;
       const plHud = Number(hud.pl) || 1;
-      const rangeStr = attrGet('range');
-      const dmgType = attrGet('damage_type');
-      const dmgRange = attrGet('damage_range');
-      const manaCost = attrGet('mana_cost');
-      const levelReq = attrGet('level');
-      const vocation = attrGet('vocation');
-      const hands = attrGet('hands');
-      const magicBonus = attrGet('magic');
+      const rangeStr = attrText('range');
+      const dmgType = attrText('damage_type');
+      const dmgRange = attrText('damage_range');
+      const manaCost = attrText('mana_cost');
+      const levelReq = attrText('level');
+      const vocation = attrText('vocation');
+      const hands = attrText('hands');
+      const magicBonus = attrText('magic');
       const previewAvg = averageMagicWeaponHitPreview(dmgRange, mlHud, plHud);
       statLines.push('<div class="tt-sep"></div>');
       statLines.push('<div><span class="tt-label">Magic weapon</span></div>');
@@ -674,6 +680,12 @@ function setupSelectorUI() {
     );
   }
 
+  function resolveSellUnitPrice(item) {
+    const sell = Number((item && item.raw && item.raw.value_sell) || 0);
+    const buy = Number((item && item.raw && item.raw.value_buy) || 0);
+    return sell > 0 ? sell : buy;
+  }
+
   function renderLootSlots(slotCount) {
     const lootGrid = document.getElementById('lootGrid');
     const lootFoot = document.getElementById('lootFoot');
@@ -715,9 +727,7 @@ function setupSelectorUI() {
           const idx = i - 1;
           const current = bagLootItems[idx];
           if (!current) return;
-          const sell = Number((current.raw && current.raw.value_sell) || 0);
-          const buy = Number((current.raw && current.raw.value_buy) || 0);
-          const unitPrice = sell > 0 ? sell : buy;
+          const unitPrice = resolveSellUnitPrice(current);
           const amount = Math.max(1, Number(current.count || 1));
           const totalGold = Math.max(0, Math.floor(unitPrice * amount));
           bagLootItems.splice(idx, 1);
@@ -913,6 +923,9 @@ function setupSelectorUI() {
   function addLootItemToBag(itemData, opts = {}) {
     lastLootRejectReason = '';
     const disableAutoEquip = Boolean(opts && opts.disableAutoEquip);
+    const excludeEquippedSlotKey = (opts && typeof opts.excludeEquippedSlotKey === 'string')
+      ? String(opts.excludeEquippedSlotKey)
+      : null;
     const incoming = {
       id: itemData && itemData.id != null ? Number(itemData.id) : null,
       title: itemData && itemData.title ? itemData.title : 'Loot',
@@ -939,7 +952,8 @@ function setupSelectorUI() {
     const totalCarriedWeight = () => {
       let total = 0;
       if (currentBagItem) total += itemUnitWeight(currentBagItem);
-      for (const eq of Object.values(equippedSlots)) {
+      for (const [slotKey, eq] of Object.entries(equippedSlots)) {
+        if (excludeEquippedSlotKey && slotKey === excludeEquippedSlotKey) continue;
         if (!eq) continue;
         total += itemUnitWeight(eq) * Math.max(1, Number(eq.count || 1));
       }
@@ -1275,11 +1289,29 @@ function setupSelectorUI() {
     const rule = slotRules[slotKey];
     const slotRoot = document.getElementById(`slot${rule.id}`);
     if (!slotRoot) continue;
+    slotRoot.addEventListener('contextmenu', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const equipped = equippedSlots[slotKey];
+      if (!equipped) return;
+      const unitPrice = resolveSellUnitPrice(equipped);
+      const amount = Math.max(1, Number(equipped.count || 1));
+      const totalGold = Math.max(0, Math.floor(unitPrice * amount));
+      clearEquippedSlotVisual(slotKey, `Sold ${equipped.title} for ${totalGold} gold.`);
+      addCoinsToInventory(totalGold);
+      renderLootSlots(currentBagCapacity);
+      if (typeof onPanelLog === 'function') {
+        onPanelLog(`Sold equipped ${equipped.title} for ${totalGold} gold.`);
+      }
+    });
     slotRoot.addEventListener('mousedown', (ev) => {
       if (ev.button !== 0) return;
       const equipped = equippedSlots[slotKey];
       if (!equipped) return;
-      const stored = addLootItemToBag({ ...equipped }, { disableAutoEquip: true });
+      const stored = addLootItemToBag(
+        { ...equipped },
+        { disableAutoEquip: true, excludeEquippedSlotKey: slotKey }
+      );
       if (!stored) return;
       clearEquippedSlotVisual(slotKey);
       if (typeof onPanelLog === 'function') onPanelLog(`Unequipped ${equipped.title} to loot bag.`);
@@ -1746,6 +1778,7 @@ function startGame(configPlayer) {
         const recentEarlyCreatureIds = [];
         let currentMap = [];
         let currentFloors = [];
+        let currentRooms = [];
         let currentStairsTile = { gx: MAP_W - 2, gy: MAP_H - 2 };
         let creaturesTargetCount = 0;
         const centerX = (gx) => gx * tileSize + tileSize / 2;
@@ -2771,10 +2804,19 @@ function startGame(configPlayer) {
               recentEarlyCreatureIds.splice(0, recentEarlyCreatureIds.length - 40);
             }
           }
+          const roomTileSet = new Set();
+          for (const room of currentRooms) {
+            for (let ry = room.y; ry < room.y + room.h; ry += 1) {
+              for (let rx = room.x; rx < room.x + room.w; rx += 1) {
+                roomTileSet.add(`${rx},${ry}`);
+              }
+            }
+          }
           const floorsForSpawn = currentFloors.filter(
             (t) =>
               !(t.gx === START_TILE.gx && t.gy === START_TILE.gy)
               && !(t.gx === currentStairsTile.gx && t.gy === currentStairsTile.gy)
+              && (roomTileSet.size === 0 || roomTileSet.has(`${t.gx},${t.gy}`))
           );
 
           for (let i = 0; i < creaturesTargetCount; i += 1) {
@@ -2868,6 +2910,7 @@ function startGame(configPlayer) {
           });
           currentMap = generated.map;
           currentStairsTile = generated.stairs;
+          currentRooms = generated.rooms || [];
           this.cameras.main.setBounds(0, 0, dungeonW * tileSize, dungeonH * tileSize);
           // Solo usamos casillas conectadas al inicio para evitar monstruos bloqueados.
           const reachable = [];
