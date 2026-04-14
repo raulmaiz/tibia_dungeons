@@ -1778,6 +1778,102 @@ function startGame(configPlayer) {
         ropeHintRect.setVisible(false);
         ropeHintText.setVisible(false);
 
+        // ── Minimap ──────────────────────────────────────────────────────────
+        const MMAP_TILE = 3;       // px per dungeon tile on the minimap
+        const MMAP_PAD = 5;        // inner padding
+        const MMAP_MARGIN_TOP = 30;
+        const MMAP_MARGIN_RIGHT = 8;
+
+        // Base layer: static map structure, redrawn per floor
+        const minimapBaseGfx = this.add.graphics();
+        minimapBaseGfx.setScrollFactor(0);
+        minimapBaseGfx.setDepth(552);
+
+        // Dynamic layer: player + monsters, redrawn periodically
+        const minimapDynGfx = this.add.graphics();
+        minimapDynGfx.setScrollFactor(0);
+        minimapDynGfx.setDepth(553);
+
+        const minimapLeft = () => this.scale.width - dungeonW * MMAP_TILE - MMAP_PAD * 2 - MMAP_MARGIN_RIGHT;
+        const minimapTop = () => MMAP_MARGIN_TOP;
+
+        const drawMinimapBase = () => {
+          const mmW = dungeonW * MMAP_TILE + MMAP_PAD * 2;
+          const mmH = dungeonH * MMAP_TILE + MMAP_PAD * 2;
+          const mmX = minimapLeft();
+          const mmY = minimapTop();
+
+          minimapBaseGfx.clear();
+
+          // Dark panel background
+          minimapBaseGfx.fillStyle(0x050a14, 0.82);
+          minimapBaseGfx.fillRect(mmX, mmY, mmW, mmH);
+          minimapBaseGfx.lineStyle(1, 0x38bdf8, 0.35);
+          minimapBaseGfx.strokeRect(mmX, mmY, mmW, mmH);
+
+          // Floor tiles
+          for (let gy = 0; gy < dungeonH; gy++) {
+            const row = currentMap[gy];
+            if (!row) continue;
+            for (let gx = 0; gx < dungeonW; gx++) {
+              if (row[gx] === '.') {
+                minimapBaseGfx.fillStyle(0x2a3a52, 1);
+                minimapBaseGfx.fillRect(
+                  mmX + MMAP_PAD + gx * MMAP_TILE,
+                  mmY + MMAP_PAD + gy * MMAP_TILE,
+                  MMAP_TILE,
+                  MMAP_TILE
+                );
+              }
+            }
+          }
+
+          // Stairs down (yellow-orange)
+          minimapBaseGfx.fillStyle(0xfbbf24, 1);
+          minimapBaseGfx.fillRect(
+            mmX + MMAP_PAD + currentStairsTile.gx * MMAP_TILE - 1,
+            mmY + MMAP_PAD + currentStairsTile.gy * MMAP_TILE - 1,
+            MMAP_TILE + 2,
+            MMAP_TILE + 2
+          );
+
+          // Stairs up / rope (sky-blue)
+          minimapBaseGfx.fillStyle(0x38bdf8, 1);
+          minimapBaseGfx.fillRect(
+            mmX + MMAP_PAD + START_TILE.gx * MMAP_TILE - 1,
+            mmY + MMAP_PAD + START_TILE.gy * MMAP_TILE - 1,
+            MMAP_TILE + 2,
+            MMAP_TILE + 2
+          );
+        };
+
+        const drawMinimapDynamic = () => {
+          const mmX = minimapLeft();
+          const mmY = minimapTop();
+          minimapDynGfx.clear();
+
+          // Alive creatures (red)
+          minimapDynGfx.fillStyle(0xf87171, 1);
+          for (const c of creatures.filter((cr) => cr.alive)) {
+            minimapDynGfx.fillRect(
+              mmX + MMAP_PAD + c.gx * MMAP_TILE,
+              mmY + MMAP_PAD + c.gy * MMAP_TILE,
+              MMAP_TILE,
+              MMAP_TILE
+            );
+          }
+
+          // Player (bright white)
+          minimapDynGfx.fillStyle(0xffffff, 1);
+          minimapDynGfx.fillRect(
+            mmX + MMAP_PAD + gridX * MMAP_TILE,
+            mmY + MMAP_PAD + gridY * MMAP_TILE,
+            MMAP_TILE,
+            MMAP_TILE
+          );
+        };
+        // ── End Minimap setup ─────────────────────────────────────────────────
+
         this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
         this.cameras.main.startFollow(player, true, 0.15, 0.15);
 
@@ -3065,6 +3161,7 @@ function startGame(configPlayer) {
           }
           currentFloors = reachable;
           refreshMapVisuals();
+          drawMinimapBase();
           stairRect.setPosition(centerX(currentStairsTile.gx), centerY(currentStairsTile.gy));
           stairText.setPosition(centerX(currentStairsTile.gx), centerY(currentStairsTile.gy));
           ropeHintRect.setPosition(centerX(START_TILE.gx), centerY(START_TILE.gy));
@@ -5340,6 +5437,11 @@ function startGame(configPlayer) {
         descendLevel(false); // initialize first level with random dungeon composition
         updatePlayerBar();
         updateHud();
+        this.time.addEvent({
+          delay: 200,
+          loop: true,
+          callback: drawMinimapDynamic,
+        });
         this.time.addEvent({
           delay: 90,
           loop: true,
