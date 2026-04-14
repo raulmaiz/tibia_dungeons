@@ -4,7 +4,7 @@ export const FORCED_CREATURE_ID_BY_LEVEL = {
   1: 1116,
   2: 1261,
   3: 1141,
-  10: 742,
+  // Floor 10 ya no usa ID único: tiene Hero + Vampire vía FLOOR_CREATURE_COUNTS
 };
 
 export const FORCED_CREATURE_IDS_BY_LEVEL = {
@@ -24,10 +24,12 @@ export const FORCED_CREATURE_TEMPLATE_BY_LEVEL = {
   1: { id: 1116, title: 'Rat', type_primary: 'Glires', experience: 5, hitpoints: 20, maxDamage: 8, image: 'creature/Rat.gif', speed: 67, runs_at: 5 },
   2: { id: 1261, title: 'Wolf', type_primary: 'Canines', experience: 18, hitpoints: 25, maxDamage: 10, image: 'creature/Wolf.gif', speed: 82, runs_at: 8 },
   3: { id: 1141, title: 'Rotworm', type_primary: 'Annelids', experience: 40, hitpoints: 65, maxDamage: 18, image: 'creature/Rotworm.gif', speed: 58, runs_at: 0 },
-  10: { id: 742, title: 'Hero', type_primary: 'Outlaws', experience: 1200, hitpoints: 1400, maxDamage: 60, image: 'creature/Hero.gif', speed: 140, runs_at: 0 },
 };
 
 export const FORCED_CREATURE_TEMPLATES_BY_LEVEL = {
+  4: [
+    { id: 1166, title: 'Troll', type_primary: 'Trolls', experience: 20, hitpoints: 50, maxDamage: 10, image: 'creature/Troll.gif', speed: 90, runs_at: 10 },
+  ],
   5: [
     { id: 1457, title: 'Ghoul', type_primary: 'Undead Humanoids', experience: 85, hitpoints: 100, maxDamage: 20, image: 'creature/Ghoul.gif', speed: 72, runs_at: 0 },
     { id: 1547, title: 'Skeleton', type_primary: 'Skeletons', experience: 35, hitpoints: 50, maxDamage: 12, image: 'creature/Skeleton.gif', speed: 77, runs_at: 0 },
@@ -48,6 +50,10 @@ export const FORCED_CREATURE_TEMPLATES_BY_LEVEL = {
     { id: 1150, title: 'Vampire', type_primary: 'Vampires', experience: 305, hitpoints: 475, maxDamage: 40, image: 'creature/Vampire.gif', speed: 119, runs_at: 0 },
     { id: 1541, title: 'Demon Skeleton', type_primary: 'Skeletons', experience: 240, hitpoints: 400, maxDamage: 45, image: 'creature/Demon Skeleton.gif', speed: 90, runs_at: 0 },
   ],
+  10: [
+    { id: 742,  title: 'Hero', type_primary: 'Outlaws', experience: 1200, hitpoints: 1400, maxDamage: 60, image: 'creature/Hero.gif', speed: 140, runs_at: 0 },
+    { id: 1150, title: 'Vampire', type_primary: 'Vampires', experience: 305, hitpoints: 475, maxDamage: 40, image: 'creature/Vampire.gif', speed: 119, runs_at: 0 },
+  ],
   15: [{ id: 1483, title: 'Giant Spider', type_primary: 'Arachnids', experience: 900, hitpoints: 1300, maxDamage: 38, image: 'creature/Giant Spider.gif', speed: 120, runs_at: 0 }],
   16: [
     { id: 1318, title: 'Dragon', type_primary: 'Dragons', experience: 700, hitpoints: 1000, maxDamage: 45, image: 'creature/Dragon.gif', speed: 86, runs_at: 300 },
@@ -62,3 +68,27 @@ export const FORCED_CREATURE_TEMPLATES_BY_LEVEL = {
 };
 
 export const TROLL_ALLOWED_IDS = [1166, 1167];
+
+/**
+ * Counts exactos por tipo de criatura para los floors fijos.
+ * Clave: creature_id → cantidad a spawnear.
+ * El sistema de spawn usará estos valores en lugar del rango aleatorio MIN/MAX.
+ */
+export const FLOOR_CREATURE_COUNTS = {
+  1:  { 1116: 10 },
+  2:  { 1261: 10 },
+  3:  { 1141: 15 },
+  4:  { 1166: 20 },
+  5:  { 1457: 15, 1547: 10 },
+  6:  { 1243: 15, 1248: 10 },
+  7:  { 1355: 10, 1358: 20 },
+  8:  { 1235: 10, 1236: 20 },
+  9:  { 1150: 25, 1541: 10 },
+  10: { 742: 25,  1150: 10 },
+  15: { 1483: 20 },
+  16: { 1318: 25, 1377: 25 },
+  17: { 25469: 25 },
+  18: { 41735: 25, 88676: 25 },
+  19: { 1253: 25 },
+  20: { 1176: 25 },
+};

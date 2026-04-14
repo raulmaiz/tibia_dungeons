@@ -13,7 +13,7 @@ import {
   progressionStatsForLevel,
 } from '../../../mechanics/progression.js';
 import { LootPityTracker } from '../../../mechanics/loot.js';
-import { generateLevelMap as buildDungeonLevelMap } from '../../../dungeon/generator.js';
+import { generateLevelMap as buildDungeonLevelMap, computeDungeonSize } from '../../../dungeon/generator.js';
 import { wirePanelLayoutSync } from '../../../ui/panelLayout.js';
 import { isBlockedSpellTitle } from '../../../spells/filters.js';
 import { inferCreatureAbilityPattern } from '../../../creatures/abilityPatterns.js';
@@ -24,6 +24,7 @@ import {
   FORCED_CREATURE_TEMPLATE_BY_LEVEL,
   FORCED_CREATURE_TEMPLATES_BY_LEVEL,
   TROLL_ALLOWED_IDS,
+  FLOOR_CREATURE_COUNTS,
 } from '../../../data/floorSpawnConfig.js';
 import {
   shakeCamera,
@@ -144,6 +145,13 @@ const MAX_FOOD_SECONDS = 900;
 
 const MAP_W = 20;
 const MAP_H = 15;
+// Dimensiones máximas posibles (50 criaturas → ~44x27). El grid de tiles se crea
+// con este tamaño y la cámara se acota a las dimensiones reales de cada floor.
+const MAX_DUNGEON_W = 60;
+const MAX_DUNGEON_H = 40;
+// Dimensiones del mapa actual (se actualizan en cada descendLevel).
+let dungeonW = MAP_W;
+let dungeonH = MAP_H;
 const UI_BOTTOM_SPACE = 88;
 const UI_OVERLAP_ROWS = 1.5;
 const CREATURE_POOL_PER_LEVEL = 12;
@@ -1349,7 +1357,7 @@ function setupSelectorUI() {
 }
 
 function isWalkableTile(gx, gy) {
-  return gx >= 0 && gx < MAP_W && gy >= 0 && gy < MAP_H;
+  return gx >= 0 && gx < dungeonW && gy >= 0 && gy < dungeonH;
 }
 
 function startGame(configPlayer) {
@@ -1403,15 +1411,15 @@ function startGame(configPlayer) {
         }
 
         const mapTiles = [];
-        for (let y = 0; y < MAP_H; y += 1) {
+        for (let y = 0; y < MAX_DUNGEON_H; y += 1) {
           mapTiles[y] = [];
-          for (let x = 0; x < MAP_W; x += 1) {
+          for (let x = 0; x < MAX_DUNGEON_W; x += 1) {
             const rect = this.add.rectangle(
               x * tileSize + tileSize / 2,
               y * tileSize + tileSize / 2,
               tileSize - 1,
               tileSize - 1,
-              0x162238
+              0x080e18
             );
             rect.setDepth(0);
             mapTiles[y][x] = rect;
@@ -2568,10 +2576,15 @@ function startGame(configPlayer) {
           const floorA = 0x121a2e;
           const floorB = 0x182238;
           const wall = 0x2a3d58;
-          for (let y = 0; y < MAP_H; y += 1) {
-            for (let x = 0; x < MAP_W; x += 1) {
-              const isWall = currentMap[y][x] === '#';
-              mapTiles[y][x].setFillStyle(isWall ? wall : (((x + y) & 1) === 0 ? floorA : floorB), 1);
+          const outer = 0x080e18;
+          for (let y = 0; y < MAX_DUNGEON_H; y += 1) {
+            for (let x = 0; x < MAX_DUNGEON_W; x += 1) {
+              if (y >= dungeonH || x >= dungeonW) {
+                mapTiles[y][x].setFillStyle(outer, 1);
+              } else {
+                const isWall = currentMap[y][x] === '#';
+                mapTiles[y][x].setFillStyle(isWall ? wall : (((x + y) & 1) === 0 ? floorA : floorB), 1);
+              }
             }
           }
         };
@@ -2585,6 +2598,35 @@ function startGame(configPlayer) {
             if (c.nameTag) c.nameTag.destroy();
           }
           creatures.length = 0;
+
+          // --- Sistema de counts exactos por floor fijo ---
+          // Busca la plantilla de una criatura por ID en todas las fuentes conocidas.
+          const findTemplateById = (id) => {
+            for (const arr of Object.values(FORCED_CREATURE_TEMPLATES_BY_LEVEL)) {
+              const t = arr.find((x) => Number(x.id) === id);
+              if (t) return t;
+            }
+            const t2 = Object.values(FORCED_CREATURE_TEMPLATE_BY_LEVEL).find((x) => Number(x.id) === id);
+            if (t2) return t2;
+            for (const g of typeProgressionGroups) {
+              const c = (g.creatures || []).find((x) => Number(x.id) === id);
+              if (c) return c;
+            }
+            return null;
+          };
+          let exactTemplates = null;
+          const countConfig = FLOOR_CREATURE_COUNTS[Number(level)];
+          if (countConfig) {
+            exactTemplates = [];
+            for (const [idStr, cnt] of Object.entries(countConfig)) {
+              const tmpl = findTemplateById(Number(idStr));
+              if (tmpl) {
+                for (let k = 0; k < cnt; k += 1) exactTemplates.push({ ...tmpl });
+              }
+            }
+            Phaser.Utils.Array.Shuffle(exactTemplates);
+            creaturesTargetCount = exactTemplates.length;
+          }
 
           const group = currentLevelGroup;
           const basePool = (group && group.creatures && group.creatures.length > 0)
@@ -2708,10 +2750,12 @@ function startGame(configPlayer) {
             if (filtered.length >= 12) levelPool = filtered;
             Phaser.Utils.Array.Shuffle(levelPool);
           }
-          creaturesTargetCount = Number(level) === 1
-            ? 10
-            : Phaser.Math.Between(MIN_CREATURES_PER_LEVEL, MAX_CREATURES_PER_LEVEL);
-          const templates = pickRandomCreatures(levelPool, creaturesTargetCount);
+          if (!exactTemplates) {
+            creaturesTargetCount = Number(level) === 1
+              ? 10
+              : Phaser.Math.Between(MIN_CREATURES_PER_LEVEL, MAX_CREATURES_PER_LEVEL);
+          }
+          const templates = exactTemplates || pickRandomCreatures(levelPool, creaturesTargetCount);
           if (!templates || templates.length === 0) {
             addCombatLog(`Floor ${level}: no valid creature templates found.`);
             creaturesTargetCount = 0;
@@ -2788,9 +2832,18 @@ function startGame(configPlayer) {
           groundLootByTile.clear();
           if (toNext) currentLevel += 1;
           currentLevelGroup = pickGroupForLevel(currentLevel);
+          // Calcular tamaño del mapa según las criaturas de este floor
+          const floorCountCfg = FLOOR_CREATURE_COUNTS[Number(currentLevel)];
+          const floorTotal = floorCountCfg
+            ? Object.values(floorCountCfg).reduce((s, v) => s + v, 0)
+            : MAX_CREATURES_PER_LEVEL;
+          const { w: newW, h: newH } = computeDungeonSize(floorTotal);
+          dungeonW = Math.min(newW, MAX_DUNGEON_W);
+          dungeonH = Math.min(newH, MAX_DUNGEON_H);
           const generated = buildDungeonLevelMap({
-            MAP_W,
-            MAP_H,
+            totalCreatures: floorTotal,
+            MAP_W: dungeonW,
+            MAP_H: dungeonH,
             START_TILE,
             between: Phaser.Math.Between,
             clamp: Phaser.Math.Clamp,
@@ -2798,9 +2851,10 @@ function startGame(configPlayer) {
           });
           currentMap = generated.map;
           currentStairsTile = generated.stairs;
+          this.cameras.main.setBounds(0, 0, dungeonW * tileSize, dungeonH * tileSize);
           // Solo usamos casillas conectadas al inicio para evitar monstruos bloqueados.
           const reachable = [];
-          const visited = Array.from({ length: MAP_H }, () => Array.from({ length: MAP_W }, () => false));
+          const visited = Array.from({ length: dungeonH }, () => Array.from({ length: dungeonW }, () => false));
           const q = [{ gx: START_TILE.gx, gy: START_TILE.gy }];
           visited[START_TILE.gy][START_TILE.gx] = true;
           while (q.length > 0) {
@@ -2815,7 +2869,7 @@ function startGame(configPlayer) {
             for (const d of dirs) {
               const nx = cur.gx + d.dx;
               const ny = cur.gy + d.dy;
-              if (nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) continue;
+              if (nx < 0 || ny < 0 || nx >= dungeonW || ny >= dungeonH) continue;
               if (visited[ny][nx]) continue;
               if (currentMap[ny][nx] !== '.') continue;
               visited[ny][nx] = true;
