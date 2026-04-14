@@ -2978,9 +2978,12 @@ function startGame(configPlayer) {
               title: template.title,
               experience: Number(template.experience || 0),
               speed: Math.max(1, Number(template.speed || 100)),
+              ranged: Number(template.ranged || 0) === 1,
+              range: Math.max(1, Number(template.range || 1)),
               alive: true,
               nextWanderAt: 0,
               nextActionAt: 0,
+              nextAbilityAt: 0,
               aggroLocked: false,
               abilities: (creatureAbilitiesById.get(creatureId) || []).slice(0, 16),
               elementMods: mergeCreatureElementModsForId(creatureId),
@@ -4969,12 +4972,14 @@ function startGame(configPlayer) {
           const abilities = Array.isArray(creature && creature.abilities) ? creature.abilities : [];
           if (abilities.length === 0) return false;
           const dist = Math.max(Math.abs(creature.gx - gridX), Math.abs(creature.gy - gridY));
+          // Effective cast range: ranged creatures use their range value; melee use 4 tiles.
+          const castRange = creature.ranged ? creature.range : 4;
           const options = abilities.filter((ab) => {
             const t = abilityType(ab);
             if (t === 'utility') return false;
             if (t === 'heal') return creature.hp < creature.maxHp && Math.random() < 0.5;
             if (t === 'melee') return dist <= 1;
-            if (dist > 4) return false;
+            if (dist > castRange) return false;
             if (!hasRangedLineOfSight(creature.gx, creature.gy, gridX, gridY)) return false;
             try {
               const pattern = inferCreatureAbilityPattern(ab);
@@ -5127,6 +5132,50 @@ function startGame(configPlayer) {
           }
           return false;
         };
+        // Ranged creature movement: flee if too close, approach if too far, idle at range.
+        const tryMoveRangedCreature = (creature) => {
+          const dist = Math.max(Math.abs(creature.gx - gridX), Math.abs(creature.gy - gridY));
+          const targetRange = creature.range;
+
+          if (dist === targetRange) return false; // already at ideal range — don't move
+
+          const options = [
+            { dx: 1, dy: 0 }, { dx: -1, dy: 0 },
+            { dx: 0, dy: 1 }, { dx: 0, dy: -1 },
+          ];
+
+          if (dist < targetRange) {
+            // Too close — pick step that maximises distance from player
+            let best = null;
+            let bestDist = dist;
+            for (const d of options) {
+              const nx = creature.gx + d.dx;
+              const ny = creature.gy + d.dy;
+              if (!isWalkable(nx, ny)) continue;
+              if (isOccupiedByActor(nx, ny)) continue;
+              const nd = Math.max(Math.abs(nx - gridX), Math.abs(ny - gridY));
+              if (nd > bestDist) { bestDist = nd; best = { nx, ny, d }; }
+            }
+            if (!best) return false;
+            orientCreatureSprite(creature, best.d.dx, best.d.dy);
+            creature.gx = best.nx; creature.gy = best.ny;
+            creature.sprite.x = centerX(creature.gx);
+            creature.sprite.y = centerY(creature.gy);
+            updateCreatureBar(creature);
+            return true;
+          }
+
+          // Too far — move toward player (BFS, one step)
+          const next = findNextStepToPlayer(creature.gx, creature.gy);
+          if (!next) return false;
+          orientCreatureSprite(creature, next.x - creature.gx, next.y - creature.gy);
+          creature.gx = next.x; creature.gy = next.y;
+          creature.sprite.x = centerX(creature.gx);
+          creature.sprite.y = centerY(creature.gy);
+          updateCreatureBar(creature);
+          return true;
+        };
+
         const shouldFlee = (creature) => creature.runsAt > 0 && creature.hp <= creature.runsAt;
         const tryFleeCreature = (creature) => {
           const options = [
@@ -5157,6 +5206,12 @@ function startGame(configPlayer) {
           updateCreatureBar(creature);
           return true;
         };
+        // Ability cooldown ranges (ms): normal and fury mode
+        const ABILITY_CD_MIN = 2400;
+        const ABILITY_CD_MAX = 4200;
+        const ABILITY_CD_FURY_MIN = 700;
+        const ABILITY_CD_FURY_MAX = 1400;
+
         const creatureTurn = () => {
           if (gameOver) return;
           const now = this.time.now;
@@ -5165,27 +5220,52 @@ function startGame(configPlayer) {
             if (now < creature.nextActionAt) continue;
             if (!hasAggro(creature)) {
               const wandered = tryWanderCreature(creature, now);
-              if (wandered) {
-                creature.nextActionAt = now + actionDelayFromSpeed(creature.speed);
-              } else {
-                creature.nextActionAt = now + 120;
-              }
+              creature.nextActionAt = now + (wandered ? actionDelayFromSpeed(creature.speed) : 120);
               continue;
             }
             creature.aggroLocked = true;
             let acted = false;
-            if (shouldFlee(creature)) {
+            const isFleeing = shouldFlee(creature);
+
+            // --- Fury / flee mode ---
+            if (isFleeing) {
               acted = tryFleeCreature(creature) || acted;
+              // In fury: cast abilities much faster
+              if (now >= creature.nextAbilityAt) {
+                const usedAbility = tryUseCreatureAbility(creature);
+                if (usedAbility) {
+                  creature.nextAbilityAt = now + Phaser.Math.Between(ABILITY_CD_FURY_MIN, ABILITY_CD_FURY_MAX);
+                }
+                acted = usedAbility || acted;
+              }
               creature.nextActionAt = now + (acted ? actionDelayFromSpeed(creature.speed) : 120);
               continue;
             }
+
             const distToPlayer = Math.max(Math.abs(creature.gx - gridX), Math.abs(creature.gy - gridY));
-            if (distToPlayer <= 4 && Math.random() < 0.5) {
-              acted = tryUseCreatureAbility(creature) || acted;
+
+            // --- Ability tick (independent cooldown) ---
+            if (now >= creature.nextAbilityAt) {
+              const usedAbility = tryUseCreatureAbility(creature);
+              if (usedAbility) {
+                creature.nextAbilityAt = now + Phaser.Math.Between(ABILITY_CD_MIN, ABILITY_CD_MAX);
+                acted = true;
+              }
             }
-            if (!isCreatureMeleeAdjacent(creature.gx, creature.gy, gridX, gridY)) {
-              acted = tryMoveCreature(creature) || acted;
+
+            // --- Movement ---
+            if (creature.ranged) {
+              // Ranged: maintain distance, only melee if player walks into adjacency
+              const moved = tryMoveRangedCreature(creature);
+              acted = moved || acted;
+            } else {
+              // Melee: always approach
+              if (!isCreatureMeleeAdjacent(creature.gx, creature.gy, gridX, gridY)) {
+                acted = tryMoveCreature(creature) || acted;
+              }
             }
+
+            // --- Melee attack (all creatures, only when adjacent and no other action this tick) ---
             if (!acted && isCreatureMeleeAdjacent(creature.gx, creature.gy, gridX, gridY)) {
               orientCreatureSprite(creature, gridX - creature.gx, gridY - creature.gy);
               if (didAttackMiss()) {
