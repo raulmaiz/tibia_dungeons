@@ -2781,8 +2781,25 @@ function startGame(configPlayer) {
             const spawn = floorsForSpawn.length > 0 ? floorsForSpawn.splice(Phaser.Math.Between(0, floorsForSpawn.length - 1), 1)[0] : null;
             const template = templates[i % templates.length];
             if (!spawn || !isWalkableTile(spawn.gx, spawn.gy)) continue;
-
-            const sprite = this.add.sprite(centerX(spawn.gx), centerY(spawn.gy), creatureKey(template));
+            const requestedTextureKey = creatureKey(template);
+            const fallbackTextureKey = creatureKey({ id: 1116 }); // Rat
+            const requestedTexture = this.textures.get(requestedTextureKey);
+            const requestedSource = requestedTexture && typeof requestedTexture.getSourceImage === 'function'
+              ? requestedTexture.getSourceImage()
+              : null;
+            const fallbackTexture = this.textures.get(fallbackTextureKey);
+            const fallbackSource = fallbackTexture && typeof fallbackTexture.getSourceImage === 'function'
+              ? fallbackTexture.getSourceImage()
+              : null;
+            const safeTextureKey = requestedSource ? requestedTextureKey : (fallbackSource ? fallbackTextureKey : null);
+            if (!safeTextureKey) {
+              addCombatLog(`Floor ${level}: skipped ${template.title || 'creature'} (missing texture).`);
+              continue;
+            }
+            if (safeTextureKey !== requestedTextureKey) {
+              addCombatLog(`Floor ${level}: texture missing for ${template.title || 'creature'}, using fallback sprite.`);
+            }
+            const sprite = this.add.sprite(centerX(spawn.gx), centerY(spawn.gy), safeTextureKey);
             sprite.setOrigin(0.5, 0.5);
             applyCreatureNormalizedDisplaySize(sprite, this, tileSize);
             sprite.x = centerX(spawn.gx);
@@ -3885,9 +3902,8 @@ function startGame(configPlayer) {
           if (singular) return singular;
           return null;
         };
-        const equipConjuredArrowToAmmoSlot = (ammoItem, amount) => {
-          if (!ammoItem) return false;
-          if (typeof inventorySetEquippedSlotVisual !== 'function') return false;
+        const placeConjuredArrow = (ammoItem, amount) => {
+          if (!ammoItem) return null;
           const qty = Math.max(1, Number(amount || 1));
           const equippedAmmo = getEquippedAmmo();
           const sameAmmoEquipped = Boolean(
@@ -3895,26 +3911,34 @@ function startGame(configPlayer) {
             && Number(equippedAmmo.id) === Number(ammoItem.id)
           );
           if (sameAmmoEquipped) {
+            if (typeof inventorySetEquippedSlotVisual !== 'function') return null;
             const nextAmmo = {
               ...equippedAmmo,
               count: Math.max(1, Number(equippedAmmo.count || 1)) + qty,
             };
-            return inventorySetEquippedSlotVisual('ammunition', nextAmmo, `${ammoItem.title} +${qty} (ammo slot).`);
+            return inventorySetEquippedSlotVisual('ammunition', nextAmmo, `${ammoItem.title} +${qty} (ammo slot).`)
+              ? 'ammo'
+              : null;
           }
+
+          // Keep current ammo equipped if it is a different type:
+          // conjured arrows should go to loot (stacking there if possible).
           if (equippedAmmo) {
-            const moved = window.debugInventory && typeof window.debugInventory.addLoot === 'function'
-              ? window.debugInventory.addLoot({ ...equippedAmmo })
-              : false;
-            if (!moved) return false;
-            if (typeof inventoryClearEquippedSlotVisual === 'function') {
-              inventoryClearEquippedSlotVisual('ammunition');
-            }
+            const storedInBag = addLootItemToBag(
+              { ...ammoItem, isStackable: true, count: qty },
+              { disableAutoEquip: true }
+            );
+            return storedInBag ? 'bag' : null;
           }
-          return inventorySetEquippedSlotVisual(
+
+          // Ammo slot empty: equip conjured ammo directly.
+          if (typeof inventorySetEquippedSlotVisual !== 'function') return null;
+          const equipped = inventorySetEquippedSlotVisual(
             'ammunition',
             { ...ammoItem, isStackable: true, count: qty },
             `Conjured ${qty} ${ammoItem.title}${qty > 1 ? 's' : ''} to ammo slot.`
           );
+          return equipped ? 'ammo' : null;
         };
         const showSpellTileEffect = (tiles, color = 0xf59e0b, opts = {}) => {
           const duration = opts.duration != null ? opts.duration : 300;
@@ -4199,11 +4223,13 @@ function startGame(configPlayer) {
             if (!ammoItem) {
               addCombatLog(`Cast [${slotNumber}] ${spell.title}, but no matching arrow item was found.`, LOG_COLORS.SPELL);
             } else {
-              const equipped = equipConjuredArrowToAmmoSlot(ammoItem, conjuredArrow.count);
-              if (equipped) {
+              const placedAt = placeConjuredArrow(ammoItem, conjuredArrow.count);
+              if (placedAt === 'ammo') {
                 addCombatLog(`Cast [${slotNumber}] ${spell.title}: ${conjuredArrow.count} ${ammoItem.title}${conjuredArrow.count > 1 ? 's' : ''} equipped in ammo slot.`, LOG_COLORS.SPELL);
+              } else if (placedAt === 'bag') {
+                addCombatLog(`Cast [${slotNumber}] ${spell.title}: ${conjuredArrow.count} ${ammoItem.title}${conjuredArrow.count > 1 ? 's' : ''} added to loot bag.`, LOG_COLORS.SPELL);
               } else {
-                addCombatLog(`Cast [${slotNumber}] ${spell.title}, but ammo slot update failed (bag full/capacity).`, LOG_COLORS.SPELL);
+                addCombatLog(`Cast [${slotNumber}] ${spell.title}, but ammo creation failed (bag full/capacity).`, LOG_COLORS.SPELL);
               }
             }
             updatePlayerBar();
