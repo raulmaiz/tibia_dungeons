@@ -49,4 +49,10 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(cacheFirst(event.request));
     return;
   }
+
+  // Assets estáticos SEO/PWA: cache-first
+  if (['/favicon.svg', '/og-image.svg', '/manifest.webmanifest'].includes(path)) {
+    event.respondWith(cacheFirst(event.request));
+    return;
+  }
 });

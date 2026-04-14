@@ -1,0 +1,22 @@
+{
+  "name": "Tibia Dungeons",
+  "short_name": "Tibia Dungeons",
+  "description": "Free browser dungeon crawler inspired by Tibia. Explore procedurally generated dungeons, fight 20 floors of creatures, collect loot and climb the Hall of Fame.",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0a0f18",
+  "theme_color": "#e2a030",
+  "categories": ["games", "entertainment"],
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "iarc_rating_id": ""
+}

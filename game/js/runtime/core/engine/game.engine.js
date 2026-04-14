@@ -285,6 +285,60 @@ function setupSelectorUI() {
     legs: 'legs',
     'amulets and necklaces': 'amulet',
   };
+  // --- Accessory (ring / amulet) duration timers ---
+  const accessoryTimerState = { ring: null, amulet: null };
+
+  function parseDurationSeconds(durationStr) {
+    const s = String(durationStr || '').toLowerCase().trim();
+    const m = s.match(/^(\d+)\s*minute/);
+    if (m) return Number(m[1]) * 60;
+    const h = s.match(/^(\d+)\s*hour/);
+    if (h) return Number(h[1]) * 3600;
+    const sc = s.match(/^(\d+)\s*sec/);
+    if (sc) return Number(sc[1]);
+    return 0;
+  }
+
+  function stopAccessoryTimer(slotKey) {
+    const t = accessoryTimerState[slotKey];
+    if (!t) return;
+    clearInterval(t.intervalId);
+    accessoryTimerState[slotKey] = null;
+  }
+
+  function startAccessoryTimer(slotKey, item) {
+    stopAccessoryTimer(slotKey);
+    const attrs = Array.isArray(item && item.attributes) ? item.attributes : [];
+    const durationRow = attrs.find((a) => a && String(a.name || '').toLowerCase() === 'duration');
+    const chargesRow = attrs.find((a) => a && String(a.name || '').toLowerCase() === 'charges');
+    let secondsLeft = 0;
+    if (durationRow) {
+      secondsLeft = parseDurationSeconds(durationRow.value);
+    } else if (chargesRow) {
+      secondsLeft = Math.max(1, Number(chargesRow.value) || 0) * 60;
+    }
+    if (secondsLeft <= 0) return;
+    const rule = slotRules[slotKey];
+    const slotLabel = rule ? document.getElementById(`slot${rule.id}Label`) : null;
+    const formatLabel = (secs) => {
+      const mm = Math.floor(secs / 60);
+      const ss = String(secs % 60).padStart(2, '0');
+      return `${item.title} (${mm}:${ss})`;
+    };
+    if (slotLabel) slotLabel.textContent = formatLabel(secondsLeft);
+    const intervalId = setInterval(() => {
+      secondsLeft -= 1;
+      if (slotLabel) slotLabel.textContent = formatLabel(Math.max(0, secondsLeft));
+      if (secondsLeft <= 0) {
+        stopAccessoryTimer(slotKey);
+        clearEquippedSlotVisual(slotKey, `${item.title} has expired.`);
+        if (typeof onPanelLog === 'function') onPanelLog(`Your ${item.title} has expired.`);
+        renderLootSlots(currentBagCapacity);
+      }
+    }, 1000);
+    accessoryTimerState[slotKey] = { intervalId };
+  }
+
   const itemTooltip = document.getElementById('itemTooltip');
   let lootContextIndex = -1;
   const hideItemTooltip = () => {
@@ -472,6 +526,51 @@ function setupSelectorUI() {
         }
       }
     }
+    if (typeLower === 'rings' || typeLower === 'amulets and necklaces') {
+      const ACCESSORY_FRIENDLY = {
+        'duration': 'Duration',
+        'charges': 'Charges',
+        'speed': 'Speed bonus',
+        'regeneration': 'Regeneration',
+        'magic': 'Magic level',
+        'fist': 'Fist fighting',
+        'sword': 'Sword fighting',
+        'club': 'Club fighting',
+        'axe': 'Axe fighting',
+        'distance': 'Distance fighting',
+        'shielding': 'Shielding',
+        'physical%': 'Physical resist.',
+        'fire%': 'Fire resist.',
+        'earth%': 'Earth resist.',
+        'energy%': 'Energy resist.',
+        'ice%': 'Ice resist.',
+        'death%': 'Death resist.',
+        'holy%': 'Holy resist.',
+      };
+      const priorityOrder = ['duration', 'charges', 'speed', 'regeneration',
+        'magic', 'fist', 'sword', 'club', 'axe', 'distance', 'shielding',
+        'physical%', 'fire%', 'earth%', 'energy%', 'ice%', 'death%', 'holy%'];
+      const skipAccessory = new Set(['is_walkable', 'upgrade_classification', 'weapon_type']);
+      const shown = new Set();
+      if (attrs.length > 0) {
+        statLines.push('<div class="tt-sep"></div>');
+        for (const pKey of priorityOrder) {
+          const row = attrs.find((a) => a && String(a.name || '').toLowerCase() === pKey);
+          if (!row) continue;
+          shown.add(pKey);
+          const label = escapeHtml(ACCESSORY_FRIENDLY[pKey] || pKey);
+          const val = escapeHtml(String(row.value != null ? row.value : ''));
+          statLines.push(`<div><span class="tt-label">${label}:</span> ${val}</div>`);
+        }
+        for (const a of attrs) {
+          const nm = String(a.name || '').toLowerCase();
+          if (skipAccessory.has(nm) || shown.has(nm)) continue;
+          const label = escapeHtml(ACCESSORY_FRIENDLY[nm] || a.name);
+          const val = escapeHtml(String(a.value != null ? a.value : ''));
+          statLines.push(`<div><span class="tt-label">${label}:</span> ${val}</div>`);
+        }
+      }
+    }
     return [
       `<div class="tt-title">${safeTitle}</div>`,
       '<div class="tt-sep"></div>',
@@ -576,6 +675,7 @@ function setupSelectorUI() {
     const slotRoot = document.getElementById(`slot${rule.id}`);
     bindTooltip(slotRoot, item);
     equipmentFoot.textContent = equipmentFootText || `Equipped ${rule.footName}: ${item.title}`;
+    if (slotKey === 'ring' || slotKey === 'amulet') startAccessoryTimer(slotKey, item);
     return true;
   }
   // Backward-compatible alias for accidental casing typos in runtime/cached code paths.
@@ -609,6 +709,7 @@ function setupSelectorUI() {
     const equipmentFoot = document.getElementById('equipmentFoot');
     if (!slotRoot || !slotImg || !slotIcon || !slotLabel || !equipmentFoot) return false;
     equippedSlots[slotKey] = null;
+    if (slotKey === 'ring' || slotKey === 'amulet') stopAccessoryTimer(slotKey);
     slotImg.style.display = 'none';
     slotIcon.textContent = rule.iconDefault;
     slotLabel.textContent = 'Empty';
@@ -678,6 +779,19 @@ function setupSelectorUI() {
       item,
       `Auto-equipped ${item.title} (hand was empty).`
     );
+  }
+
+  function tryAutoEquipAccessory(item) {
+    const type = String(item.item_type || '').toLowerCase();
+    if (type === 'rings') {
+      if (equippedSlots.ring) return false;
+      return setEquippedSlotVisual('ring', item, `Auto-equipped ring: ${item.title}.`);
+    }
+    if (type === 'amulets and necklaces') {
+      if (equippedSlots.amulet) return false;
+      return setEquippedSlotVisual('amulet', item, `Auto-equipped amulet: ${item.title}.`);
+    }
+    return false;
   }
 
   function resolveSellUnitPrice(item) {
@@ -1034,6 +1148,7 @@ function setupSelectorUI() {
         tryAutoEquipArmorUpgrade(incoming)
         || tryAutoEquipShieldUpgrade(incoming)
         || tryAutoEquipWeaponUpgrade(incoming)
+        || tryAutoEquipAccessory(incoming)
       );
       // If it was equipped, it should not occupy inventory space.
       if (equippedNow) return true;
@@ -3601,6 +3716,21 @@ function startGame(configPlayer) {
           const flatReduction = Math.floor((totalDefenseValue * 0.18) + ((skillValue - 10) * 0.08));
           const reducedByPercent = Math.floor(raw * (1 - percentReduction));
           const reduced = Math.max(1, reducedByPercent - flatReduction);
+          // Apply elemental/physical resistance from ring and amulet (physical% attribute)
+          let accessoryResistPct = 0;
+          for (const accSlot of ['ring', 'amulet']) {
+            const acc = equipped[accSlot];
+            if (!acc) continue;
+            const accAttrs = Array.isArray(acc.attributes) ? acc.attributes : [];
+            const physRow = accAttrs.find((a) => a && String(a.name || '').toLowerCase() === 'physical%');
+            if (physRow) {
+              const v = Number(physRow.value);
+              if (Number.isFinite(v) && v > 0) accessoryResistPct += v;
+            }
+          }
+          if (accessoryResistPct > 0) {
+            return Math.max(1, Math.floor(reduced * (1 - Math.min(50, accessoryResistPct) / 100)));
+          }
           return reduced;
         };
         const ammoAttackBonus = (weapon = null) => {
@@ -4205,7 +4335,8 @@ function startGame(configPlayer) {
             const crit = didAttackCrit();
             const base = inferClassAdjustedSpellDamage(spell, { area: isAreaPattern });
             const dmgRaw = crit ? applyCriticalDamage(base) : base;
-            const dmg = applyIncomingElementalDamage(dmgRaw, target, spellElem);
+            const dmgBase = applyIncomingElementalDamage(dmgRaw, target, spellElem);
+            const dmg = godModeEnabled ? Math.max(1, Number(target.hp || 1)) : dmgBase;
             target.hp = Math.max(0, target.hp - dmg);
             showCreatureHitEffect(target, dmg);
             if (crit) showCritText(target.sprite.x, target.sprite.y);
@@ -4306,7 +4437,8 @@ function startGame(configPlayer) {
                 const base = inferClassAdjustedSpellDamage(spell, { area: false });
                 const dmgRaw = crit ? applyCriticalDamage(base) : base;
                 const spellElem = inferSpellDamageElementKey(spell);
-                const dmg = applyIncomingElementalDamage(dmgRaw, frontTarget, spellElem);
+                const dmgBase = applyIncomingElementalDamage(dmgRaw, frontTarget, spellElem);
+                const dmg = godModeEnabled ? Math.max(1, Number(frontTarget.hp || 1)) : dmgBase;
                 frontTarget.hp = Math.max(0, frontTarget.hp - dmg);
                 showCreatureHitEffect(frontTarget, dmg);
                 if (crit) showCritText(frontTarget.sprite.x, frontTarget.sprite.y);
@@ -4338,7 +4470,8 @@ function startGame(configPlayer) {
               const base = inferClassAdjustedSpellDamage(spell, { area: false });
               const dmgRaw = crit ? applyCriticalDamage(base) : base;
               const spellElem = inferSpellDamageElementKey(spell);
-              const dmg = applyIncomingElementalDamage(dmgRaw, target, spellElem);
+              const dmgBase = applyIncomingElementalDamage(dmgRaw, target, spellElem);
+              const dmg = godModeEnabled ? Math.max(1, Number(target.hp || 1)) : dmgBase;
               target.hp = Math.max(0, target.hp - dmg);
               showCreatureHitEffect(target, dmg);
               if (crit) showCritText(target.sprite.x, target.sprite.y);
@@ -4411,7 +4544,8 @@ function startGame(configPlayer) {
             if (activeWeapon && isMagicRangedWeapon(activeWeapon)) {
               elemKey = normalizeDamageTypeToModifierKey(magicWeaponDamageTypeRaw(activeWeapon)) || 'energy';
             }
-            const dealt = applyIncomingElementalDamage(damage, targetCreature, elemKey);
+            const dealtBase = applyIncomingElementalDamage(damage, targetCreature, elemKey);
+            const dealt = godModeEnabled ? Math.max(1, Number(targetCreature.hp || 1)) : dealtBase;
             targetCreature.hp = Math.max(0, targetCreature.hp - dealt);
             showCreatureHitEffect(targetCreature, dealt);
             if (isCrit) {

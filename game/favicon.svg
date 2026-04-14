@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="10" fill="#0a0f18"/>
+  <!-- Dungeon floor tiles -->
+  <rect x="4" y="36" width="56" height="24" rx="2" fill="#1a1208"/>
+  <rect x="4" y="36" width="56" height="2" fill="#2a1e0e"/>
+  <line x1="22" y1="38" x2="22" y2="60" stroke="#2a1e0e" stroke-width="1"/>
+  <line x1="42" y1="38" x2="42" y2="60" stroke="#2a1e0e" stroke-width="1"/>
+  <line x1="4" y1="48" x2="62" y2="48" stroke="#2a1e0e" stroke-width="1"/>
+  <!-- Sword -->
+  <rect x="30" y="6" width="4" height="28" rx="1" fill="#c0a060"/>
+  <rect x="20" y="22" width="24" height="4" rx="1" fill="#c0a060"/>
+  <rect x="31" y="4" width="2" height="4" rx="1" fill="#e8d070"/>
+  <!-- Sword shine -->
+  <rect x="31" y="8" width="1" height="18" rx="0.5" fill="rgba(255,255,200,0.4)"/>
+  <!-- Skull eyes (dungeon ambiance) -->
+  <circle cx="16" cy="52" r="2" fill="#e2a030"/>
+  <circle cx="48" cy="52" r="2" fill="#e2a030"/>
+</svg>
