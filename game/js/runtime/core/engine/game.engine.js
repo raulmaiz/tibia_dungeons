@@ -1523,6 +1523,7 @@ function startGame(configPlayer) {
     backgroundColor: '#0a1220',
     width,
     height,
+    resolution: 1,
     physics: { default: 'arcade', arcade: { debug: false } },
     scene: {
       preload() {
