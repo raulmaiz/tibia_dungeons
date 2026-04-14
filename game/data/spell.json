@@ -27,7 +27,7 @@
     "druid": 1,
     "paladin": 1,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Find Person.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-22T09:03:58+00:00"
@@ -60,7 +60,7 @@
     "druid": 1,
     "paladin": 1,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Light.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:03:00+00:00"
@@ -93,7 +93,7 @@
     "druid": 1,
     "paladin": 1,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Light Healing.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-22T08:45:47+00:00"
@@ -126,7 +126,7 @@
     "druid": 1,
     "paladin": 1,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Magic Rope.gif",
     "version": "6.4",
     "status": "active",
     "timestamp": "2026-02-17T18:03:14+00:00"
@@ -159,7 +159,7 @@
     "druid": 1,
     "paladin": 1,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Cure Poison.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T17:59:19+00:00"
@@ -192,7 +192,7 @@
     "druid": 1,
     "paladin": 1,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Great Light.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:01:38+00:00"
@@ -225,7 +225,7 @@
     "druid": 1,
     "paladin": 1,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Levitate.gif",
     "version": "6.4",
     "status": "active",
     "timestamp": "2026-02-17T18:02:54+00:00"
@@ -258,7 +258,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Challenge.gif",
     "version": "6.6",
     "status": "active",
     "timestamp": "2026-02-17T17:58:18+00:00"
@@ -291,7 +291,7 @@
     "druid": 1,
     "paladin": 1,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Haste.gif",
     "version": "6.4",
     "status": "active",
     "timestamp": "2026-02-17T18:01:48+00:00"
@@ -324,7 +324,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Berserk.gif",
     "version": "6.4",
     "status": "active",
     "timestamp": "2026-02-17T17:57:55+00:00"
@@ -357,7 +357,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Light Magic Missile.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:03:05+00:00"
@@ -390,7 +390,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Death Strike.gif",
     "version": "8.10",
     "status": "active",
     "timestamp": "2026-02-17T17:59:29+00:00"
@@ -423,7 +423,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Invisible.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:02:41+00:00"
@@ -456,7 +456,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Ultimate Healing Rune.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:06:15+00:00"
@@ -489,7 +489,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Paralyse.gif",
     "version": "6.4",
     "status": "active",
     "timestamp": "2026-02-17T18:03:44+00:00"
@@ -522,7 +522,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Heavy Magic Missile.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:01:55+00:00"
@@ -555,7 +555,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Great Fireball.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:01:35+00:00"
@@ -588,7 +588,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Fireball.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:01:03+00:00"
@@ -621,7 +621,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Conjure Arrow.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T17:58:30+00:00"
@@ -654,7 +654,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Food (Spell).gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:01:17+00:00"
@@ -687,7 +687,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Poison Field.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:03:52+00:00"
@@ -720,7 +720,7 @@
     "druid": 1,
     "paladin": 1,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Intense Healing.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:02:27+00:00"
@@ -753,7 +753,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Fire Field.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:00:54+00:00"
@@ -786,7 +786,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Flame Strike.gif",
     "version": "6.6",
     "status": "active",
     "timestamp": "2026-02-17T18:01:06+00:00"
@@ -819,7 +819,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Energy Strike.gif",
     "version": "6.6",
     "status": "active",
     "timestamp": "2026-02-17T18:00:13+00:00"
@@ -852,7 +852,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Magic Shield.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:03:17+00:00"
@@ -885,7 +885,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Cure Poison Rune.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T17:59:22+00:00"
@@ -918,7 +918,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Intense Healing Rune.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:02:29+00:00"
@@ -951,7 +951,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Energy Field.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:00:11+00:00"
@@ -984,7 +984,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Summon Creature.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:05:10+00:00"
@@ -1017,7 +1017,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Conjure Poisoned Arrow.gif",
     "version": null,
     "status": "deprecated",
     "timestamp": "2026-02-17T17:58:44+00:00"
@@ -1050,7 +1050,7 @@
     "druid": 1,
     "paladin": 1,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Destroy Field.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T17:59:32+00:00"
@@ -1083,7 +1083,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Conjure Bolt.gif",
     "version": "6.4",
     "status": "deprecated",
     "timestamp": "2026-02-17T17:58:33+00:00"
@@ -1116,7 +1116,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Heal Friend.gif",
     "version": "6.4",
     "status": "active",
     "timestamp": "2026-02-17T18:01:50+00:00"
@@ -1149,7 +1149,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Animate Dead.gif",
     "version": "6.4",
     "status": "active",
     "timestamp": "2026-02-17T17:55:54+00:00"
@@ -1182,7 +1182,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Ultimate Healing.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:06:12+00:00"
@@ -1215,7 +1215,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Strong Haste.gif",
     "version": "6.4",
     "status": "active",
     "timestamp": "2026-02-17T18:04:57+00:00"
@@ -1248,7 +1248,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Poison Bomb.gif",
     "version": "6.6",
     "status": "active",
     "timestamp": "2026-02-17T18:03:49+00:00"
@@ -1281,7 +1281,7 @@
     "druid": 1,
     "paladin": 1,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Disintegrate.gif",
     "version": "6.4",
     "status": "active",
     "timestamp": "2026-02-17T17:59:37+00:00"
@@ -1314,7 +1314,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Creature Illusion.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T17:59:04+00:00"
@@ -1347,7 +1347,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Conjure Explosive Arrow.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T17:58:38+00:00"
@@ -1380,7 +1380,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Energy Beam.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:00:06+00:00"
@@ -1413,7 +1413,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Convince Creature.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T17:59:02+00:00"
@@ -1446,7 +1446,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Chameleon.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T17:58:20+00:00"
@@ -1479,7 +1479,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Poison Wall.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:03:58+00:00"
@@ -1512,7 +1512,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Explosion.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:00:35+00:00"
@@ -1545,7 +1545,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Ultimate Light.gif",
     "version": "6.4",
     "status": "active",
     "timestamp": "2026-02-17T18:06:24+00:00"
@@ -1578,7 +1578,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Cancel Invisibility.gif",
     "version": "6.6",
     "status": "active",
     "timestamp": "2026-02-17T17:58:10+00:00"
@@ -1611,7 +1611,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Wild Growth.gif",
     "version": "6.6",
     "status": "active",
     "timestamp": "2026-02-17T18:06:47+00:00"
@@ -1644,7 +1644,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Soulfire.gif",
     "version": "6.4",
     "status": "active",
     "timestamp": "2026-02-17T18:04:37+00:00"
@@ -1677,7 +1677,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Fire Wall.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:00:57+00:00"
@@ -1710,7 +1710,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Great Energy Beam.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:01:31+00:00"
@@ -1743,7 +1743,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Conjure Power Bolt.gif",
     "version": "6.6",
     "status": "deprecated",
     "timestamp": "2026-02-17T17:58:46+00:00"
@@ -1776,7 +1776,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Magic Wall.gif",
     "version": "6.4",
     "status": "active",
     "timestamp": "2026-02-17T18:03:22+00:00"
@@ -1809,7 +1809,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Energy Wall.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:00:16+00:00"
@@ -1842,7 +1842,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Mass Healing.gif",
     "version": "6.4",
     "status": "active",
     "timestamp": "2026-02-17T18:03:25+00:00"
@@ -1875,7 +1875,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Energy Wave.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:00:19+00:00"
@@ -1908,7 +1908,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Enchant Staff.gif",
     "version": "6.6",
     "status": "deprecated",
     "timestamp": "2026-02-17T18:00:03+00:00"
@@ -1941,7 +1941,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Sudden Death.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:05:08+00:00"
@@ -1974,7 +1974,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Energy Bomb.gif",
     "version": "6.4",
     "status": "active",
     "timestamp": "2026-02-17T18:00:08+00:00"
@@ -2007,7 +2007,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Fire Bomb.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:00:51+00:00"
@@ -2040,7 +2040,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Whirlwind Throw.gif",
     "version": "8.00",
     "status": "active",
     "timestamp": "2026-02-17T18:06:44+00:00"
@@ -2073,7 +2073,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Groundshaker.gif",
     "version": "8.00",
     "status": "active",
     "timestamp": "2026-02-17T18:01:46+00:00"
@@ -2106,7 +2106,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Fierce Berserk.gif",
     "version": "8.00",
     "status": "active",
     "timestamp": "2026-02-17T18:00:43+00:00"
@@ -2139,7 +2139,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Conjure Sniper Arrow.gif",
     "version": "8.00",
     "status": "deprecated",
     "timestamp": "2026-02-17T17:58:52+00:00"
@@ -2172,7 +2172,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Conjure Piercing Bolt.gif",
     "version": "8.00",
     "status": "deprecated",
     "timestamp": "2026-02-17T17:58:40+00:00"
@@ -2205,7 +2205,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Enchant Spear.gif",
     "version": "8.00",
     "status": "active",
     "timestamp": "2026-02-17T18:00:01+00:00"
@@ -2238,7 +2238,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Ethereal Spear.gif",
     "version": "8.00",
     "status": "active",
     "timestamp": "2026-02-17T18:00:30+00:00"
@@ -2271,7 +2271,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Charge.gif",
     "version": "8.40",
     "status": "active",
     "timestamp": "2026-02-17T17:58:22+00:00"
@@ -2304,7 +2304,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Wound Cleansing.gif",
     "version": "8.10",
     "status": "active",
     "timestamp": "2026-02-17T18:06:49+00:00"
@@ -2337,7 +2337,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Ice Strike.gif",
     "version": "8.10",
     "status": "active",
     "timestamp": "2026-02-17T18:02:11+00:00"
@@ -2370,7 +2370,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Terra Strike.gif",
     "version": "8.10",
     "status": "active",
     "timestamp": "2026-02-17T18:05:43+00:00"
@@ -2403,7 +2403,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Rage of the Skies.gif",
     "version": "8.10",
     "status": "active",
     "timestamp": "2026-02-17T18:04:13+00:00"
@@ -2436,7 +2436,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Stalagmite.gif",
     "version": "8.10",
     "status": "active",
     "timestamp": "2026-02-17T18:04:45+00:00"
@@ -2469,7 +2469,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Avalanche.gif",
     "version": "8.10",
     "status": "active",
     "timestamp": "2026-02-17T17:57:16+00:00"
@@ -2502,7 +2502,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Thunderstorm.gif",
     "version": "8.10",
     "status": "active",
     "timestamp": "2026-02-17T18:05:48+00:00"
@@ -2535,7 +2535,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Hell's Core.gif",
     "version": "8.10",
     "status": "active",
     "timestamp": "2026-02-17T18:01:58+00:00"
@@ -2568,7 +2568,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Stone Shower.gif",
     "version": "8.10",
     "status": "active",
     "timestamp": "2026-02-17T18:04:47+00:00"
@@ -2601,7 +2601,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Wrath of Nature.gif",
     "version": "8.10",
     "status": "active",
     "timestamp": "2026-02-17T18:06:51+00:00"
@@ -2634,7 +2634,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Eternal Winter.gif",
     "version": "8.10",
     "status": "active",
     "timestamp": "2026-02-17T18:00:27+00:00"
@@ -2667,7 +2667,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Divine Missile.gif",
     "version": "8.10",
     "status": "active",
     "timestamp": "2026-02-17T17:59:51+00:00"
@@ -2700,7 +2700,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Divine Caldera.gif",
     "version": "8.10",
     "status": "active",
     "timestamp": "2026-02-17T17:59:39+00:00"
@@ -2733,7 +2733,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Divine Healing.gif",
     "version": "8.10",
     "status": "active",
     "timestamp": "2026-02-17T17:59:49+00:00"
@@ -2766,7 +2766,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Ice Wave.gif",
     "version": "8.10",
     "status": "active",
     "timestamp": "2026-02-17T18:02:13+00:00"
@@ -2799,7 +2799,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Terra Wave.gif",
     "version": "8.10",
     "status": "active",
     "timestamp": "2026-02-17T18:05:45+00:00"
@@ -2832,7 +2832,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Icicle.gif",
     "version": "8.10",
     "status": "active",
     "timestamp": "2026-02-17T18:02:15+00:00"
@@ -2865,7 +2865,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Heal Party.gif",
     "version": "8.40",
     "status": "active",
     "timestamp": "2026-02-17T18:01:53+00:00"
@@ -2898,7 +2898,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Protector.gif",
     "version": "8.40",
     "status": "active",
     "timestamp": "2026-02-17T18:04:11+00:00"
@@ -2931,7 +2931,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Blood Rage.gif",
     "version": "8.40",
     "status": "active",
     "timestamp": "2026-02-17T17:57:58+00:00"
@@ -2964,7 +2964,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Sharpshooter.gif",
     "version": "8.40",
     "status": "active",
     "timestamp": "2026-02-17T18:04:35+00:00"
@@ -2997,7 +2997,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Swift Foot.gif",
     "version": "8.40",
     "status": "active",
     "timestamp": "2026-02-17T18:05:32+00:00"
@@ -3030,7 +3030,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Holy Missile.gif",
     "version": "8.40",
     "status": "active",
     "timestamp": "2026-02-17T18:02:03+00:00"
@@ -3063,7 +3063,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Train Party.gif",
     "version": "8.40",
     "status": "active",
     "timestamp": "2026-02-17T18:05:56+00:00"
@@ -3096,7 +3096,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Enchant Party.gif",
     "version": "8.40",
     "status": "active",
     "timestamp": "2026-02-17T17:59:59+00:00"
@@ -3129,7 +3129,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Protect Party.gif",
     "version": "8.40",
     "status": "active",
     "timestamp": "2026-02-17T18:04:08+00:00"
@@ -3162,7 +3162,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Annihilation.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T17:56:50+00:00"
@@ -3195,7 +3195,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Curse.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T17:59:25+00:00"
@@ -3228,7 +3228,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Ultimate Flame Strike.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T18:06:07+00:00"
@@ -3261,7 +3261,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Recovery.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T18:04:16+00:00"
@@ -3294,7 +3294,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Cure Burning.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T17:59:10+00:00"
@@ -3327,7 +3327,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Cure Bleeding.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T17:59:07+00:00"
@@ -3360,7 +3360,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Cure Electrification.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T17:59:16+00:00"
@@ -3393,7 +3393,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Physical Strike.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T18:03:47+00:00"
@@ -3426,7 +3426,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Brutal Strike.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T17:58:05+00:00"
@@ -3459,7 +3459,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Cure Curse.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T17:59:13+00:00"
@@ -3492,7 +3492,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Electrify.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T17:59:56+00:00"
@@ -3525,7 +3525,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Front Sweep.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T18:01:24+00:00"
@@ -3558,7 +3558,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Holy Flash.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T18:02:01+00:00"
@@ -3591,7 +3591,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Ignite.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T18:02:18+00:00"
@@ -3624,7 +3624,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Envenom.gif",
     "version": "6.4",
     "status": "active",
     "timestamp": "2026-02-17T18:00:24+00:00"
@@ -3657,7 +3657,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Inflict Wound.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T18:02:24+00:00"
@@ -3690,7 +3690,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Intense Recovery.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T18:02:32+00:00"
@@ -3723,7 +3723,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Strong Ice Strike.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T18:05:00+00:00"
@@ -3756,7 +3756,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Intense Wound Cleansing.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T18:02:38+00:00"
@@ -3789,7 +3789,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Salvation.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T18:04:24+00:00"
@@ -3822,7 +3822,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Strong Ethereal Spear.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T18:04:52+00:00"
@@ -3855,7 +3855,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Lightning.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T18:03:07+00:00"
@@ -3888,7 +3888,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Strong Flame Strike.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T18:04:55+00:00"
@@ -3921,7 +3921,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Strong Energy Strike.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T18:04:50+00:00"
@@ -3954,7 +3954,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Ultimate Energy Strike.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T18:06:02+00:00"
@@ -3987,7 +3987,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Strong Terra Strike.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T18:05:05+00:00"
@@ -4020,7 +4020,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Ultimate Ice Strike.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T18:06:21+00:00"
@@ -4053,7 +4053,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Ultimate Terra Strike.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T18:06:26+00:00"
@@ -4086,7 +4086,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Strong Ice Wave.gif",
     "version": "8.70",
     "status": "active",
     "timestamp": "2026-02-17T18:05:02+00:00"
@@ -4119,7 +4119,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Fire Wave.gif",
     "version": null,
     "status": "active",
     "timestamp": "2026-02-17T18:00:59+00:00"
@@ -4152,7 +4152,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Practise Fire Wave.gif",
     "version": "9.80",
     "status": "active",
     "timestamp": "2026-02-17T18:04:01+00:00"
@@ -4185,7 +4185,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Practise Healing.gif",
     "version": "9.80",
     "status": "active",
     "timestamp": "2026-02-17T18:04:03+00:00"
@@ -4218,7 +4218,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Apprentice's Strike.gif",
     "version": "9.80",
     "status": "active",
     "timestamp": "2026-02-17T17:57:11+00:00"
@@ -4251,7 +4251,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Practise Magic Missile.gif",
     "version": "9.80",
     "status": "active",
     "timestamp": "2026-02-17T18:04:06+00:00"
@@ -4284,7 +4284,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Bruise Bane.gif",
     "version": "10.55",
     "status": "active",
     "timestamp": "2026-02-17T17:58:03+00:00"
@@ -4317,7 +4317,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Chill Out.gif",
     "version": "10.55",
     "status": "active",
     "timestamp": "2026-02-17T17:58:25+00:00"
@@ -4350,7 +4350,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Buzz.gif",
     "version": "10.55",
     "status": "active",
     "timestamp": "2026-02-17T17:58:07+00:00"
@@ -4383,7 +4383,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Mud Attack.gif",
     "version": "10.55",
     "status": "active",
     "timestamp": "2026-02-17T18:03:32+00:00"
@@ -4416,7 +4416,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Scorch.gif",
     "version": "10.55",
     "status": "active",
     "timestamp": "2026-02-17T18:04:30+00:00"
@@ -4449,7 +4449,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Arrow Call.gif",
     "version": "10.55",
     "status": "active",
     "timestamp": "2026-02-17T17:57:14+00:00"
@@ -4482,7 +4482,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Conjure Diamond Arrow.gif",
     "version": "11.40.5409",
     "status": "deprecated",
     "timestamp": "2026-02-17T17:58:36+00:00"
@@ -4515,7 +4515,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Conjure Royal Star.gif",
     "version": "--",
     "status": "ts-only",
     "timestamp": "2026-02-17T17:58:49+00:00"
@@ -4548,7 +4548,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Conjure Spectral Bolt.gif",
     "version": "11.40.5409",
     "status": "deprecated",
     "timestamp": "2026-02-17T17:58:55+00:00"
@@ -4581,7 +4581,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Conjure Wand of Darkness.gif",
     "version": "11.40.5409",
     "status": "active",
     "timestamp": "2026-02-17T17:58:58+00:00"
@@ -4614,7 +4614,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Summon Knight Familiar.gif",
     "version": "11.40.5409",
     "status": "active",
     "timestamp": "2026-02-17T18:05:19+00:00"
@@ -4647,7 +4647,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Summon Paladin Familiar.gif",
     "version": "11.40.5409",
     "status": "active",
     "timestamp": "2026-02-17T18:05:24+00:00"
@@ -4680,7 +4680,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Summon Druid Familiar.gif",
     "version": "11.40.5409",
     "status": "active",
     "timestamp": "2026-02-17T18:05:14+00:00"
@@ -4713,7 +4713,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Summon Sorcerer Familiar.gif",
     "version": "11.40.5409",
     "status": "active",
     "timestamp": "2026-02-17T18:05:27+00:00"
@@ -4746,7 +4746,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Expose Weakness.gif",
     "version": "12.55.10451",
     "status": "active",
     "timestamp": "2026-02-17T18:00:38+00:00"
@@ -4779,7 +4779,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Sap Strength.gif",
     "version": "12.55.10451",
     "status": "active",
     "timestamp": "2026-02-17T18:04:27+00:00"
@@ -4812,7 +4812,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Great Fire Wave.gif",
     "version": "12.55.10451",
     "status": "active",
     "timestamp": "2026-02-17T18:01:33+00:00"
@@ -4845,7 +4845,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Restoration.gif",
     "version": "12.55.10451",
     "status": "active",
     "timestamp": "2026-02-17T18:04:19+00:00"
@@ -4878,7 +4878,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Nature's Embrace.gif",
     "version": "12.55.10451",
     "status": "active",
     "timestamp": "2026-02-17T18:03:41+00:00"
@@ -4911,7 +4911,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Fair Wound Cleansing.gif",
     "version": "12.55.10451",
     "status": "active",
     "timestamp": "2026-02-17T18:00:41+00:00"
@@ -4944,7 +4944,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Cancel Magic Shield.gif",
     "version": "12.55.10451",
     "status": "active",
     "timestamp": "2026-02-17T17:58:13+00:00"
@@ -4977,7 +4977,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Chivalrous Challenge.gif",
     "version": "12.55.10451",
     "status": "active",
     "timestamp": "2026-02-17T17:58:28+00:00"
@@ -5010,7 +5010,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Divine Dazzle.gif",
     "version": "12.55.10451",
     "status": "active",
     "timestamp": "2026-02-17T17:59:42+00:00"
@@ -5043,7 +5043,7 @@
     "druid": 1,
     "paladin": 1,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Find Fiend.gif",
     "version": "12.80.11430",
     "status": "active",
     "timestamp": "2026-02-17T18:00:46+00:00"
@@ -5076,7 +5076,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Executioner's Throw.gif",
     "version": "13.10.12852",
     "status": "active",
     "timestamp": "2026-02-17T18:00:32+00:00"
@@ -5109,7 +5109,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Divine Empowerment.gif",
     "version": "13.10.12852",
     "status": "active",
     "timestamp": "2026-02-17T17:59:44+00:00"
@@ -5142,7 +5142,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Great Death Beam.gif",
     "version": "13.10.12852",
     "status": "active",
     "timestamp": "2026-02-17T18:01:28+00:00"
@@ -5175,7 +5175,7 @@
     "druid": 1,
     "paladin": 1,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Gift of Life.gif",
     "version": "13.10.12852",
     "status": "active",
     "timestamp": "2026-04-02T10:02:03+00:00"
@@ -5208,7 +5208,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Ice Burst.gif",
     "version": "13.10.12852",
     "status": "active",
     "timestamp": "2026-02-17T18:02:05+00:00"
@@ -5241,7 +5241,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Divine Grenade.gif",
     "version": "13.10.12852",
     "status": "active",
     "timestamp": "2026-02-17T17:59:46+00:00"
@@ -5274,7 +5274,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Terra Burst.gif",
     "version": "13.10.12852",
     "status": "active",
     "timestamp": "2026-02-17T18:05:40+00:00"
@@ -5307,7 +5307,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Avatar of Light.gif",
     "version": "13.10.12852",
     "status": "active",
     "timestamp": "2026-02-17T17:57:23+00:00"
@@ -5340,7 +5340,7 @@
     "druid": 1,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Avatar of Nature.gif",
     "version": "13.10.12852",
     "status": "active",
     "timestamp": "2026-02-17T17:57:44+00:00"
@@ -5373,7 +5373,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Avatar of Storm.gif",
     "version": "13.10.12852",
     "status": "active",
     "timestamp": "2026-02-17T17:57:50+00:00"
@@ -5406,7 +5406,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Avatar of Steel.gif",
     "version": "13.10.12852",
     "status": "active",
     "timestamp": "2026-02-17T17:57:47+00:00"
@@ -5439,7 +5439,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Lesser Front Sweep.gif",
     "version": "13.32.14520",
     "status": "active",
     "timestamp": "2026-02-17T18:02:46+00:00"
@@ -5472,7 +5472,7 @@
     "druid": 0,
     "paladin": 1,
     "monk": 0,
-    "image": null,
+    "image": "data/images/spell/Lesser Ethereal Spear.gif",
     "version": "13.32.14520",
     "status": "active",
     "timestamp": "2026-02-17T18:02:43+00:00"
@@ -5505,7 +5505,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Mentor Other.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T18:03:30+00:00"
@@ -5538,7 +5538,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Focus Serenity.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T18:01:13+00:00"
@@ -5571,7 +5571,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Greater Flurry of Blows.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T18:01:41+00:00"
@@ -5604,7 +5604,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Chained Penance.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T17:58:15+00:00"
@@ -5637,7 +5637,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Sweeping Takedown.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T18:05:29+00:00"
@@ -5670,7 +5670,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Mass Spirit Mend.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T18:03:27+00:00"
@@ -5703,7 +5703,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Double Jab.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T17:59:54+00:00"
@@ -5736,7 +5736,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Flurry of Blows.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T18:01:08+00:00"
@@ -5769,7 +5769,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Mystic Repulse.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T18:03:38+00:00"
@@ -5802,7 +5802,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Swift Jab.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T18:05:34+00:00"
@@ -5835,7 +5835,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Summon Monk Familiar.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T18:05:22+00:00"
@@ -5868,7 +5868,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Avatar of Balance.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T17:57:19+00:00"
@@ -5901,7 +5901,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Balanced Brawl.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T17:57:53+00:00"
@@ -5934,7 +5934,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Devastating Knockout.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T17:59:34+00:00"
@@ -5967,7 +5967,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Enlighten Party.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T18:00:21+00:00"
@@ -6000,7 +6000,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Focus Harmony.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T18:01:11+00:00"
@@ -6033,7 +6033,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Forceful Uppercut.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T18:01:22+00:00"
@@ -6066,7 +6066,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Greater Tiger Clash.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T18:01:43+00:00"
@@ -6099,7 +6099,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Restore Balance.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T18:04:22+00:00"
@@ -6132,7 +6132,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Spirit Mend.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T18:04:40+00:00"
@@ -6165,7 +6165,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Spiritual Outburst.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T18:04:42+00:00"
@@ -6198,7 +6198,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Tiger Clash.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T18:05:53+00:00"
@@ -6231,7 +6231,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Virtue of Harmony.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T18:06:34+00:00"
@@ -6264,7 +6264,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Virtue of Justice.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T18:06:36+00:00"
@@ -6297,7 +6297,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Virtue of Sustain.gif",
     "version": "15.00.249ccc",
     "status": "active",
     "timestamp": "2026-02-17T18:06:42+00:00"
@@ -6330,7 +6330,7 @@
     "druid": 0,
     "paladin": 0,
     "monk": 1,
-    "image": null,
+    "image": "data/images/spell/Lesser Mystic Repulse.gif",
     "version": "15.12.c7d92c",
     "status": "active",
     "timestamp": "2026-02-17T18:02:51+00:00"

@@ -68,8 +68,9 @@
     }
     </script>
     <style>
-      html, body { height: 100%; margin: 0; overflow: hidden; background: radial-gradient(120% 100% at 50% 0%, #152238 0%, #0a0f18 55%, #050810 100%); color: #e2e8f0; font-family: "Segoe UI", system-ui, -apple-system, Roboto, Ubuntu, sans-serif; }
-      #phaser { width: 100vw; height: 100vh; position: relative; }
+      html, body { height: 100%; margin: 0; overflow: hidden; background: radial-gradient(120% 100% at 50% 0%, #152238 0%, #0a0f18 55%, #050810 100%); color: #e2e8f0; font-family: "Segoe UI", system-ui, -apple-system, Roboto, Ubuntu, sans-serif; display: flex; flex-direction: row; }
+      .center-col { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+      #phaser { flex-shrink: 0; position: relative; overflow: hidden; }
       #phaser::after {
         content: "";
         position: absolute;
@@ -79,11 +80,172 @@
         background: repeating-linear-gradient(180deg, transparent, transparent 2px, rgba(0, 0, 0, 0.04) 2px, rgba(0, 0, 0, 0.04) 4px);
         mix-blend-mode: multiply;
       }
+      /* ── Stats bar (panel 1) ─────────────────────── */
+      #statsBar {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 10px;
+        background: rgba(8, 14, 26, 0.97);
+        border-bottom: 1px solid rgba(56, 189, 248, 0.18);
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        min-height: 30px;
+      }
+      .sb-divider { width: 1px; height: 18px; background: rgba(56,189,248,0.18); flex-shrink: 0; }
+      .sb-section { display: flex; align-items: center; gap: 5px; }
+      .sb-tag { color: #64748b; font-size: 10px; letter-spacing: 0.04em; }
+      .sb-val { color: #e2e8f0; }
+      .sb-hi { color: #fbbf24; }
+      .sb-bar-wrap { display: flex; align-items: center; gap: 4px; }
+      .sb-bar-label { font-size: 10px; font-weight: 700; letter-spacing: 0.05em; flex-shrink: 0; }
+      .sb-bar-track {
+        position: relative; width: 90px; height: 11px;
+        background: rgba(12,21,38,0.9);
+        border: 1px solid rgba(71,85,105,0.55);
+        border-radius: 6px; overflow: hidden; flex-shrink: 0;
+      }
+      .sb-bar-fill { position: absolute; left:0; top:0; bottom:0; border-radius:6px; transition: width 0.25s ease; }
+      .sb-bar-text { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:700; color:rgba(255,255,255,0.9); text-shadow:0 1px 2px rgba(0,0,0,0.9); pointer-events:none; }
+      .sb-hp-fill { background: linear-gradient(90deg,#991b1b,#ef4444); box-shadow:0 0 4px rgba(239,68,68,0.4); }
+      .sb-mp-fill { background: linear-gradient(90deg,#1d4ed8,#60a5fa); box-shadow:0 0 4px rgba(96,165,250,0.4); }
+      /* ── Spell bar (panel 2) ─────────────────────── */
+      #spellBar {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        background: rgba(6, 11, 22, 0.97);
+        border-bottom: 1px solid rgba(56, 189, 248, 0.18);
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: thin;
+        scrollbar-color: #334155 transparent;
+        min-height: 0;
+      }
+      #spellBarSlots { display: flex; gap: 4px; align-items: flex-end; }
+      .spell-slot {
+        flex-shrink: 0; width: 46px;
+        display: flex; flex-direction: column; align-items: center; gap: 2px;
+        position: relative; cursor: default;
+      }
+      .spell-slot-key {
+        position: absolute; top: 1px; left: 1px;
+        background: rgba(0,0,0,0.75); color: #fbbf24;
+        font-size: 8px; font-weight: 800;
+        padding: 1px 2px; border-radius: 3px; line-height: 1; z-index: 1;
+      }
+      .spell-slot-img-wrap {
+        width: 34px; height: 34px;
+        border: 1px solid rgba(71,85,105,0.5); border-radius: 6px;
+        background: rgba(12,21,38,0.85);
+        display: flex; align-items: center; justify-content: center;
+        overflow: hidden; position: relative;
+      }
+      .spell-slot.active .spell-slot-img-wrap { border-color: rgba(56,189,248,0.55); background: rgba(56,189,248,0.08); }
+      .spell-slot.empty .spell-slot-img-wrap { opacity: 0.25; }
+      .spell-slot-img { width: 30px; height: 30px; object-fit: contain; image-rendering: pixelated; }
+      .spell-slot-name { font-size: 7px; color: #64748b; text-align: center; max-width: 46px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.2; }
+      .spell-slot.active .spell-slot-name { color: #94a3b8; }
+      .spell-slot.no-key .spell-slot-img-wrap { border-color: rgba(100,116,139,0.35); }
+      #gameUiBar {
+        flex-shrink: 0;
+        background: rgba(7, 13, 24, 0.97);
+        border-top: 1px solid rgba(56, 189, 248, 0.2);
+        padding: 5px 10px 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        min-height: 0;
+      }
+      #gameXpBarWrap {
+        position: relative;
+        height: 11px;
+        background: rgba(12, 21, 38, 0.96);
+        border: 1px solid rgba(71, 85, 105, 0.85);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+      #gameXpBarFill {
+        position: absolute;
+        left: 0; top: 1px; bottom: 1px;
+        background: linear-gradient(90deg, #b45309, #fbbf24);
+        border-radius: 999px;
+        width: 0%;
+        transition: width 0.3s ease;
+        box-shadow: 0 0 6px rgba(251, 191, 36, 0.35);
+      }
+      #gameXpBarText {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: 700;
+        color: #f8fafc;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+        pointer-events: none;
+        letter-spacing: 0.05em;
+      }
+      .game-log-row {
+        font-size: 12px;
+        font-weight: 600;
+        color: #e8f0ff;
+        line-height: 1.3;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        min-height: 16px;
+      }
+      .left-sidebar {
+        width: 216px;
+        flex-shrink: 0;
+        height: 100vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 8px 6px;
+        box-sizing: border-box;
+        scrollbar-width: thin;
+        scrollbar-color: #334155 transparent;
+      }
+      .right-sidebar {
+        width: 268px;
+        flex-shrink: 0;
+        height: 100vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 8px 6px;
+        box-sizing: border-box;
+        scrollbar-width: thin;
+        scrollbar-color: #334155 transparent;
+      }
+      .minimap-panel {
+        flex-shrink: 0;
+        border: 1px solid rgba(56, 189, 248, 0.28);
+        border-radius: 8px;
+        overflow: hidden;
+        background: rgba(5, 10, 20, 0.92);
+        line-height: 0;
+      }
+      #minimapCanvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        image-rendering: pixelated;
+      }
       .equipment-panel {
-        position: fixed;
-        right: 206px;
-        top: 14px;
-        width: 250px;
         padding: 10px;
         border: 1px solid rgba(56, 189, 248, 0.22);
         border-radius: 12px;
@@ -91,13 +253,9 @@
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset, 0 0 28px rgba(56, 189, 248, 0.08);
-        z-index: 6;
+        flex-shrink: 0;
       }
       .loot-panel {
-        position: fixed;
-        right: 206px;
-        top: 340px;
-        width: 250px;
         padding: 10px;
         border: 1px solid rgba(56, 189, 248, 0.22);
         border-radius: 12px;
@@ -105,13 +263,9 @@
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset, 0 0 28px rgba(56, 189, 248, 0.08);
-        z-index: 6;
+        flex-shrink: 0;
       }
       .spells-panel {
-        position: fixed;
-        right: -8px;
-        top: 14px;
-        width: 198px;
         padding: 8px;
         border: 1px solid rgba(56, 189, 248, 0.22);
         border-radius: 12px;
@@ -119,7 +273,7 @@
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset, 0 0 28px rgba(56, 189, 248, 0.08);
-        z-index: 6;
+        flex-shrink: 0;
       }
       .equipment-title {
         margin: 0;
@@ -242,10 +396,6 @@
         color: #94a3b8;
       }
       .stats-panel {
-        position: fixed;
-        right: -8px;
-        top: 760px;
-        width: 198px;
         padding: 8px;
         border: 1px solid rgba(56, 189, 248, 0.22);
         border-radius: 12px;
@@ -253,7 +403,7 @@
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset, 0 0 28px rgba(56, 189, 248, 0.08);
-        z-index: 6;
+        flex-shrink: 0;
       }
       .stats-title {
         margin: 0;
@@ -332,13 +482,13 @@
         display: flex;
         flex-direction: column;
         height: auto;
-        max-height: 62vh;
+        max-height: 38vh;
       }
       .spells-grid {
         display: grid;
         grid-template-columns: 1fr;
         gap: 3px;
-        max-height: 56vh;
+        max-height: 32vh;
         flex: 0 1 auto;
         min-height: 0;
         overflow: auto;
@@ -378,10 +528,6 @@
         color: #94a3b8;
       }
       .learned-spells-panel {
-        position: fixed;
-        right: -8px;
-        top: 484px;
-        width: 198px;
         padding: 8px;
         border: 1px solid rgba(56, 189, 248, 0.22);
         border-radius: 12px;
@@ -389,7 +535,7 @@
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset, 0 0 28px rgba(56, 189, 248, 0.08);
-        z-index: 6;
+        flex-shrink: 0;
       }
       .learned-spells-title {
         margin: 0;
@@ -439,10 +585,6 @@
         color: #94a3b8;
       }
       .items-shop-panel {
-        position: fixed;
-        right: -8px;
-        top: 676px;
-        width: 198px;
         padding: 8px;
         border: 1px solid rgba(56, 189, 248, 0.22);
         border-radius: 12px;
@@ -450,7 +592,7 @@
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04) inset, 0 0 28px rgba(56, 189, 248, 0.08);
-        z-index: 6;
+        flex-shrink: 0;
       }
       .items-shop-title {
         margin: 0;
@@ -605,17 +747,6 @@
       .loot-context-menu button:hover {
         background: #7f1d1d;
       }
-      @media (max-width: 1120px) {
-        .equipment-panel { width: 210px; }
-        .equipment-slot { height: 56px; }
-        .equipment-panel { right: 182px; }
-        .loot-panel { width: 210px; top: 330px; right: 182px; }
-        .stats-panel { width: 176px; top: 760px; right: -8px; }
-        .spells-panel { width: 176px; top: 14px; right: -8px; }
-        .spells-content { height: auto; max-height: 62vh; }
-        .learned-spells-panel { width: 176px; top: 484px; right: -8px; }
-        .items-shop-panel { width: 176px; top: 676px; right: -8px; }
-      }
       .overlay {
         position: fixed; inset: 0; z-index: 10;
         background: radial-gradient(ellipse at 50% 30%, rgba(14,22,44,0.97) 0%, rgba(4,8,18,0.99) 100%);
@@ -708,7 +839,108 @@
     <script src="https://unpkg.com/phaser@3/dist/phaser.min.js"></script>
   </head>
   <body>
-    <div id="phaser"></div>
+    <!-- Left sidebar: Spells, Learned, Items Shop, Top Stats -->
+    <div class="left-sidebar">
+    <aside class="spells-panel" aria-label="Spells panel">
+      <details class="spells-accordion" id="spellsAccordion">
+        <summary class="spells-title">Spells Shop</summary>
+        <div class="spells-content">
+          <div class="spells-grid" id="spellsGrid"></div>
+          <div class="spells-foot" id="spellsFoot">Gold: 0</div>
+        </div>
+      </details>
+    </aside>
+    <aside class="learned-spells-panel" id="learnedSpellsPanel" aria-label="Learned spells panel">
+      <details class="learned-spells-accordion" id="learnedSpellsAccordion">
+        <summary class="learned-spells-title">Learned Spells</summary>
+        <div class="learned-spells-content">
+          <div class="learned-spells-grid" id="learnedSpellsGrid"></div>
+          <div class="learned-spells-foot" id="learnedSpellsFoot">Total: 0</div>
+        </div>
+      </details>
+    </aside>
+    <aside class="items-shop-panel" id="itemsShopPanel" aria-label="Items shop panel">
+      <details class="items-shop-accordion" id="itemsShopAccordion">
+        <summary class="items-shop-title">Items Shop</summary>
+        <div class="items-shop-content">
+          <input id="itemsShopSearchInput" class="items-shop-search" type="text" maxlength="64" placeholder="Search item (3+ chars)" />
+          <div class="items-shop-grid" id="itemsShopGrid"></div>
+          <div class="items-shop-foot" id="itemsShopFoot">Type at least 3 chars</div>
+        </div>
+      </details>
+    </aside>
+    <aside class="stats-panel" id="statsPanel" aria-label="Stats panel">
+      <details class="stats-accordion" id="statsAccordion">
+        <summary class="stats-title">Top Stats</summary>
+        <div class="stats-content">
+          <div class="stats-grid" id="statsGrid"></div>
+          <div class="stats-foot" id="statsFoot">Showing top 5 by level</div>
+        </div>
+      </details>
+    </aside>
+    </div>
+
+    <div class="center-col">
+      <!-- Panel 1: Player stats -->
+      <div id="statsBar">
+        <div class="sb-section">
+          <span id="sbCharName" class="sb-val">-</span>
+          <div class="sb-divider"></div>
+          <span class="sb-tag">Lv</span><span id="sbLevel" class="sb-hi">1</span>
+          <div class="sb-divider"></div>
+          <span class="sb-tag">Floor</span><span id="sbFloor" class="sb-hi">1</span>
+          <div class="sb-divider"></div>
+          <span id="sbCreatures" class="sb-val">-</span>
+        </div>
+        <div class="sb-divider"></div>
+        <div class="sb-bar-wrap">
+          <span class="sb-bar-label" style="color:#f87171">HP</span>
+          <div class="sb-bar-track">
+            <div class="sb-bar-fill sb-hp-fill" id="sbHpFill" style="width:100%"></div>
+            <div class="sb-bar-text" id="sbHpText">-/-</div>
+          </div>
+        </div>
+        <div class="sb-bar-wrap">
+          <span class="sb-bar-label" style="color:#60a5fa">MP</span>
+          <div class="sb-bar-track">
+            <div class="sb-bar-fill sb-mp-fill" id="sbMpFill" style="width:100%"></div>
+            <div class="sb-bar-text" id="sbMpText">-/-</div>
+          </div>
+        </div>
+        <div class="sb-divider"></div>
+        <div class="sb-section">
+          <span class="sb-tag">ML</span><span id="sbML" class="sb-val">0</span>
+          <div class="sb-divider"></div>
+          <span id="sbSkill" class="sb-val">-</span>
+          <div class="sb-divider"></div>
+          <span class="sb-tag">Fist</span><span id="sbFist" class="sb-val">10</span>
+          <div class="sb-divider"></div>
+          <span class="sb-tag">Shield</span><span id="sbShield" class="sb-val">10</span>
+          <div class="sb-divider"></div>
+          <span id="sbCap" class="sb-val">-</span>
+        </div>
+      </div>
+      <!-- Panel 2: Spell hotkey bar -->
+      <div id="spellBar">
+        <div id="spellBarSlots"></div>
+      </div>
+      <div id="phaser"></div>
+      <div id="gameUiBar">
+        <div id="gameXpBarWrap">
+          <div id="gameXpBarFill"></div>
+          <div id="gameXpBarText">XP 0 / 50</div>
+        </div>
+        <div class="game-log-row" id="gameLog0"></div>
+        <div class="game-log-row" id="gameLog1"></div>
+        <div class="game-log-row" id="gameLog2"></div>
+      </div>
+    </div>
+
+    <!-- Right sidebar: Minimap + Equipment + Loot -->
+    <div class="right-sidebar">
+    <div class="minimap-panel" aria-label="Minimap">
+      <canvas id="minimapCanvas"></canvas>
+    </div>
     <aside class="equipment-panel" aria-label="Equipment panel">
       <details class="equipment-accordion" id="equipmentAccordion" open>
         <summary class="equipment-title">Equipment</summary>
@@ -783,43 +1015,7 @@
         </div>
       </details>
     </aside>
-    <aside class="stats-panel" id="statsPanel" aria-label="Stats panel">
-      <details class="stats-accordion" id="statsAccordion">
-        <summary class="stats-title">Top Stats</summary>
-        <div class="stats-content">
-          <div class="stats-grid" id="statsGrid"></div>
-          <div class="stats-foot" id="statsFoot">Showing top 5 by level</div>
-        </div>
-      </details>
-    </aside>
-    <aside class="spells-panel" aria-label="Spells panel">
-      <details class="spells-accordion" id="spellsAccordion">
-        <summary class="spells-title">Spells Shop</summary>
-        <div class="spells-content">
-          <div class="spells-grid" id="spellsGrid"></div>
-          <div class="spells-foot" id="spellsFoot">Gold: 0</div>
-        </div>
-      </details>
-    </aside>
-    <aside class="learned-spells-panel" id="learnedSpellsPanel" aria-label="Learned spells panel">
-      <details class="learned-spells-accordion" id="learnedSpellsAccordion">
-        <summary class="learned-spells-title">Learned Spells</summary>
-        <div class="learned-spells-content">
-          <div class="learned-spells-grid" id="learnedSpellsGrid"></div>
-          <div class="learned-spells-foot" id="learnedSpellsFoot">Total: 0</div>
-        </div>
-      </details>
-    </aside>
-    <aside class="items-shop-panel" id="itemsShopPanel" aria-label="Items shop panel">
-      <details class="items-shop-accordion" id="itemsShopAccordion">
-        <summary class="items-shop-title">Items Shop</summary>
-        <div class="items-shop-content">
-          <input id="itemsShopSearchInput" class="items-shop-search" type="text" maxlength="64" placeholder="Search item (3+ chars)" />
-          <div class="items-shop-grid" id="itemsShopGrid"></div>
-          <div class="items-shop-foot" id="itemsShopFoot">Type at least 3 chars</div>
-        </div>
-      </details>
-    </aside>
+    </div><!-- end right-sidebar -->
     <div id="itemTooltip" class="item-tooltip" aria-hidden="true"></div>
     <div id="lootContextMenu" class="loot-context-menu" aria-hidden="true">
       <button id="discardLootBtn" type="button">Discard</button>

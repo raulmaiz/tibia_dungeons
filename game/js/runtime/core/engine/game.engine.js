@@ -1513,9 +1513,13 @@ function startGame(configPlayer) {
   const tileSize = 40;
   const mapWidth = MAP_W * tileSize;
   const mapHeight = MAP_H * tileSize;
-  const width = Math.min(window.innerWidth, mapWidth);
-  const desiredHeight = mapHeight + UI_BOTTOM_SPACE;
-  const height = Math.min(window.innerHeight, desiredHeight);
+  const LEFT_SIDEBAR_W = 216;
+  const RIGHT_SIDEBAR_W = 268;
+  // Reserve space for: statsBar (~30px) + spellBar (~58px) + gameUiBar (~72px)
+  const TOP_PANELS_H = 88;
+  const BOTTOM_BAR_H = 72;
+  const width = Math.min(window.innerWidth - LEFT_SIDEBAR_W - RIGHT_SIDEBAR_W, mapWidth);
+  const height = Math.min(window.innerHeight - TOP_PANELS_H - BOTTOM_BAR_H, mapHeight);
 
   game = new Phaser.Game({
     type: Phaser.AUTO,
@@ -1635,104 +1639,39 @@ function startGame(configPlayer) {
         playerManaBar.fill.setDepth(29);
         playerNameTag.setDepth(31);
 
-        const nameLabel = this.add.text(12, 10, `${configPlayer.name} | Player Lv 1`, {
-          color: '#e5e7eb',
-          fontSize: '16px',
-          fontStyle: 'bold',
-        });
-        nameLabel.setScrollFactor(0);
-        nameLabel.setDepth(510);
-        nameLabel.setStroke('#020617', 4);
+        // ── Stats bar DOM refs ────────────────────────────────────────────────
+        const sbCharName = document.getElementById('sbCharName');
+        const sbLevel = document.getElementById('sbLevel');
+        const sbFloor = document.getElementById('sbFloor');
+        const sbCreatures = document.getElementById('sbCreatures');
+        const sbHpFill = document.getElementById('sbHpFill');
+        const sbHpText = document.getElementById('sbHpText');
+        const sbMpFill = document.getElementById('sbMpFill');
+        const sbMpText = document.getElementById('sbMpText');
+        const sbML = document.getElementById('sbML');
+        const sbSkill = document.getElementById('sbSkill');
+        const sbFist = document.getElementById('sbFist');
+        const sbShield = document.getElementById('sbShield');
+        const sbCap = document.getElementById('sbCap');
+        const capitalise = (s) => String(s || '').charAt(0).toUpperCase() + String(s || '').slice(1);
 
-        const combatHud = this.add.text(this.scale.width - 12, 10, '', {
-          color: '#fca5a5',
-          fontSize: '13px',
-          fontStyle: 'bold',
-        });
-        combatHud.setOrigin(1, 0);
-        combatHud.setScrollFactor(0);
-        combatHud.setDepth(510);
-        combatHud.setStroke('#1e1b4b', 3);
-        const levelHud = this.add.text(this.scale.width / 2, 10, '', {
-          color: '#93c5fd',
-          fontSize: '13px',
-          fontStyle: 'bold',
-        });
-        levelHud.setOrigin(0.5, 0);
-        levelHud.setScrollFactor(0);
-        levelHud.setDepth(510);
-        levelHud.setStroke('#0c4a6e', 3);
-
-        const uiBaseY = mapHeight - (tileSize * UI_OVERLAP_ROWS);
-        const logPanel = this.add.rectangle(
-          this.scale.width / 2,
-          uiBaseY + 52,
-          this.scale.width - 16,
-          58,
-          0x070d18,
-          0.82
-        );
-        logPanel.setStrokeStyle(1, 0x38bdf8, 0.35);
-        logPanel.setScrollFactor(0);
-        logPanel.setDepth(500);
-        const levelProgressBg = this.add.rectangle(
-          this.scale.width / 2,
-          uiBaseY + 21,
-          this.scale.width - 16,
-          11,
-          0x0c1526,
-          0.96
-        );
-        levelProgressBg.setStrokeStyle(1, 0x475569, 0.85);
-        levelProgressBg.setScrollFactor(0);
-        levelProgressBg.setDepth(500);
-        const levelProgressFill = this.add.rectangle(
-          8,
-          uiBaseY + 21,
-          this.scale.width - 18,
-          8,
-          0xfbbf24,
-          1
-        );
-        levelProgressFill.setOrigin(0, 0.5);
-        levelProgressFill.setScrollFactor(0);
-        levelProgressFill.setDepth(501);
-        levelProgressFill.setStrokeStyle(1, 0xfde68a, 0.5);
-        const levelProgressText = this.add.text(this.scale.width / 2, uiBaseY + 21, '', {
-          color: '#f8fafc',
-          fontSize: '11px',
-          fontStyle: 'bold',
-        });
-        levelProgressText.setOrigin(0.5, 0.5);
-        levelProgressText.setStroke('#0b1220', 3);
-        levelProgressText.setScrollFactor(0);
-        levelProgressText.setDepth(502);
         const LOG_COLORS = {
           DEFAULT: '#e8f0ff',
           HIT: '#cbd5e1',
           CRIT: '#fde047',
           SPELL: '#7dd3fc',
         };
-        const combatLogRows = [0, 1, 2].map((idx) => {
-          const row = this.add.text(14, uiBaseY + 32 + idx * 14, '', {
-            color: LOG_COLORS.DEFAULT,
-            fontSize: '12px',
-            fontStyle: 'bold',
-            wordWrap: { width: this.scale.width - 28 },
-          });
-          row.setScrollFactor(0);
-          row.setDepth(503);
-          row.setStroke('#020617', 3);
-          return row;
-        });
+        const gameLogEls = [0, 1, 2].map((i) => document.getElementById(`gameLog${i}`));
         const combatLogLines = [];
         const addCombatLog = (msg, color = LOG_COLORS.DEFAULT) => {
           combatLogLines.push({ msg, color });
           if (combatLogLines.length > 3) combatLogLines.shift();
-          for (let i = 0; i < combatLogRows.length; i += 1) {
+          for (let i = 0; i < gameLogEls.length; i += 1) {
+            const el = gameLogEls[i];
+            if (!el) continue;
             const line = combatLogLines[i];
-            combatLogRows[i].setText(line ? String(line.msg) : '');
-            combatLogRows[i].setColor(line ? line.color : LOG_COLORS.DEFAULT);
+            el.textContent = line ? String(line.msg) : '';
+            el.style.color = line ? line.color : LOG_COLORS.DEFAULT;
           }
         };
         onPanelLog = addCombatLog;
@@ -1778,98 +1717,87 @@ function startGame(configPlayer) {
         ropeHintRect.setVisible(false);
         ropeHintText.setVisible(false);
 
-        // ── Minimap ──────────────────────────────────────────────────────────
-        const MMAP_TILE = 3;       // px per dungeon tile on the minimap
-        const MMAP_PAD = 5;        // inner padding
-        const MMAP_MARGIN_TOP = 30;
-        const MMAP_MARGIN_RIGHT = 8;
-
-        // Base layer: static map structure, redrawn per floor
-        const minimapBaseGfx = this.add.graphics();
-        minimapBaseGfx.setScrollFactor(0);
-        minimapBaseGfx.setDepth(552);
-
-        // Dynamic layer: player + monsters, redrawn periodically
-        const minimapDynGfx = this.add.graphics();
-        minimapDynGfx.setScrollFactor(0);
-        minimapDynGfx.setDepth(553);
-
-        const minimapLeft = () => this.scale.width - dungeonW * MMAP_TILE - MMAP_PAD * 2 - MMAP_MARGIN_RIGHT;
-        const minimapTop = () => MMAP_MARGIN_TOP;
+        // ── Minimap (HTML canvas in right sidebar) ───────────────────────────
+        const MMAP_PAD = 5;
+        const minimapCanvas = /** @type {HTMLCanvasElement|null} */ (document.getElementById('minimapCanvas'));
+        const minimapCtx = minimapCanvas ? minimapCanvas.getContext('2d') : null;
+        let minimapMMTile = 3; // tile size in px, updated each floor
+        let minimapBaseImageData = null;
 
         const drawMinimapBase = () => {
-          const mmW = dungeonW * MMAP_TILE + MMAP_PAD * 2;
-          const mmH = dungeonH * MMAP_TILE + MMAP_PAD * 2;
-          const mmX = minimapLeft();
-          const mmY = minimapTop();
+          if (!minimapCtx || !minimapCanvas) return;
+          const containerW = (minimapCanvas.parentElement && minimapCanvas.parentElement.clientWidth) || 252;
+          minimapMMTile = Math.max(2, Math.floor((containerW - MMAP_PAD * 2) / dungeonW));
+          const mmW = dungeonW * minimapMMTile + MMAP_PAD * 2;
+          const mmH = dungeonH * minimapMMTile + MMAP_PAD * 2;
+          minimapCanvas.width = mmW;
+          minimapCanvas.height = mmH;
 
-          minimapBaseGfx.clear();
-
-          // Dark panel background
-          minimapBaseGfx.fillStyle(0x050a14, 0.82);
-          minimapBaseGfx.fillRect(mmX, mmY, mmW, mmH);
-          minimapBaseGfx.lineStyle(1, 0x38bdf8, 0.35);
-          minimapBaseGfx.strokeRect(mmX, mmY, mmW, mmH);
-
+          // Background
+          minimapCtx.fillStyle = 'rgba(5,10,20,0.95)';
+          minimapCtx.fillRect(0, 0, mmW, mmH);
+          // Border
+          minimapCtx.strokeStyle = 'rgba(56,189,248,0.35)';
+          minimapCtx.lineWidth = 1;
+          minimapCtx.strokeRect(0.5, 0.5, mmW - 1, mmH - 1);
           // Floor tiles
+          minimapCtx.fillStyle = '#2a3a52';
           for (let gy = 0; gy < dungeonH; gy++) {
             const row = currentMap[gy];
             if (!row) continue;
             for (let gx = 0; gx < dungeonW; gx++) {
               if (row[gx] === '.') {
-                minimapBaseGfx.fillStyle(0x2a3a52, 1);
-                minimapBaseGfx.fillRect(
-                  mmX + MMAP_PAD + gx * MMAP_TILE,
-                  mmY + MMAP_PAD + gy * MMAP_TILE,
-                  MMAP_TILE,
-                  MMAP_TILE
+                minimapCtx.fillRect(
+                  MMAP_PAD + gx * minimapMMTile,
+                  MMAP_PAD + gy * minimapMMTile,
+                  minimapMMTile,
+                  minimapMMTile
                 );
               }
             }
           }
-
           // Stairs down (yellow-orange)
-          minimapBaseGfx.fillStyle(0xfbbf24, 1);
-          minimapBaseGfx.fillRect(
-            mmX + MMAP_PAD + currentStairsTile.gx * MMAP_TILE - 1,
-            mmY + MMAP_PAD + currentStairsTile.gy * MMAP_TILE - 1,
-            MMAP_TILE + 2,
-            MMAP_TILE + 2
+          minimapCtx.fillStyle = '#fbbf24';
+          minimapCtx.fillRect(
+            MMAP_PAD + currentStairsTile.gx * minimapMMTile - 1,
+            MMAP_PAD + currentStairsTile.gy * minimapMMTile - 1,
+            minimapMMTile + 2,
+            minimapMMTile + 2
           );
-
           // Stairs up / rope (sky-blue)
-          minimapBaseGfx.fillStyle(0x38bdf8, 1);
-          minimapBaseGfx.fillRect(
-            mmX + MMAP_PAD + START_TILE.gx * MMAP_TILE - 1,
-            mmY + MMAP_PAD + START_TILE.gy * MMAP_TILE - 1,
-            MMAP_TILE + 2,
-            MMAP_TILE + 2
+          minimapCtx.fillStyle = '#38bdf8';
+          minimapCtx.fillRect(
+            MMAP_PAD + START_TILE.gx * minimapMMTile - 1,
+            MMAP_PAD + START_TILE.gy * minimapMMTile - 1,
+            minimapMMTile + 2,
+            minimapMMTile + 2
           );
+          // Save static snapshot for fast dynamic overlay
+          minimapBaseImageData = minimapCtx.getImageData(0, 0, mmW, mmH);
+          drawMinimapDynamic();
         };
 
         const drawMinimapDynamic = () => {
-          const mmX = minimapLeft();
-          const mmY = minimapTop();
-          minimapDynGfx.clear();
-
+          if (!minimapCtx || !minimapBaseImageData) return;
+          minimapCtx.putImageData(minimapBaseImageData, 0, 0);
           // Alive creatures (red)
-          minimapDynGfx.fillStyle(0xf87171, 1);
-          for (const c of creatures.filter((cr) => cr.alive)) {
-            minimapDynGfx.fillRect(
-              mmX + MMAP_PAD + c.gx * MMAP_TILE,
-              mmY + MMAP_PAD + c.gy * MMAP_TILE,
-              MMAP_TILE,
-              MMAP_TILE
+          minimapCtx.fillStyle = '#f87171';
+          for (const c of creatures) {
+            if (!c.alive) continue;
+            minimapCtx.fillRect(
+              MMAP_PAD + c.gx * minimapMMTile,
+              MMAP_PAD + c.gy * minimapMMTile,
+              minimapMMTile,
+              minimapMMTile
             );
           }
-
-          // Player (bright white)
-          minimapDynGfx.fillStyle(0xffffff, 1);
-          minimapDynGfx.fillRect(
-            mmX + MMAP_PAD + gridX * MMAP_TILE,
-            mmY + MMAP_PAD + gridY * MMAP_TILE,
-            MMAP_TILE,
-            MMAP_TILE
+          // Player (white)
+          minimapCtx.fillStyle = '#ffffff';
+          minimapCtx.fillRect(
+            MMAP_PAD + gridX * minimapMMTile,
+            MMAP_PAD + gridY * minimapMMTile,
+            minimapMMTile,
+            minimapMMTile
           );
         };
         // ── End Minimap setup ─────────────────────────────────────────────────
@@ -3343,7 +3271,74 @@ function startGame(configPlayer) {
           syncLootPanelPosition();
           syncLearnedPanelPosition();
           syncItemsShopPanelPosition();
+          renderSpellBar();
         };
+
+        const renderSpellBar = () => {
+          const slotsEl = document.getElementById('spellBarSlots');
+          if (!slotsEl) return;
+          slotsEl.innerHTML = '';
+          const spellById = new Map();
+          for (const s of spellsCatalog || []) spellById.set(Number(s.article_id), s);
+
+          // Hotkey slots 1-9
+          for (let i = 0; i < 9; i += 1) {
+            const spellId = learnedSpellSlots[i];
+            const spell = spellId != null ? spellById.get(Number(spellId)) : null;
+            const slot = document.createElement('div');
+            slot.className = `spell-slot ${spell ? 'active' : 'empty'}`;
+            // Key badge
+            const keyBadge = document.createElement('span');
+            keyBadge.className = 'spell-slot-key';
+            keyBadge.textContent = String(i + 1);
+            slot.appendChild(keyBadge);
+            // Image wrap
+            const imgWrap = document.createElement('div');
+            imgWrap.className = 'spell-slot-img-wrap';
+            if (spell && spell.image) {
+              const img = document.createElement('img');
+              img.className = 'spell-slot-img';
+              img.src = spell.image;
+              img.alt = spell.title;
+              imgWrap.appendChild(img);
+            }
+            slot.appendChild(imgWrap);
+            // Name
+            const nameEl = document.createElement('span');
+            nameEl.className = 'spell-slot-name';
+            nameEl.textContent = spell ? spell.title : '';
+            slot.appendChild(nameEl);
+            if (spell) slot.title = `[${i + 1}] ${spell.title}\n${spell.words}\nMana: ${spell.mana} | Lv: ${spell.level}`;
+            slotsEl.appendChild(slot);
+          }
+
+          // Unslotted learned spells (no hotkey assigned)
+          for (const spell of spellsCatalog || []) {
+            const id = Number(spell.article_id);
+            if (!learnedSpellIds.has(id)) continue;
+            if (learnedSpellSlots.some((s) => s != null && Number(s) === id)) continue;
+            if (isBlockedSpellTitle(spell.title)) continue;
+            const slot = document.createElement('div');
+            slot.className = 'spell-slot active no-key';
+            const imgWrap = document.createElement('div');
+            imgWrap.className = 'spell-slot-img-wrap';
+            if (spell.image) {
+              const img = document.createElement('img');
+              img.className = 'spell-slot-img';
+              img.src = spell.image;
+              img.alt = spell.title;
+              imgWrap.appendChild(img);
+            }
+            slot.appendChild(imgWrap);
+            const nameEl = document.createElement('span');
+            nameEl.className = 'spell-slot-name';
+            nameEl.textContent = spell.title;
+            slot.appendChild(nameEl);
+            slot.title = `${spell.title}\n${spell.words}\nMana: ${spell.mana} | Lv: ${spell.level}\n(no hotkey)`;
+            slotsEl.appendChild(slot);
+          }
+        };
+
         const renderSpellShop = () => {
           const spellsGrid = document.getElementById('spellsGrid');
           const spellsFoot = document.getElementById('spellsFoot');
@@ -3734,16 +3729,30 @@ function startGame(configPlayer) {
           if (typeof window !== 'undefined') {
             window.__gameHud = { ml: playerMagicLevel, pl: playerLevel };
           }
-          nameLabel.setText(`${configPlayer.name} (${playerClassKey}) | Player Lv ${playerLevel} | ML ${playerMagicLevel} | ${skillLabel} ${skillLevel}`);
-          levelHud.setText(`Floor ${currentLevel} | ${typeName} ${aliveCreatures().length}/${creaturesTargetCount}`);
-          combatHud.setText(`HP ${playerHp}/${playerMaxHp} MP ${playerMana}/${playerMaxMana} ML ${playerMagicLevel} ${skillLabel} ${skillLevel} (${skillPct}%) Fist ${playerFistLevel} Shield ${playerShieldingLevel} CAP ${capCurrentText}/${capTotalText}`);
+          // ── Stats bar HTML update ───────────────────────────────────────
+          if (sbCharName) sbCharName.textContent = `${configPlayer.name} (${capitalise(playerClassKey)})`;
+          if (sbLevel) sbLevel.textContent = String(playerLevel);
+          if (sbFloor) sbFloor.textContent = String(currentLevel);
+          if (sbCreatures) sbCreatures.textContent = `${typeName}  ${aliveCreatures().length}/${creaturesTargetCount}`;
+          const hpPct = playerMaxHp > 0 ? Phaser.Math.Clamp(playerHp / playerMaxHp, 0, 1) : 0;
+          const mpPct = playerMaxMana > 0 ? Phaser.Math.Clamp(playerMana / playerMaxMana, 0, 1) : 0;
+          if (sbHpFill) sbHpFill.style.width = `${(hpPct * 100).toFixed(1)}%`;
+          if (sbHpText) sbHpText.textContent = `${playerHp}/${playerMaxHp}`;
+          if (sbMpFill) sbMpFill.style.width = `${(mpPct * 100).toFixed(1)}%`;
+          if (sbMpText) sbMpText.textContent = `${playerMana}/${playerMaxMana}`;
+          if (sbML) sbML.textContent = String(playerMagicLevel);
+          if (sbSkill) sbSkill.textContent = `${skillLabel} ${skillLevel} (${skillPct}%)`;
+          if (sbFist) sbFist.textContent = String(playerFistLevel);
+          if (sbShield) sbShield.textContent = String(playerShieldingLevel);
+          if (sbCap) sbCap.textContent = `CAP ${capCurrentText}/${capTotalText}`;
           const xpNeeded = xpToNextLevel(playerLevel);
           const safeXp = Number.isFinite(playerXp) ? playerXp : 0;
           const progress = xpNeeded > 0 && Number.isFinite(safeXp) ? safeXp / xpNeeded : 0;
-          const totalWidth = this.scale.width - 18;
           const safeProgress = Number.isFinite(progress) ? Phaser.Math.Clamp(progress, 0, 1) : 0;
-          levelProgressFill.width = Math.max(2, totalWidth * safeProgress);
-          levelProgressText.setText(`XP ${Math.floor(safeXp)} / ${xpNeeded}`);
+          const xpBarFill = document.getElementById('gameXpBarFill');
+          const xpBarText = document.getElementById('gameXpBarText');
+          if (xpBarFill) xpBarFill.style.width = `${(safeProgress * 100).toFixed(1)}%`;
+          if (xpBarText) xpBarText.textContent = `XP ${Math.floor(safeXp)} / ${xpNeeded}`;
           renderSpellShop();
           renderItemsShop(itemsShopQuery);
           renderTopStatsPanel();

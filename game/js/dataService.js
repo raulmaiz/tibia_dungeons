@@ -219,6 +219,7 @@ export async function getSpellsCatalogWithPrices() {
       status: s.status || null,
       price,
       price_source: useOverride ? (override.source || 'internet') : 'estimated',
+      image: s.image || null,
       raw: { ...s },
     });
   }
