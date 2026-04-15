@@ -14,6 +14,7 @@ import {
 } from '../../../mechanics/progression.js';
 import { LootPityTracker } from '../../../mechanics/loot.js';
 import { generateLevelMap as buildDungeonLevelMap, computeDungeonSize } from '../../../dungeon/generator.js';
+import { createFloorAtmosphere } from './floorAtmosphere.js';
 import { wirePanelLayoutSync } from '../../../ui/panelLayout.js';
 import { isBlockedSpellTitle } from '../../../spells/filters.js';
 import { inferCreatureAbilityPattern } from '../../../creatures/abilityPatterns.js';
@@ -60,6 +61,111 @@ let creatureAbilitiesById = new Map();
 let creatureDamageModifiersById = new Map();
 let inventorySetEquippedSlotVisual = null;
 let inventoryClearEquippedSlotVisual = null;
+// Equipment-light bridge: the UI layer updates this whenever a Light Sources
+// item is equipped/unequipped. The scene wires it to
+// floorAtmosphere.setEquipmentLight once the atmosphere exists; the pending
+// state is applied on creation so pre-scene equips (starting torch) light up
+// as soon as the dungeon renders.
+let atmosphereSetEquipmentLight = () => {};
+let currentLightItemState = null; // { articleId, radius, duration, startTime, initialElapsed }
+const lightBurnElapsedByArticleId = new Map();
+function lightRadiusForLightSourceItem(item) {
+  const id = Number((item && (item.article_id || item.id)) || 0);
+  if (id === 1396) return 3; // Torch → utevo lux
+  if (id === 1671) return 6; // Magic Light Wand → utevo vis lux
+  return 4;                  // any other Light Sources → utevo gran lux
+}
+function parseDurationStringToMs(raw) {
+  if (!raw) return 0;
+  const s = String(raw).toLowerCase().trim();
+  const m = /^(\d+(?:\.\d+)?)\s*(second|minute|hour|day)s?$/.exec(s);
+  if (!m) return 0;
+  const n = parseFloat(m[1]);
+  const u = m[2];
+  const mult = { second: 1000, minute: 60000, hour: 3600000, day: 86400000 }[u];
+  return Math.round(n * mult);
+}
+const DEFAULT_LIGHT_DURATION_MS = 5 * 60 * 1000; // 5 min fallback when item has no duration attribute
+function durationMsFromItemAttrs(item) {
+  const attrs = Array.isArray(item && item.attributes) ? item.attributes : [];
+  const attr = attrs.find((a) => String((a && a.name) || '').toLowerCase() === 'duration');
+  const parsed = attr ? parseDurationStringToMs(attr.value) : 0;
+  return parsed > 0 ? parsed : DEFAULT_LIGHT_DURATION_MS;
+}
+function bridgeClockNow() {
+  return (typeof performance !== 'undefined' && typeof performance.now === 'function')
+    ? performance.now() : Date.now();
+}
+function applyEquipmentLightFromItem(item) {
+  const now = bridgeClockNow();
+  // First, snapshot accumulated burn time for any previously-lit item.
+  if (currentLightItemState) {
+    const cur = currentLightItemState;
+    const sessionElapsed = now - cur.startTime;
+    const total = cur.initialElapsed + sessionElapsed;
+    lightBurnElapsedByArticleId.set(cur.articleId, total);
+  }
+  if (!item) {
+    currentLightItemState = null;
+    atmosphereSetEquipmentLight(0, 0, 0);
+    return;
+  }
+  const articleId = Number(item.article_id || item.id || 0);
+  const radius = lightRadiusForLightSourceItem(item);
+  const durationMs = durationMsFromItemAttrs(item);
+  const initialElapsed = Number(lightBurnElapsedByArticleId.get(articleId) || 0);
+  if (durationMs > 0 && initialElapsed >= durationMs) {
+    // Fully burnt out — equip the item for inventory purposes but emit no light.
+    currentLightItemState = {
+      articleId, radius: 0, duration: durationMs, startTime: now, initialElapsed,
+    };
+    atmosphereSetEquipmentLight(0, 0, 0);
+    return;
+  }
+  currentLightItemState = {
+    articleId, radius, duration: durationMs, startTime: now, initialElapsed,
+  };
+  atmosphereSetEquipmentLight(radius, durationMs, initialElapsed);
+  updateEquippedLightSlotImage();
+}
+// Slot icon for the equipped light item — changes as the flame burns down.
+function getLightItemImage(articleId, elapsed, duration) {
+  if (Number(articleId) === 1396) { // Torch
+    if (!(duration > 0)) return 'item/Lit Torch (Sparkling).gif';
+    const remaining = duration - elapsed;
+    if (remaining <= 0) return 'item/Burnt Down Torch.gif';
+    if (remaining < 60 * 1000) return 'item/Lit Torch (Small).gif';
+    if (elapsed >= duration * 0.5) return 'item/Lit Torch (Medium).gif';
+    return 'item/Lit Torch (Sparkling).gif';
+  }
+  return null; // use the item's default manifest image
+}
+function getCurrentLightElapsedMs() {
+  if (!currentLightItemState) return 0;
+  const cur = currentLightItemState;
+  return cur.initialElapsed + (bridgeClockNow() - cur.startTime);
+}
+function updateEquippedLightSlotImage() {
+  const slotImg = document.getElementById('slotLightImg');
+  if (!slotImg || !currentLightItemState) return;
+  const cur = currentLightItemState;
+  const elapsed = getCurrentLightElapsedMs();
+  const img = getLightItemImage(cur.articleId, elapsed, cur.duration);
+  if (!img) return;
+  const desiredSrc = `./data/images/${img}`;
+  if (!slotImg.src.endsWith(img)) slotImg.src = desiredSrc;
+}
+function applyCurrentLightStateToAtmosphere() {
+  if (!currentLightItemState) { atmosphereSetEquipmentLight(0, 0, 0); return; }
+  const cur = currentLightItemState;
+  const sessionElapsed = bridgeClockNow() - cur.startTime;
+  const totalElapsed = cur.initialElapsed + sessionElapsed;
+  if (cur.duration > 0 && totalElapsed >= cur.duration) {
+    atmosphereSetEquipmentLight(0, 0, 0);
+  } else {
+    atmosphereSetEquipmentLight(cur.radius, cur.duration, totalElapsed);
+  }
+}
 const CREATURE_DAMAGE_MULTIPLIER_BY_ID = new Map([
   [37051, 0.5],
 ]);
@@ -681,6 +787,7 @@ function setupSelectorUI() {
     equipmentFoot.textContent = equipmentFootText || `Equipped ${rule.footName}: ${item.title}`;
     equipmentFoot.style.display = 'block';
     if (slotKey === 'ring' || slotKey === 'amulet') startAccessoryTimer(slotKey, item);
+    if (slotKey === 'light') applyEquipmentLightFromItem(item);
     return true;
   }
   // Backward-compatible alias for accidental casing typos in runtime/cached code paths.
@@ -718,6 +825,7 @@ function setupSelectorUI() {
     if (!slotRoot || !slotImg || !slotIcon || !slotLabel || !equipmentFoot) return false;
     equippedSlots[slotKey] = null;
     if (slotKey === 'ring' || slotKey === 'amulet') stopAccessoryTimer(slotKey);
+    if (slotKey === 'light') applyEquipmentLightFromItem(null);
     slotImg.style.display = 'none';
     slotIcon.textContent = rule.iconDefault;
     slotLabel.textContent = 'Empty';
@@ -1523,6 +1631,8 @@ function setupSelectorUI() {
 
     setLoadingProgress(45, 'Starting game engine...');
     addCoinsToInventory(0);
+    // Starting inventory: torch equipped and lit (3-tile radius).
+    await equipItemInSlot('light', 1396);
     document.getElementById('startOverlay').style.display = 'none';
     startGame(playerConfig);
     // _starting stays true — the game is now running, no more starts needed
@@ -1611,6 +1721,16 @@ function startGame(configPlayer) {
             mapTiles[y][x] = rect;
           }
         }
+
+        const floorAtmosphere = createFloorAtmosphere(this, {
+          tileSize,
+          mapTiles,
+          MAX_DUNGEON_W,
+          MAX_DUNGEON_H,
+        });
+        // Bridge the equipment-light channel now that the atmosphere is ready.
+        atmosphereSetEquipmentLight = (r, d, e) => floorAtmosphere.setEquipmentLight(r, d, e);
+        applyCurrentLightStateToAtmosphere();
 
         const player = this.add.sprite(tileSize * 1.5, tileSize * 1.5, frameTextureName(configPlayer.sex, 0));
         // Centrado visual y tamano menor a 1 tile para evitar solapes entre casillas vecinas.
@@ -1712,45 +1832,6 @@ function startGame(configPlayer) {
         onPanelLog = addCombatLog;
         addCombatLog('Combat ready.');
 
-        const stairRect = this.add.rectangle(
-          0,
-          0,
-          tileSize - 4,
-          tileSize - 4,
-          0x1e3a5f
-        );
-        stairRect.setStrokeStyle(2, 0x38bdf8, 0.95);
-        stairRect.setDepth(4);
-        const stairText = this.add.text(0, 0, '⇵', {
-          color: '#7dd3fc',
-          fontSize: '16px',
-          fontStyle: 'bold',
-        });
-        stairText.setOrigin(0.5, 0.5);
-        stairText.setDepth(5);
-        stairText.setStroke('#0c4a6e', 4);
-        const ropeHintRect = this.add.rectangle(
-          0,
-          0,
-          tileSize - 10,
-          tileSize - 10,
-          0x166534,
-          0.22
-        );
-        ropeHintRect.setStrokeStyle(1, 0x86efac, 0.95);
-        ropeHintRect.setDepth(6);
-        const ropeHintText = this.add.text(0, 0, 'R', {
-          color: '#bbf7d0',
-          fontSize: '12px',
-          fontStyle: 'bold',
-        });
-        ropeHintText.setOrigin(0.5, 0.5);
-        ropeHintText.setDepth(7);
-        ropeHintText.setStroke('#14532d', 3);
-        stairRect.setVisible(false);
-        stairText.setVisible(false);
-        ropeHintRect.setVisible(false);
-        ropeHintText.setVisible(false);
 
         // ── Minimap (HTML canvas in right sidebar) ───────────────────────────
         const MMAP_PAD = 5;
@@ -2786,20 +2867,13 @@ function startGame(configPlayer) {
           return { map: map.map((r) => r.join('')), stairs };
         };
         const refreshMapVisuals = () => {
-          const floorA = 0x121a2e;
-          const floorB = 0x182238;
-          const wall = 0x2a3d58;
-          const outer = 0x080e18;
-          for (let y = 0; y < MAX_DUNGEON_H; y += 1) {
-            for (let x = 0; x < MAX_DUNGEON_W; x += 1) {
-              if (y >= dungeonH || x >= dungeonW) {
-                mapTiles[y][x].setFillStyle(outer, 1);
-              } else {
-                const isWall = currentMap[y][x] === '#';
-                mapTiles[y][x].setFillStyle(isWall ? wall : (((x + y) & 1) === 0 ? floorA : floorB), 1);
-              }
-            }
-          }
+          floorAtmosphere.rebuildAll(
+            currentMap,
+            dungeonW,
+            dungeonH,
+            currentStairsTile,
+            START_TILE,
+          );
         };
         const spawnCreaturesForLevel = (level) => {
           for (const c of creatures) {
@@ -3137,17 +3211,12 @@ function startGame(configPlayer) {
             }
           }
           currentFloors = reachable;
+          floorAtmosphere.setThemeForLevel(currentLevel);
           refreshMapVisuals();
+          floorAtmosphere.showPit(false);
           drawMinimapBase();
-          stairRect.setPosition(centerX(currentStairsTile.gx), centerY(currentStairsTile.gy));
-          stairText.setPosition(centerX(currentStairsTile.gx), centerY(currentStairsTile.gy));
-          ropeHintRect.setPosition(centerX(START_TILE.gx), centerY(START_TILE.gy));
-          ropeHintText.setPosition(centerX(START_TILE.gx), centerY(START_TILE.gy) - 11);
-          stairRect.setVisible(false);
-          stairText.setVisible(false);
           const canRopeUp = currentLevel > 1;
-          ropeHintRect.setVisible(canRopeUp);
-          ropeHintText.setVisible(canRopeUp);
+          floorAtmosphere.showRopeAnchor(canRopeUp);
           spawnCreaturesForLevel(currentLevel);
           gridX = START_TILE.gx;
           gridY = START_TILE.gy;
@@ -3582,32 +3651,20 @@ function startGame(configPlayer) {
           if (shopKey === _lastSpellShopKey) return;
           _lastSpellShopKey = shopKey;
           spellsGrid.innerHTML = '';
+          // Light-family spells are universally available regardless of class —
+          // they're a core utility for the darkness/light system.
+          const UNIVERSAL_SPELL_IDS = new Set([797, 805, 1952]);
           const available = (spellsCatalog || []).filter((s) => {
             if (String(s.status || '').toLowerCase() !== 'active') return false;
             if (Math.max(0, Number(s.level || 0)) === 0) return false;
             if (String(s.spell_type || '').toLowerCase() === 'rune') return false;
             if (Math.max(0, Number(s.level || 0)) > playerLevel) return false;
             if (learnedSpellIds.has(Number(s.article_id))) return false;
-            const classAllowed = Number((s.raw && s.raw[playerClassKey]) || 0) === 1;
+            const classAllowed = UNIVERSAL_SPELL_IDS.has(Number(s.article_id))
+              || Number((s.raw && s.raw[playerClassKey]) || 0) === 1;
             if (!classAllowed) return false;
             const title = String(s.title || '').trim().toLowerCase();
             if (isBlockedSpellTitle(title)) return false;
-            const words = String(s.words || '').trim().toLowerCase();
-            const effect = String((s.raw && s.raw.effect) || '').trim().toLowerCase();
-            const looksHealing = (
-              title.includes('healing')
-              || title.includes('exura')
-              || effect.includes('restore hit points')
-              || effect.includes('heals')
-            );
-            const isLightSpell = (
-              (title.includes('light') && !looksHealing)
-              || effect.includes('illumination')
-              || words === 'utevo lux'
-              || words === 'utevo gran lux'
-              || words === 'utevo vis lux'
-            );
-            if (isLightSpell) return false;
             return true;
           });
           const frag = document.createDocumentFragment();
@@ -4899,8 +4956,16 @@ function startGame(configPlayer) {
             }
           } else {
             const effect = String((spell.raw && spell.raw.effect) || '').toLowerCase();
+            const articleIdNum = Number(spell.article_id);
+            // Illumination spells — radius from the spell's effect text, 5 min
+            // with linear radius decay handled by the atmosphere layer.
+            const LIGHT_SPELL_RADII = { 797: 3, 805: 4, 1952: 6 };
+            const lightRadius = LIGHT_SPELL_RADII[articleIdNum];
             showSpellAuraEffect(player.x, player.y, spell, 1.0);
-            if (effect.includes('speed')) {
+            if (lightRadius) {
+              floorAtmosphere.addLightSpell(articleIdNum, lightRadius, 5 * 60 * 1000);
+              addCombatLog(`Cast [${slotNumber}] ${spell.title}: illumination radius ${lightRadius} tiles (5 min, fading).`, LOG_COLORS.SPELL);
+            } else if (effect.includes('speed')) {
               playerMoveDurationMs = Math.max(90, playerMoveDurationMs - 20);
               playerActionDelayMs = Math.max(150, playerActionDelayMs - 30);
               this.time.delayedCall(10000, () => updatePlayerTimingsByLevel());
@@ -5064,9 +5129,8 @@ function startGame(configPlayer) {
           updateCreatureBar(targetCreature);
           updateHud();
           if (aliveCreatures().length === 0) {
-            stairRect.setVisible(true);
-            stairText.setVisible(true);
-            addCombatLog(`You defeated all creatures on floor ${currentLevel}. Go down the stairs.`);
+            floorAtmosphere.showPit(true);
+            addCombatLog(`You defeated all creatures on floor ${currentLevel}. Drop into the pit.`);
             if (canStrafeCastMagicWeapon(activeWeapon)) {
               nextMagicWeaponShotAt = now + playerActionDelayMs;
             } else {
@@ -5765,6 +5829,11 @@ function startGame(configPlayer) {
           callback: drawMinimapDynamic,
         });
         this.time.addEvent({
+          delay: 2000,
+          loop: true,
+          callback: updateEquippedLightSlotImage,
+        });
+        this.time.addEvent({
           delay: 90,
           loop: true,
           callback: creatureTurn,
@@ -5806,6 +5875,7 @@ function startGame(configPlayer) {
 
         this.events.on('update', () => {
           updateAllHealthBars();
+          floorAtmosphere.updateDarkness(this.time.now, player.x, player.y);
           if (moving || gameOver) return;
           if (isTypingInInput()) return;
           const now = this.time.now;
