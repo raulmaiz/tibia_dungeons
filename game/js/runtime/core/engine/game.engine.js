@@ -25,6 +25,7 @@ import {
   FORCED_CREATURE_TEMPLATES_BY_LEVEL,
   TROLL_ALLOWED_IDS,
   FLOOR_CREATURE_COUNTS,
+  FLOOR_DISPLAY_LABEL,
 } from '../../../data/floorSpawnConfig.js';
 import {
   shakeCamera,
@@ -277,6 +278,7 @@ function setupSelectorUI() {
     helmet: { id: 'Helmet', iconDefault: 'HEAD', requireType: 'Helmets', footName: 'helmet' },
     amulet: { id: 'Amulet', iconDefault: 'NECK', requireType: 'Amulets and Necklaces', footName: 'amulet' },
     hand: { id: 'Hand', iconDefault: 'HAND', requireClass: 'Weapons', footName: 'weapon' },
+    light: { id: 'Light', iconDefault: 'LIT', requireSecondaryType: 'Illumination', requireTypeAlt: 'Light Sources', footName: 'light source' },
   };
   const armorAutoSlotByType = {
     armors: 'armor',
@@ -477,12 +479,14 @@ function setupSelectorUI() {
       ? 'Two-handed'
       : (handsAttr === 'one' ? 'One-handed' : null);
     const isWeaponClass = String(cls || '').toLowerCase() === 'weapons';
+    const ttRow = (label, value) =>
+      `<div class="tt-row"><span class="tt-label">${label}</span><span class="tt-value">${value}</span></div>`;
     const statLines = [];
     if (isEquippable) {
-      if (attackStat != null) statLines.push(`<div><span class="tt-label">Attack:</span> ${attackStat}</div>`);
-      if (defenseStat != null) statLines.push(`<div><span class="tt-label">Defense:</span> ${defenseStat}</div>`);
-      if (armorStat != null) statLines.push(`<div><span class="tt-label">Armor:</span> ${armorStat}</div>`);
-      if (isWeaponClass && handsLabel) statLines.push(`<div><span class="tt-label">Hands:</span> ${handsLabel}</div>`);
+      if (attackStat != null) statLines.push(ttRow('Attack', attackStat));
+      if (defenseStat != null) statLines.push(ttRow('Defense', defenseStat));
+      if (armorStat != null) statLines.push(ttRow('Armor', armorStat));
+      if (isWeaponClass && handsLabel) statLines.push(ttRow('Hands', handsLabel));
     }
     const typeLower = String(type || '').toLowerCase();
     if (typeLower === 'wands' || typeLower === 'rods') {
@@ -499,30 +503,22 @@ function setupSelectorUI() {
       const magicBonus = attrText('magic');
       const previewAvg = averageMagicWeaponHitPreview(dmgRange, mlHud, plHud);
       statLines.push('<div class="tt-sep"></div>');
-      statLines.push('<div><span class="tt-label">Magic weapon</span></div>');
-      if (rangeStr) statLines.push(`<div><span class="tt-label">Range:</span> ${escapeHtml(rangeStr)} tiles</div>`);
-      if (dmgType) statLines.push(`<div><span class="tt-label">Damage type:</span> ${escapeHtml(dmgType)}</div>`);
-      if (dmgRange) statLines.push(`<div><span class="tt-label">Damage (data):</span> ${escapeHtml(dmgRange)}</div>`);
-      if (previewAvg != null) {
-        statLines.push(
-          `<div><span class="tt-label">Est. hit (avg, ML ${mlHud}):</span> ~${previewAvg}</div>`
-        );
-      }
-      if (manaCost) statLines.push(`<div><span class="tt-label">Mana / shot:</span> ${escapeHtml(manaCost)}</div>`);
-      if (levelReq) statLines.push(`<div><span class="tt-label">Required level:</span> ${escapeHtml(levelReq)}</div>`);
-      if (vocation) statLines.push(`<div><span class="tt-label">Vocation:</span> ${escapeHtml(vocation)}</div>`);
-      if (hands) statLines.push(`<div><span class="tt-label">Hands:</span> ${escapeHtml(hands)}</div>`);
-      if (magicBonus) statLines.push(`<div><span class="tt-label">Magic:</span> ${escapeHtml(magicBonus)}</div>`);
+      statLines.push('<div class="tt-section">Magic Weapon</div>');
+      if (rangeStr) statLines.push(ttRow('Range', `${escapeHtml(rangeStr)} tiles`));
+      if (dmgType) statLines.push(ttRow('Damage type', escapeHtml(dmgType)));
+      if (dmgRange) statLines.push(ttRow('Damage', escapeHtml(dmgRange)));
+      if (previewAvg != null) statLines.push(ttRow(`Est. hit (ML ${mlHud})`, `~${previewAvg}`));
+      if (manaCost) statLines.push(ttRow('Mana / shot', escapeHtml(manaCost)));
+      if (levelReq) statLines.push(ttRow('Req. level', escapeHtml(levelReq)));
+      if (vocation) statLines.push(ttRow('Vocation', escapeHtml(vocation)));
+      if (hands) statLines.push(ttRow('Hands', escapeHtml(hands)));
+      if (magicBonus) statLines.push(ttRow('Magic', escapeHtml(magicBonus)));
       const skipNames = new Set(['is_walkable', 'upgrade_classification', 'weapon_type', 'range', 'damage_type', 'damage_range', 'mana_cost', 'level', 'vocation', 'hands', 'magic']);
-      const extra = attrs.filter((a) => a && a.name && !skipNames.has(String(a.name).toLowerCase()));
-      const showExtra = extra.slice(0, 10);
+      const showExtra = attrs.filter((a) => a && a.name && !skipNames.has(String(a.name).toLowerCase())).slice(0, 8);
       if (showExtra.length > 0) {
-        statLines.push('<div class="tt-space"></div>');
-        statLines.push('<div><span class="tt-label">Other</span></div>');
+        statLines.push('<div class="tt-sep"></div>');
         for (const a of showExtra) {
-          const vn = escapeHtml(String(a.name || ''));
-          const vv = escapeHtml(String(a.value != null ? a.value : ''));
-          statLines.push(`<div><span class="tt-label">${vn}:</span> ${vv}</div>`);
+          statLines.push(ttRow(escapeHtml(String(a.name || '')), escapeHtml(String(a.value != null ? a.value : ''))));
         }
       }
     }
@@ -558,32 +554,23 @@ function setupSelectorUI() {
           const row = attrs.find((a) => a && String(a.name || '').toLowerCase() === pKey);
           if (!row) continue;
           shown.add(pKey);
-          const label = escapeHtml(ACCESSORY_FRIENDLY[pKey] || pKey);
-          const val = escapeHtml(String(row.value != null ? row.value : ''));
-          statLines.push(`<div><span class="tt-label">${label}:</span> ${val}</div>`);
+          statLines.push(ttRow(escapeHtml(ACCESSORY_FRIENDLY[pKey] || pKey), escapeHtml(String(row.value != null ? row.value : ''))));
         }
         for (const a of attrs) {
           const nm = String(a.name || '').toLowerCase();
           if (skipAccessory.has(nm) || shown.has(nm)) continue;
-          const label = escapeHtml(ACCESSORY_FRIENDLY[nm] || a.name);
-          const val = escapeHtml(String(a.value != null ? a.value : ''));
-          statLines.push(`<div><span class="tt-label">${label}:</span> ${val}</div>`);
+          statLines.push(ttRow(escapeHtml(ACCESSORY_FRIENDLY[nm] || a.name), escapeHtml(String(a.value != null ? a.value : ''))));
         }
       }
     }
-    return [
-      `<div class="tt-title">${safeTitle}</div>`,
-      '<div class="tt-sep"></div>',
-      `<div><span class="tt-label">Name:</span> ${safeTitle}</div>`,
-      `<div><span class="tt-label">Type:</span> ${safeCls} • ${safeType}</div>`,
-      `<div><span class="tt-label">Price:</span> ${price} gp</div>`,
-      `<div><span class="tt-label">Weight:</span> ${safeWeight}</div>`,
+    const bodyRows = [
+      `<div class="tt-row"><span class="tt-label">Type</span><span class="tt-value">${safeType}</span></div>`,
+      price > 0 ? `<div class="tt-row"><span class="tt-label">Price</span><span class="tt-value tt-gold">${price} gp</span></div>` : '',
+      safeWeight > 0 ? `<div class="tt-row"><span class="tt-label">Weight</span><span class="tt-value">${safeWeight} oz</span></div>` : '',
       ...statLines,
-      '<div class="tt-space"></div>',
-      `<div class="tt-actions"><span class="tt-label">${primaryAction} / Sell</span></div>`,
-      `<div>- Left click: ${primaryAction}</div>`,
-      '<div>- Right click: Sell</div>',
-    ].join('');
+    ].filter(Boolean).join('');
+    const actionRow = `<div class="tt-actions"><span class="tt-act-icon">⟵</span> ${primaryAction}&ensp;<span class="tt-act-sep">|</span>&ensp;<span class="tt-act-icon">⟶</span> Sell</div>`;
+    return `<div class="tt-header"><div class="tt-title">${safeTitle}</div></div><div class="tt-body">${bodyRows}</div><div class="tt-footer">${actionRow}</div>`;
   }
 
   function bindTooltip(el, item) {
@@ -592,18 +579,22 @@ function setupSelectorUI() {
     if (!text) return;
     const placeNearElement = () => {
       const rect = el.getBoundingClientRect();
-      const tipW = Math.max(220, itemTooltip.offsetWidth || 220);
-      const tipH = Math.max(120, itemTooltip.offsetHeight || 120);
-      let x = rect.right + 8;
-      let y = rect.top + 2;
-      if (x + tipW > window.innerWidth - 6) x = rect.left - tipW - 14;
-      if (y + tipH > window.innerHeight - 6) y = rect.top - tipH - 10;
-      itemTooltip.style.left = `${Math.max(6, Math.floor(x))}px`;
-      itemTooltip.style.top = `${Math.max(6, Math.floor(y))}px`;
+      const tipW = itemTooltip.offsetWidth || 210;
+      const tipH = itemTooltip.offsetHeight || 80;
+      // Always LEFT of the item, clamped to viewport
+      let x = rect.left - tipW - 4;
+      if (x < 4) x = 4;
+      // Vertically center the tooltip on the item cell
+      let y = rect.top + (rect.height / 2) - (tipH / 2);
+      if (y + tipH > window.innerHeight - 6) y = Math.max(4, window.innerHeight - tipH - 6);
+      if (y < 4) y = 4;
+      itemTooltip.style.left = `${Math.floor(x)}px`;
+      itemTooltip.style.top = `${Math.floor(y)}px`;
     };
     const show = (ev) => {
       itemTooltip.innerHTML = text;
       itemTooltip.style.display = 'block';
+      void itemTooltip.offsetWidth; // force reflow so offsetWidth is accurate
       placeNearElement();
     };
     const move = (ev) => {
@@ -618,7 +609,7 @@ function setupSelectorUI() {
     el.addEventListener('mouseleave', hide);
   }
 
-  function setEquippedSlotVisual(slotKey, item, equipmentFootText = null) {
+  function setEquippedSlotVisual(slotKey, item, equipmentFootText = null, options = {}) {
     const rule = slotRules[slotKey];
     if (!rule) return false;
     const slotImg = document.getElementById(`slot${rule.id}Img`);
@@ -635,7 +626,13 @@ function setupSelectorUI() {
       ));
       if (isTwoHanded && equippedSlots.shield) {
         const shieldToBag = { ...equippedSlots.shield };
-        const storedShield = addLootItemToBag(shieldToBag, { disableAutoEquip: true });
+        const excludeBagIndex = Number.isInteger(options && options.excludeBagIndex)
+          ? Number(options.excludeBagIndex)
+          : null;
+        const storedShield = addLootItemToBag(shieldToBag, {
+          disableAutoEquip: true,
+          excludeBagIndex,
+        });
         if (!storedShield) {
           equipmentFoot.textContent = 'Cannot equip two-handed weapon: no space/capacity to move shield to loot.';
           return false;
@@ -653,7 +650,13 @@ function setupSelectorUI() {
       ));
       if (handIsTwoHanded && hand) {
         const handToBag = { ...hand };
-        const storedHand = addLootItemToBag(handToBag, { disableAutoEquip: true });
+        const excludeBagIndex = Number.isInteger(options && options.excludeBagIndex)
+          ? Number(options.excludeBagIndex)
+          : null;
+        const storedHand = addLootItemToBag(handToBag, {
+          disableAutoEquip: true,
+          excludeBagIndex,
+        });
         if (!storedHand) {
           equipmentFoot.textContent = 'Cannot equip shield: no space/capacity to move two-handed weapon to loot.';
           return false;
@@ -671,10 +674,12 @@ function setupSelectorUI() {
       slotIcon.textContent = rule.iconDefault;
     }
     const qty = Math.max(1, Number(item.count || 1));
-    slotLabel.textContent = qty > 1 ? `${item.title} x${qty}` : (item.title || 'Equipped');
+    slotLabel.textContent = qty > 1 ? `x${qty}` : (item.title || 'Equipped');
     const slotRoot = document.getElementById(`slot${rule.id}`);
+    if (slotRoot) slotRoot.classList.add('equipped');
     bindTooltip(slotRoot, item);
     equipmentFoot.textContent = equipmentFootText || `Equipped ${rule.footName}: ${item.title}`;
+    equipmentFoot.style.display = 'block';
     if (slotKey === 'ring' || slotKey === 'amulet') startAccessoryTimer(slotKey, item);
     return true;
   }
@@ -686,13 +691,16 @@ function setupSelectorUI() {
     if (!rule || !item) return false;
     const matchesType = !rule.requireType || (item.item_type || '').toLowerCase() === rule.requireType.toLowerCase();
     const matchesClass = !rule.requireClass || (item.item_class || '').toLowerCase() === rule.requireClass.toLowerCase();
+    const matchesSecondary = (!rule.requireSecondaryType && !rule.requireTypeAlt)
+      || (rule.requireSecondaryType && String(item.type_secondary || '').toLowerCase() === rule.requireSecondaryType.toLowerCase())
+      || (rule.requireTypeAlt && String(item.item_type || '').toLowerCase() === rule.requireTypeAlt.toLowerCase());
     if (slotKey === 'hand' && String(item.item_type || '').toLowerCase() === 'ammunition') return false;
-    return matchesType && matchesClass;
+    return matchesType && matchesClass && matchesSecondary;
   }
 
   function resolveEquipSlotForItem(item) {
     if (!item) return null;
-    const preferredOrder = ['hand', 'ammunition', 'armor', 'shield', 'legs', 'boots', 'ring', 'helmet', 'amulet'];
+    const preferredOrder = ['hand', 'ammunition', 'armor', 'shield', 'legs', 'boots', 'ring', 'helmet', 'amulet', 'light'];
     for (const key of preferredOrder) {
       if (canEquipItemInSlot(key, item)) return key;
     }
@@ -714,6 +722,7 @@ function setupSelectorUI() {
     slotIcon.textContent = rule.iconDefault;
     slotLabel.textContent = 'Empty';
     slotRoot.title = '';
+    slotRoot.classList.remove('equipped');
     if (footText) equipmentFoot.textContent = footText;
     return true;
   }
@@ -760,6 +769,17 @@ function setupSelectorUI() {
     const equippedDefense = readDefenseAttr(equippedSlots.shield);
     // Requirement: only if incoming shield has higher defense than current shield.
     if (nextDefense <= equippedDefense) return false;
+    const previousShield = equippedSlots.shield ? { ...equippedSlots.shield } : null;
+    if (previousShield) {
+      const storedPreviousShield = addLootItemToBag(previousShield, {
+        disableAutoEquip: true,
+        excludeEquippedSlotKey: 'shield',
+      });
+      if (!storedPreviousShield) return false;
+      if (typeof onPanelLog === 'function') {
+        onPanelLog(`Stored previous shield in loot bag: ${previousShield.title}.`);
+      }
+    }
     return setEquippedSlotVisual(
       'shield',
       item,
@@ -810,10 +830,10 @@ function setupSelectorUI() {
     const count = Math.max(0, Math.floor(Number(slotCount) || 0));
     for (let i = 1; i <= count; i += 1) {
       const cell = document.createElement('div');
-      cell.className = 'loot-slot';
       const lootItem = bagLootItems[i - 1] || null;
       if (lootItem) {
-        cell.title = lootItem.title || 'Loot';
+        cell.className = 'loot-slot';
+        cell.title = '';
         if (lootItem.image) {
           const img = document.createElement('img');
           img.src = `./data/images/${lootItem.image}`;
@@ -824,13 +844,8 @@ function setupSelectorUI() {
         }
         if ((lootItem.count || 1) > 1) {
           const countTag = document.createElement('div');
+          countTag.className = 'loot-count';
           countTag.textContent = `x${lootItem.count}`;
-          countTag.style.position = 'absolute';
-          countTag.style.right = '3px';
-          countTag.style.bottom = '2px';
-          countTag.style.fontSize = '10px';
-          countTag.style.color = '#e2e8f0';
-          countTag.style.textShadow = '0 1px 1px rgba(0,0,0,0.8)';
           cell.appendChild(countTag);
         }
         bindTooltip(cell, lootItem);
@@ -913,7 +928,12 @@ function setupSelectorUI() {
           if (!slotKey) return;
           const equipped = equippedSlots[slotKey];
           const equippedCopy = equipped ? { ...equipped } : null;
-          const equipOk = setEquippedSlotVisual(slotKey, { ...current }, `Equipped ${slotKey}: ${current.title}`);
+          const equipOk = setEquippedSlotVisual(
+            slotKey,
+            { ...current },
+            `Equipped ${slotKey}: ${current.title}`,
+            { excludeBagIndex: idx }
+          );
           if (!equipOk) return;
           if (equippedCopy) {
             bagLootItems[idx] = equippedCopy;
@@ -923,9 +943,9 @@ function setupSelectorUI() {
           renderLootSlots(currentBagCapacity);
         });
       } else {
+        cell.className = 'loot-slot empty-slot';
         cell.textContent = String(i);
       }
-      cell.style.position = 'relative';
       lootGrid.appendChild(cell);
     }
     lootFoot.textContent = '';
@@ -1040,6 +1060,9 @@ function setupSelectorUI() {
     const excludeEquippedSlotKey = (opts && typeof opts.excludeEquippedSlotKey === 'string')
       ? String(opts.excludeEquippedSlotKey)
       : null;
+    const excludeBagIndex = Number.isInteger(opts && opts.excludeBagIndex)
+      ? Number(opts.excludeBagIndex)
+      : null;
     const incoming = {
       id: itemData && itemData.id != null ? Number(itemData.id) : null,
       title: itemData && itemData.title ? itemData.title : 'Loot',
@@ -1071,7 +1094,9 @@ function setupSelectorUI() {
         if (!eq) continue;
         total += itemUnitWeight(eq) * Math.max(1, Number(eq.count || 1));
       }
-      for (const it of bagLootItems) {
+      for (let i = 0; i < bagLootItems.length; i += 1) {
+        if (excludeBagIndex != null && i === excludeBagIndex) continue;
+        const it = bagLootItems[i];
         total += itemUnitWeight(it) * Math.max(1, Number(it.count || 1));
       }
       return total;
@@ -1168,7 +1193,8 @@ function setupSelectorUI() {
         return true;
       }
     }
-    if (bagLootItems.length >= currentBagCapacity) {
+    const occupiedSlots = bagLootItems.length - (excludeBagIndex != null ? 1 : 0);
+    if (occupiedSlots >= currentBagCapacity) {
       lastLootRejectReason = 'slots';
       return false;
     }
@@ -1290,12 +1316,17 @@ function setupSelectorUI() {
       }
       const matchesType = !rule.requireType || (item.item_type || '').toLowerCase() === rule.requireType.toLowerCase();
       const matchesClass = !rule.requireClass || (item.item_class || '').toLowerCase() === rule.requireClass.toLowerCase();
+      const matchesSecondary = (!rule.requireSecondaryType && !rule.requireTypeAlt)
+        || (rule.requireSecondaryType && String(item.type_secondary || '').toLowerCase() === rule.requireSecondaryType.toLowerCase())
+        || (rule.requireTypeAlt && String(item.item_type || '').toLowerCase() === rule.requireTypeAlt.toLowerCase());
       if (slotKey === 'hand' && String(item.item_type || '').toLowerCase() === 'ammunition') {
         equipmentFoot.textContent = `Cannot equip ${item.title} in HAND slot (use AMMO slot).`;
         return false;
       }
-      if (!matchesType || !matchesClass) {
-        const req = rule.requireType || `item_class ${rule.requireClass}`;
+      if (!matchesType || !matchesClass || !matchesSecondary) {
+        const req = (rule.requireSecondaryType || rule.requireTypeAlt)
+          ? [rule.requireTypeAlt, rule.requireSecondaryType].filter(Boolean).join(' or ')
+          : (rule.requireType || `item_class ${rule.requireClass}`);
         equipmentFoot.textContent = `Cannot equip ${item.title} in ${slotKey.toUpperCase()} slot (requires ${req}).`;
         return false;
       }
@@ -1336,6 +1367,9 @@ function setupSelectorUI() {
     },
     async equipHand(articleId) {
       return equipItemInSlot('hand', articleId);
+    },
+    async equipLight(articleId) {
+      return equipItemInSlot('light', articleId);
     },
     unequipHand() {
       return clearEquippedSlotVisual('hand', 'Your hand slot is empty.');
@@ -1650,6 +1684,7 @@ function startGame(configPlayer) {
         const sbMpText = document.getElementById('sbMpText');
         const sbML = document.getElementById('sbML');
         const sbSkill = document.getElementById('sbSkill');
+        const sbFistLabel = document.getElementById('sbFistLabel');
         const sbFist = document.getElementById('sbFist');
         const sbShield = document.getElementById('sbShield');
         const sbCap = document.getElementById('sbCap');
@@ -1818,6 +1853,7 @@ function startGame(configPlayer) {
           seven: Phaser.Input.Keyboard.KeyCodes.SEVEN,
           eight: Phaser.Input.Keyboard.KeyCodes.EIGHT,
           nine: Phaser.Input.Keyboard.KeyCodes.NINE,
+          zero: Phaser.Input.Keyboard.KeyCodes.ZERO,
           num1: Phaser.Input.Keyboard.KeyCodes.NUMPAD_ONE,
           num2: Phaser.Input.Keyboard.KeyCodes.NUMPAD_TWO,
           num3: Phaser.Input.Keyboard.KeyCodes.NUMPAD_THREE,
@@ -1827,6 +1863,7 @@ function startGame(configPlayer) {
           num7: Phaser.Input.Keyboard.KeyCodes.NUMPAD_SEVEN,
           num8: Phaser.Input.Keyboard.KeyCodes.NUMPAD_EIGHT,
           num9: Phaser.Input.Keyboard.KeyCodes.NUMPAD_NINE,
+          num0: Phaser.Input.Keyboard.KeyCodes.NUMPAD_ZERO,
         });
         const isTypingInInput = () => {
           const el = document.activeElement;
@@ -1884,6 +1921,7 @@ function startGame(configPlayer) {
         let playerMoveDurationMs = 190;
         let playerActionDelayMs = 320;
         let nextPlayerActionAt = 0;
+        let nextMagicWeaponShotAt = 0;
         let playerHp = lvl1Stats.maxHp;
         let playerMaxHp = lvl1Stats.maxHp;
         let playerMana = lvl1Stats.maxMana;
@@ -1901,14 +1939,16 @@ function startGame(configPlayer) {
         let playerShieldingUses = 0;
         let playerXp = 0;
         const learnedSpellIds = new Set();
-        const learnedSpellSlots = Array.from({ length: 9 }, () => null);
+        const learnedSpellSlots = Array.from({ length: 10 }, () => null); // slots 1-9 + 0
         const spellCooldownUntil = new Map();
+        const spellCdDurations = new Map();
         let gameOver = false;
         let playerDead = false;
         let runKills = 0;
         let godModeEnabled = false;
         let currentLevel = 1;
         let currentLevelGroup = null;
+        let currentFloorCreatureLabel = '';
         const recentGroupIndices = [];
         const runStartBias = Phaser.Math.Between(0, 8);
         const runSpreadBias = Phaser.Math.Between(0, 4);
@@ -2778,9 +2818,9 @@ function startGame(configPlayer) {
           const lookupRangedFields = (id) => {
             for (const g of typeProgressionGroups) {
               const c = (g.creatures || []).find((x) => Number(x.id) === id);
-              if (c) return { ranged: Number(c.ranged || 0), range: Math.max(1, Number(c.range || 1)) };
+              if (c) return { ranged: c.ranged === true, range: Math.max(1, Number(c.range || 1)) };
             }
-            return { ranged: 0, range: 1 };
+            return { ranged: false, range: 1 };
           };
           const findTemplateById = (id) => {
             for (const arr of Object.values(FORCED_CREATURE_TEMPLATES_BY_LEVEL)) {
@@ -2942,6 +2982,15 @@ function startGame(configPlayer) {
             creaturesTargetCount = 0;
             return;
           }
+          {
+            const uniqueTitles = [...new Set(templates.map((t) => t.title).filter(Boolean))];
+            const uniqueTypes = [...new Set(templates.map((t) => t.type_primary).filter(Boolean))];
+            const explicitLabel = FLOOR_DISPLAY_LABEL[Number(level)];
+            currentFloorCreatureLabel = explicitLabel
+              || (uniqueTitles.length === 1 ? uniqueTitles[0]
+                : (uniqueTypes.length === 1 ? uniqueTypes[0]
+                  : (currentLevelGroup ? currentLevelGroup.type_primary : (templates[0]?.title || 'Creature'))));
+          }
           if (level <= earlyLevels) {
             for (const t of templates) {
               const cid = Number(t && t.id);
@@ -3011,7 +3060,7 @@ function startGame(configPlayer) {
               title: template.title,
               experience: Number(template.experience || 0),
               speed: Math.max(1, Number(template.speed || 100)),
-              ranged: Number(template.ranged || 0) === 1,
+              ranged: template.ranged === true,
               range: Math.max(1, Number(template.range || 1)),
               alive: true,
               nextWanderAt: 0,
@@ -3163,46 +3212,91 @@ function startGame(configPlayer) {
         const hideSpellTooltip = () => {
           if (!spellTooltipEl) return;
           spellTooltipEl.style.display = 'none';
-          spellTooltipEl.textContent = '';
+          spellTooltipEl.innerHTML = '';
         };
+        const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const ttRow = (label, value) => `<div class="tt-row"><span class="tt-label">${esc(label)}</span><span class="tt-value">${esc(String(value))}</span></div>`;
         const formatSpellTooltip = (spell) => {
           if (!spell) return '';
           const raw = spell.raw && typeof spell.raw === 'object' ? spell.raw : {};
-          const lines = [];
-          lines.push(`${spell.title || raw.title || 'Unknown Spell'}`);
-          lines.push(`────────────────────`);
-          if (spell.words) lines.push(`Words: ${spell.words}`);
-          lines.push(`Type: ${spell.spell_type || 'Unknown'}  |  Group: ${spell.group_spell || 'Unknown'}`);
-          lines.push(``);
-          lines.push(`Requirements`);
-          lines.push(`- Level: ${Math.max(0, Number(spell.level || 0))}`);
-          lines.push(``);
-          lines.push(`Cast Cost`);
-          lines.push(`- Mana: ${Math.max(0, Number(spell.mana || 0))}`);
-          lines.push(``);
-          lines.push(`Shop`);
-          lines.push(`- Price: ${Math.max(0, Number(spell.price || 0))} gp`);
-          if (raw.effect) {
-            lines.push(``);
-            lines.push(`Effect`);
-            lines.push(`${raw.effect}`);
+          const effect = String(raw.effect || '').trim();
+          let h = `<div class="tt-header">`;
+          h += `<div class="tt-title">${esc(spell.title || 'Unknown Spell')}</div>`;
+          if (spell.words) h += `<div class="tt-words">${esc(spell.words)}</div>`;
+          h += `</div><div class="tt-body">`;
+          h += `<div class="tt-section">Info</div>`;
+          h += ttRow('Type', spell.spell_type || '—');
+          h += ttRow('Group', spell.group_spell || '—');
+          h += `<div class="tt-sep"></div>`;
+          h += `<div class="tt-section">Requirements</div>`;
+          h += ttRow('Level', Math.max(0, Number(spell.level || 0)));
+          h += ttRow('Mana', Math.max(0, Number(spell.mana || 0)));
+          h += `<div class="tt-sep"></div>`;
+          h += `<div class="tt-section">Shop</div>`;
+          h += ttRow('Price', `${Math.max(0, Number(spell.price || 0))} gp`);
+          if (effect) {
+            h += `<div class="tt-sep"></div>`;
+            h += `<div class="tt-effect">${esc(effect)}</div>`;
           }
-          return lines.join('\n');
+          h += `</div>`;
+          return h;
+        };
+        const formatSpellBarTooltip = (spell, slotLabel) => {
+          if (!spell) return '';
+          const raw = spell.raw && typeof spell.raw === 'object' ? spell.raw : {};
+          const effect = String(raw.effect || '').trim();
+          const title = slotLabel ? `${esc(slotLabel)} ${esc(spell.title || '')}` : esc(spell.title || '');
+          let h = `<div class="tt-header"><div class="tt-title">${title}</div>`;
+          if (spell.words) h += `<div class="tt-words">${esc(spell.words)}</div>`;
+          h += `</div><div class="tt-body">`;
+          if (effect) h += `<div class="tt-desc">${esc(effect)}</div><div class="tt-sep"></div>`;
+          h += `<div class="tt-row"><span class="tt-label">Mana</span><span class="tt-value">${Math.max(0, Number(spell.mana || 0))}</span></div>`;
+          h += `</div>`;
+          return h;
+        };
+        const showTooltipHtml = (html, ev, maxW = 260) => {
+          if (!spellTooltipEl) return;
+          spellTooltipEl.innerHTML = html;
+          spellTooltipEl.style.display = 'block';
+          spellTooltipEl.style.maxWidth = `${maxW}px`;
+          const pad = 14;
+          const x = Math.min(window.innerWidth - maxW - 8, ev.clientX + pad);
+          const y = Math.min(window.innerHeight - 260, ev.clientY + pad);
+          spellTooltipEl.style.left = `${Math.max(6, x)}px`;
+          spellTooltipEl.style.top = `${Math.max(6, y)}px`;
         };
         const bindSpellTooltip = (el, spell) => {
           if (!el || !spellTooltipEl) return;
           const place = (ev) => {
-            const pad = 12;
-            const x = Math.min(window.innerWidth - 440, ev.clientX + pad);
-            const y = Math.min(window.innerHeight - 240, ev.clientY + pad);
+            const pad = 14;
+            const x = Math.min(window.innerWidth - 270, ev.clientX + pad);
+            const y = Math.min(window.innerHeight - 260, ev.clientY + pad);
             spellTooltipEl.style.left = `${Math.max(6, x)}px`;
             spellTooltipEl.style.top = `${Math.max(6, y)}px`;
           };
           el.addEventListener('mouseenter', (ev) => {
-            spellTooltipEl.textContent = formatSpellTooltip(spell);
+            spellTooltipEl.innerHTML = formatSpellTooltip(spell);
             spellTooltipEl.style.display = 'block';
-            spellTooltipEl.style.overflow = 'hidden';
-            spellTooltipEl.style.maxHeight = 'none';
+            spellTooltipEl.style.maxWidth = '260px';
+            place(ev);
+          });
+          el.addEventListener('mousemove', place);
+          el.addEventListener('mouseleave', hideSpellTooltip);
+        };
+        const bindSpellBarTooltip = (el, spell, slotLabel) => {
+          if (!el || !spellTooltipEl) return;
+          const html = formatSpellBarTooltip(spell, slotLabel);
+          const place = (ev) => {
+            const pad = 14;
+            const x = Math.min(window.innerWidth - 220, ev.clientX + pad);
+            const y = Math.min(window.innerHeight - 160, ev.clientY + pad);
+            spellTooltipEl.style.left = `${Math.max(6, x)}px`;
+            spellTooltipEl.style.top = `${Math.max(6, y)}px`;
+          };
+          el.addEventListener('mouseenter', (ev) => {
+            spellTooltipEl.innerHTML = html;
+            spellTooltipEl.style.display = 'block';
+            spellTooltipEl.style.maxWidth = '220px';
             place(ev);
           });
           el.addEventListener('mousemove', place);
@@ -3214,6 +3308,16 @@ function startGame(configPlayer) {
         });
         document.addEventListener('keydown', hideSpellTooltip);
         document.addEventListener('click', hideSpellTooltip);
+        // Update cooldown countdown text every 250ms
+        setInterval(() => {
+          const now2 = Date.now();
+          for (const [spellId, cdUntil] of spellCooldownUntil.entries()) {
+            const rem = cdUntil - now2;
+            const textEl = document.querySelector(`.spell-cd-text[data-cd-text-for="${spellId}"]`);
+            if (!textEl) continue;
+            textEl.textContent = rem > 200 ? String(Math.ceil(rem / 1000)) : '';
+          }
+        }, 250);
         const lootAccordionEl = document.getElementById('lootAccordion');
         const {
           syncLootPanelPosition,
@@ -3237,62 +3341,159 @@ function startGame(configPlayer) {
           const learnedFoot = document.getElementById('learnedSpellsFoot');
           if (!learnedGrid || !learnedFoot) return;
           learnedGrid.innerHTML = '';
-          const slotBySpellId = new Map();
+
+          // Build slot index map: spellId → slotIndex (0-9)
+          const slotIdxBySpellId = new Map();
           for (let i = 0; i < learnedSpellSlots.length; i += 1) {
             const id = learnedSpellSlots[i];
-            if (id != null) slotBySpellId.set(Number(id), i + 1);
+            if (id != null) slotIdxBySpellId.set(Number(id), i);
           }
+
           const learned = (spellsCatalog || [])
             .filter((s) => learnedSpellIds.has(Number(s.article_id)))
             .filter((s) => !isBlockedSpellTitle(s.title))
             .sort((a, b) => {
-              const aSlot = Number(slotBySpellId.get(Number(a.article_id)) || 999);
-              const bSlot = Number(slotBySpellId.get(Number(b.article_id)) || 999);
+              const aSlot = slotIdxBySpellId.has(Number(a.article_id)) ? slotIdxBySpellId.get(Number(a.article_id)) : 999;
+              const bSlot = slotIdxBySpellId.has(Number(b.article_id)) ? slotIdxBySpellId.get(Number(b.article_id)) : 999;
               if (aSlot !== bSlot) return aSlot - bSlot;
               return String(a.title || '').localeCompare(String(b.title || ''));
             });
+
           if (learned.length === 0) {
             const empty = document.createElement('div');
             empty.className = 'learned-spell-row';
+            empty.style.justifyContent = 'center';
+            empty.style.color = '#475569';
             empty.textContent = 'No spells learned yet.';
             learnedGrid.appendChild(empty);
-          } else {
-            for (const spell of learned) {
-              const row = document.createElement('div');
-              row.className = 'learned-spell-row';
-              const slotIdx = Number(slotBySpellId.get(Number(spell.article_id)) || 0) - 1;
-              const slotPrefix = slotIdx >= 0 ? `[${slotIdx + 1}] ` : '';
-              row.textContent = `${slotPrefix}${spell.title} (Lv ${Math.max(0, Number(spell.level || 0))})`;
-              bindSpellTooltip(row, spell);
-              learnedGrid.appendChild(row);
-            }
+            learnedFoot.textContent = 'Total: 0';
+            syncLootPanelPosition(); syncLearnedPanelPosition(); syncItemsShopPanelPosition();
+            renderSpellBar();
+            return;
           }
+
+          // Drag state
+          let draggedSpellId = null;
+
+          const slotBadgeLabel = (slotIdx) => {
+            if (slotIdx < 0) return null;
+            return slotIdx < 9 ? String(slotIdx + 1) : '0';
+          };
+
+          const applyDrop = (fromId, toId) => {
+            if (fromId === toId) return;
+            const fromIdx = learnedSpellSlots.findIndex((s) => s != null && Number(s) === fromId);
+            const toIdx   = learnedSpellSlots.findIndex((s) => s != null && Number(s) === toId);
+            if (fromIdx >= 0 && toIdx >= 0) {
+              // Both slotted — swap
+              [learnedSpellSlots[fromIdx], learnedSpellSlots[toIdx]] = [learnedSpellSlots[toIdx], learnedSpellSlots[fromIdx]];
+            } else if (fromIdx >= 0 && toIdx < 0) {
+              // Dragged is slotted, target is not — target takes the slot
+              learnedSpellSlots[fromIdx] = toId;
+            } else if (fromIdx < 0 && toIdx >= 0) {
+              // Dragged has no slot, target does — dragged takes the slot
+              learnedSpellSlots[toIdx] = fromId;
+            }
+            _lastSpellBarKey = '';
+            _lastSpellShopKey = '';
+            renderLearnedSpells();
+          };
+
+          for (const spell of learned) {
+            const spellId = Number(spell.article_id);
+            const slotIdx = slotIdxBySpellId.has(spellId) ? slotIdxBySpellId.get(spellId) : -1;
+            const badgeLabel = slotBadgeLabel(slotIdx);
+
+            const row = document.createElement('div');
+            row.className = 'learned-spell-row';
+            row.draggable = true;
+            row.dataset.spellId = String(spellId);
+
+            // Drag handle
+            const handle = document.createElement('span');
+            handle.className = 'ls-handle';
+            handle.textContent = '⠿';
+            row.appendChild(handle);
+
+            // Slot badge
+            const badge = document.createElement('span');
+            badge.className = `ls-badge ${badgeLabel ? 'has-slot' : 'no-slot'}`;
+            badge.textContent = badgeLabel || '–';
+            row.appendChild(badge);
+
+            // Icon
+            const iconWrap = document.createElement('div');
+            iconWrap.className = 'ls-icon';
+            if (spell.image) {
+              const img = document.createElement('img');
+              img.src = spell.image;
+              img.alt = spell.title;
+              iconWrap.appendChild(img);
+            }
+            row.appendChild(iconWrap);
+
+            // Info
+            const info = document.createElement('div');
+            info.className = 'ls-info';
+            const titleEl = document.createElement('div');
+            titleEl.className = 'ls-title';
+            titleEl.textContent = spell.title || '';
+            const metaEl = document.createElement('div');
+            metaEl.className = 'ls-meta';
+            metaEl.textContent = `Lv ${Math.max(0, Number(spell.level || 0))}  ·  Mana ${Math.max(0, Number(spell.mana || 0))}`;
+            info.appendChild(titleEl);
+            info.appendChild(metaEl);
+            row.appendChild(info);
+
+            bindSpellTooltip(row, spell);
+
+            // Drag & drop events
+            row.addEventListener('dragstart', (ev) => {
+              draggedSpellId = spellId;
+              row.classList.add('ls-dragging');
+              ev.dataTransfer.effectAllowed = 'move';
+              ev.dataTransfer.setData('text/plain', String(spellId));
+            });
+            row.addEventListener('dragend', () => {
+              draggedSpellId = null;
+              row.classList.remove('ls-dragging');
+              learnedGrid.querySelectorAll('.ls-drag-over').forEach((el) => el.classList.remove('ls-drag-over'));
+            });
+            row.addEventListener('dragover', (ev) => {
+              ev.preventDefault();
+              ev.dataTransfer.dropEffect = 'move';
+              if (draggedSpellId !== spellId) row.classList.add('ls-drag-over');
+            });
+            row.addEventListener('dragleave', () => row.classList.remove('ls-drag-over'));
+            row.addEventListener('drop', (ev) => {
+              ev.preventDefault();
+              row.classList.remove('ls-drag-over');
+              const fromId = Number(ev.dataTransfer.getData('text/plain'));
+              if (fromId && fromId !== spellId) applyDrop(fromId, spellId);
+            });
+
+            learnedGrid.appendChild(row);
+          }
+
           learnedFoot.textContent = `Total: ${learned.length}`;
-          syncLootPanelPosition();
-          syncLearnedPanelPosition();
-          syncItemsShopPanelPosition();
+          syncLootPanelPosition(); syncLearnedPanelPosition(); syncItemsShopPanelPosition();
           renderSpellBar();
         };
 
+        let _lastSpellBarKey = '';
         const renderSpellBar = () => {
           const slotsEl = document.getElementById('spellBarSlots');
           if (!slotsEl) return;
+          // Skip rebuild if slot assignments haven't changed — prevents per-frame flicker
+          const barKey = learnedSpellSlots.join(',') + '|' + [...learnedSpellIds].sort((a, b) => a - b).join(',');
+          if (barKey === _lastSpellBarKey) return;
+          _lastSpellBarKey = barKey;
           slotsEl.innerHTML = '';
+          const now = Date.now();
           const spellById = new Map();
           for (const s of spellsCatalog || []) spellById.set(Number(s.article_id), s);
 
-          // Hotkey slots 1-9
-          for (let i = 0; i < 9; i += 1) {
-            const spellId = learnedSpellSlots[i];
-            const spell = spellId != null ? spellById.get(Number(spellId)) : null;
-            const slot = document.createElement('div');
-            slot.className = `spell-slot ${spell ? 'active' : 'empty'}`;
-            // Key badge
-            const keyBadge = document.createElement('span');
-            keyBadge.className = 'spell-slot-key';
-            keyBadge.textContent = String(i + 1);
-            slot.appendChild(keyBadge);
-            // Image wrap
+          const makeImgWrap = (spell, spellId) => {
             const imgWrap = document.createElement('div');
             imgWrap.className = 'spell-slot-img-wrap';
             if (spell && spell.image) {
@@ -3302,13 +3503,49 @@ function startGame(configPlayer) {
               img.alt = spell.title;
               imgWrap.appendChild(img);
             }
-            slot.appendChild(imgWrap);
+            // Cooldown overlay
+            const cdOverlay = document.createElement('div');
+            cdOverlay.className = 'spell-cd-overlay';
+            if (spellId != null) cdOverlay.dataset.cdFor = String(spellId);
+            const cdText = document.createElement('div');
+            cdText.className = 'spell-cd-text';
+            if (spellId != null) cdText.dataset.cdTextFor = String(spellId);
+            imgWrap.appendChild(cdOverlay);
+            imgWrap.appendChild(cdText);
+            // Restore active cooldown if any
+            if (spellId != null) {
+              const cdUntil = Number(spellCooldownUntil.get(spellId) || 0);
+              const totalMs = (spellCdDurations.get(spellId) || 0) * 1000;
+              if (now < cdUntil && totalMs > 0) {
+                const remMs = cdUntil - now;
+                const durSec = (remMs / 1000).toFixed(2);
+                cdOverlay.style.setProperty('--cd-dur', `${durSec}s`);
+                cdOverlay.classList.add('cd-active');
+                cdText.textContent = Math.ceil(remMs / 1000);
+              }
+            }
+            return imgWrap;
+          };
+
+          // Hotkey slots 1-9 + 0 (index 9 = slot 10 = key "0")
+          for (let i = 0; i < 10; i += 1) {
+            const spellId = learnedSpellSlots[i] != null ? Number(learnedSpellSlots[i]) : null;
+            const spell = spellId != null ? spellById.get(spellId) : null;
+            const slot = document.createElement('div');
+            slot.className = `spell-slot ${spell ? 'active' : 'empty'}`;
+            if (spellId != null) slot.dataset.spellId = String(spellId);
+            // Key badge: slots 1-9 show 1-9, slot index 9 shows "0"
+            const keyBadge = document.createElement('span');
+            keyBadge.className = 'spell-slot-key';
+            keyBadge.textContent = i < 9 ? String(i + 1) : '0';
+            slot.appendChild(keyBadge);
+            slot.appendChild(makeImgWrap(spell, spellId));
             // Name
             const nameEl = document.createElement('span');
             nameEl.className = 'spell-slot-name';
             nameEl.textContent = spell ? spell.title : '';
             slot.appendChild(nameEl);
-            if (spell) slot.title = `[${i + 1}] ${spell.title}\n${spell.words}\nMana: ${spell.mana} | Lv: ${spell.level}`;
+            if (spell) bindSpellBarTooltip(slot, spell, null);
             slotsEl.appendChild(slot);
           }
 
@@ -3320,25 +3557,18 @@ function startGame(configPlayer) {
             if (isBlockedSpellTitle(spell.title)) continue;
             const slot = document.createElement('div');
             slot.className = 'spell-slot active no-key';
-            const imgWrap = document.createElement('div');
-            imgWrap.className = 'spell-slot-img-wrap';
-            if (spell.image) {
-              const img = document.createElement('img');
-              img.className = 'spell-slot-img';
-              img.src = spell.image;
-              img.alt = spell.title;
-              imgWrap.appendChild(img);
-            }
-            slot.appendChild(imgWrap);
+            slot.dataset.spellId = String(id);
+            slot.appendChild(makeImgWrap(spell, id));
             const nameEl = document.createElement('span');
             nameEl.className = 'spell-slot-name';
             nameEl.textContent = spell.title;
             slot.appendChild(nameEl);
-            slot.title = `${spell.title}\n${spell.words}\nMana: ${spell.mana} | Lv: ${spell.level}\n(no hotkey)`;
+            bindSpellBarTooltip(slot, spell, null);
             slotsEl.appendChild(slot);
           }
         };
 
+        let _lastSpellShopKey = '';
         const renderSpellShop = () => {
           const spellsGrid = document.getElementById('spellsGrid');
           const spellsFoot = document.getElementById('spellsFoot');
@@ -3347,6 +3577,10 @@ function startGame(configPlayer) {
             ? Math.max(0, Number(window.debugInventory.getGold() || 0))
             : 0;
           const roomCleared = aliveCreatures().length === 0;
+          // Skip rebuild if nothing affecting the shop display has changed
+          const shopKey = `${playerLevel}|${currentGold}|${roomCleared ? 1 : 0}|${[...learnedSpellIds].sort((a, b) => a - b).join(',')}`;
+          if (shopKey === _lastSpellShopKey) return;
+          _lastSpellShopKey = shopKey;
           spellsGrid.innerHTML = '';
           const available = (spellsCatalog || []).filter((s) => {
             if (String(s.status || '').toLowerCase() !== 'active') return false;
@@ -3390,29 +3624,31 @@ function startGame(configPlayer) {
             const left = document.createElement('span');
             left.textContent = spell.title || `Spell ${spell.article_id}`;
             const right = document.createElement('span');
+            right.className = 'price';
             right.textContent = `${price} gp`;
             head.appendChild(left);
             head.appendChild(right);
             bindSpellTooltip(row, spell);
             const meta = document.createElement('div');
             meta.className = 'meta';
-            meta.textContent = `Lv ${lvl} | Mana ${Math.max(0, Number(spell.mana || 0))}`;
+            meta.textContent = `Lv ${lvl}  ·  Mana ${Math.max(0, Number(spell.mana || 0))}`;
             const btn = document.createElement('button');
             btn.type = 'button';
             if (isLearned) {
-              btn.textContent = 'Learned';
+              btn.textContent = '✓ Learned';
               btn.disabled = true;
             } else if (!canLevel) {
-              btn.textContent = `Need Lv ${lvl}`;
+              btn.textContent = `Lv ${lvl} required`;
               btn.disabled = true;
             } else if (!canGold) {
-              btn.textContent = `Need ${price} gp`;
+              btn.textContent = `${price} gp required`;
               btn.disabled = true;
             } else if (!roomCleared) {
               btn.textContent = 'Clear room first';
               btn.disabled = true;
             } else {
-              btn.textContent = 'Buy spell';
+              btn.textContent = 'Buy Spell';
+              btn.className = 'btn-buy';
               btn.disabled = false;
               const buySpell = (ev) => {
                 ev.preventDefault();
@@ -3462,76 +3698,87 @@ function startGame(configPlayer) {
         };
         const formatItemShopTooltip = (item) => {
           if (!item) return '';
-          const lines = [];
-          lines.push(`${item.title || `Item ${item.id}`}`);
-          lines.push(`────────────────────`);
-          lines.push(`Shop`);
-          lines.push(`- Price: ${Math.max(0, Number(item.price || 0))} gp`);
-          lines.push(``);
-          lines.push(`Type`);
-          lines.push(`- Class: ${item.item_class || 'Unknown'}`);
-          lines.push(`- Type: ${item.item_type || 'Unknown'}`);
-          if (item.type_secondary) lines.push(`- Secondary: ${item.type_secondary}`);
           const attrs = Array.isArray(item.attributes) ? item.attributes : [];
           const shopType = String(item.item_type || '').toLowerCase();
+          let h = `<div class="tt-header"><div class="tt-title">${esc(item.title || `Item ${item.id}`)}</div></div>`;
+          h += `<div class="tt-body">`;
+          h += `<div class="tt-section">Shop</div>`;
+          h += ttRow('Price', `${Math.max(0, Number(item.price || 0))} gp`);
+          h += `<div class="tt-sep"></div>`;
+          h += `<div class="tt-section">Type</div>`;
+          h += ttRow('Class', item.item_class || '—');
+          h += ttRow('Type', item.item_type || '—');
+          if (item.type_secondary) h += ttRow('Secondary', item.type_secondary);
           if (shopType === 'wands' || shopType === 'rods') {
             const g = (n) => {
               const row = attrs.find((a) => a && String(a.name || '').toLowerCase() === n);
               return row ? String(row.value || '').trim() : '';
             };
-            lines.push(``);
-            lines.push(`Wand / Rod`);
-            const r = g('range');
-            const dt = g('damage_type');
-            const dr = g('damage_range');
-            const mc = g('mana_cost');
-            if (r) lines.push(`- Range: ${r}`);
-            if (dt) lines.push(`- Damage type: ${dt}`);
-            if (dr) lines.push(`- Damage (data): ${dr}`);
-            if (mc) lines.push(`- Mana / shot: ${mc}`);
+            const r = g('range'); const dt = g('damage_type'); const dr = g('damage_range'); const mc = g('mana_cost');
+            h += `<div class="tt-sep"></div><div class="tt-section">Wand / Rod</div>`;
+            if (r) h += ttRow('Range', r);
+            if (dt) h += ttRow('Dmg type', dt);
+            if (dr) h += ttRow('Dmg range', dr);
+            if (mc) h += ttRow('Mana/shot', mc);
             const hud = (typeof window !== 'undefined' && window.__gameHud) ? window.__gameHud : { ml: 0, pl: 1 };
             const prev = averageMagicWeaponHitPreview(dr, Number(hud.ml) || 0, Number(hud.pl) || 1);
-            if (prev != null) lines.push(`- Est. hit (avg, ML ${hud.ml}): ~${prev}`);
+            if (prev != null) h += ttRow(`Est. hit ML${hud.ml}`, `~${prev}`);
           }
-          if (attrs.length > 0) {
-            lines.push(``);
-            lines.push(`Attributes`);
-            for (const a of attrs.slice(0, 8)) {
-              const n = String((a && a.name) || '').trim();
-              const v = String((a && a.value) || '').trim();
-              if (!n) continue;
-              lines.push(`- ${n}: ${v || '-'}`);
+          const hiddenAttrNames = new Set([
+            'range',
+            'damage_type',
+            'damage_range',
+            'mana_cost',
+            'is_walkable',
+            'upgrade_classification',
+            'upgrade_clasification',
+          ]);
+          const attrLabelMap = new Map([
+            ['level', 'required level'],
+          ]);
+          const displayAttrs = attrs
+            .filter((a) => {
+              if (!a || !String(a.name || '').trim()) return false;
+              const attrName = String(a.name || '').trim().toLowerCase();
+              return !hiddenAttrNames.has(attrName);
+            })
+            .slice(0, 8);
+          if (displayAttrs.length > 0) {
+            h += `<div class="tt-sep"></div><div class="tt-section">Attributes</div>`;
+            for (const a of displayAttrs) {
+              const attrName = String(a.name || '').trim();
+              const attrKey = attrName.toLowerCase();
+              const attrLabel = attrLabelMap.get(attrKey) || attrName;
+              h += ttRow(attrLabel, String(a.value || '—').trim());
             }
           }
           const desc = String(item.description || '').trim();
           if (desc) {
-            lines.push(``);
-            lines.push(`Description`);
-            lines.push(desc);
+            h += `<div class="tt-sep"></div><div class="tt-effect">${esc(desc)}</div>`;
           }
-          return lines.join('\n');
+          h += `</div>`;
+          return h;
         };
         const bindItemShopTooltip = (el, item) => {
           if (!el || !spellTooltipEl) return;
           const place = (ev) => {
-            const padX = 36;
-            const padY = 52;
-            const x = Math.min(window.innerWidth - 440, ev.clientX + padX);
-            const y = Math.min(window.innerHeight - 240, ev.clientY + padY);
+            const padX = 36; const padY = 52;
+            const x = Math.min(window.innerWidth - 270, ev.clientX + padX);
+            const y = Math.min(window.innerHeight - 300, ev.clientY + padY);
             spellTooltipEl.style.left = `${Math.max(6, x)}px`;
             spellTooltipEl.style.top = `${Math.max(6, y)}px`;
           };
           el.addEventListener('mouseenter', (ev) => {
-            spellTooltipEl.textContent = formatItemShopTooltip(item);
+            spellTooltipEl.innerHTML = formatItemShopTooltip(item);
             spellTooltipEl.style.display = 'block';
-            spellTooltipEl.style.overflow = 'auto';
-            spellTooltipEl.style.maxHeight = '42vh';
+            spellTooltipEl.style.maxWidth = '260px';
             place(ev);
           });
           el.addEventListener('mousemove', place);
           el.addEventListener('mouseleave', hideSpellTooltip);
         };
         let itemsShopQuery = '';
+        let _lastItemsShopKey = '';
         const renderItemsShop = (queryRaw = itemsShopQuery) => {
           itemsShopQuery = String(queryRaw || '').trim();
           const gridEl = document.getElementById('itemsShopGrid');
@@ -3541,6 +3788,9 @@ function startGame(configPlayer) {
             ? Math.max(0, Number(window.debugInventory.getGold() || 0))
             : 0;
           const roomCleared = aliveCreatures().length === 0;
+          const itemsKey = `${itemsShopQuery}|${currentGold}|${roomCleared ? 1 : 0}`;
+          if (itemsKey === _lastItemsShopKey) return;
+          _lastItemsShopKey = itemsKey;
           gridEl.innerHTML = '';
           if (itemsShopQuery.length < 3) {
             footEl.textContent = `Type at least 3 chars | Gold: ${currentGold}`;
@@ -3570,10 +3820,13 @@ function startGame(configPlayer) {
             const head = document.createElement('div');
             head.className = 'item-shop-head';
             if (item.image) {
+              const imgWrap = document.createElement('div');
+              imgWrap.className = 'item-shop-img-wrap';
               const img = document.createElement('img');
               img.src = `./data/images/${item.image}`;
               img.alt = item.title || 'Item';
-              head.appendChild(img);
+              imgWrap.appendChild(img);
+              head.appendChild(imgWrap);
             }
             const nameEl = document.createElement('span');
             nameEl.className = 'item-shop-name';
@@ -3586,9 +3839,8 @@ function startGame(configPlayer) {
             const price = Math.max(0, Number(item.price || 0));
             const isStackable = Number((item.raw && item.raw.is_stackable) || 0) === 1;
             const buyWrap = document.createElement('div');
-            buyWrap.style.display = 'grid';
+            buyWrap.className = 'buy-wrap';
             buyWrap.style.gridTemplateColumns = isStackable ? '1fr 1fr' : '1fr';
-            buyWrap.style.gap = '4px';
             const makeBuyButton = (qty) => {
               const totalPrice = price * qty;
               const btn = document.createElement('button');
@@ -3605,6 +3857,7 @@ function startGame(configPlayer) {
                 return btn;
               }
               btn.textContent = qty === 1 ? 'Buy x1' : 'Buy x100';
+              btn.className = 'btn-buy';
               btn.disabled = false;
               btn.addEventListener('mousedown', (ev) => {
                 if (ev.button !== 0) return;
@@ -3674,6 +3927,17 @@ function startGame(configPlayer) {
             renderItemsShop(itemsShopSearchInputEl.value || '');
           });
         }
+        // Close items shop and return focus to game when clicking outside the panel
+        document.addEventListener('mousedown', (e) => {
+          if (!itemsShopAccordionEl || !itemsShopAccordionEl.open) return;
+          if (itemsShopPanelEl && itemsShopPanelEl.contains(e.target)) return;
+          itemsShopAccordionEl.open = false;
+          if (itemsShopSearchInputEl) {
+            itemsShopSearchInputEl.value = '';
+            itemsShopSearchInputEl.blur();
+            renderItemsShop('');
+          }
+        });
         const renderTopStatsPanel = () => {
           const statsGridEl = document.getElementById('statsGrid');
           const statsFootEl = document.getElementById('statsFoot');
@@ -3693,9 +3957,8 @@ function startGame(configPlayer) {
             if (b.level !== a.level) return b.level - a.level;
             return String(a.key).localeCompare(String(b.key));
           });
-          const top = stats.slice(0, 5);
           statsGridEl.innerHTML = '';
-          for (const s of top) {
+          for (const s of stats) {
             const row = document.createElement('div');
             row.className = 'stats-row';
             const left = document.createElement('span');
@@ -3706,12 +3969,12 @@ function startGame(configPlayer) {
             row.appendChild(right);
             statsGridEl.appendChild(row);
           }
-          statsFootEl.textContent = `Showing top ${top.length} of ${stats.length} stats`;
+          statsFootEl.textContent = `${stats.length} stat${stats.length !== 1 ? 's' : ''}`;
           syncStatsPanelPosition();
         };
         const updateHud = () => {
           const group = currentLevelGroup;
-          const typeName = group ? group.type_primary : 'Creature';
+          const typeName = currentFloorCreatureLabel || (group ? group.type_primary : 'Creature');
           const invState = window.debugInventory && typeof window.debugInventory.state === 'function'
             ? window.debugInventory.state()
             : null;
@@ -3742,7 +4005,10 @@ function startGame(configPlayer) {
           if (sbMpText) sbMpText.textContent = `${playerMana}/${playerMaxMana}`;
           if (sbML) sbML.textContent = String(playerMagicLevel);
           if (sbSkill) sbSkill.textContent = `${skillLabel} ${skillLevel} (${skillPct}%)`;
-          if (sbFist) sbFist.textContent = String(playerFistLevel);
+          const fistShortLabel = skillType ? skillLabel.split(' ')[0] : 'Fist';
+          const fistDisplayLevel = skillType ? skillLevel : playerFistLevel;
+          if (sbFistLabel) sbFistLabel.textContent = fistShortLabel;
+          if (sbFist) sbFist.textContent = String(fistDisplayLevel);
           if (sbShield) sbShield.textContent = String(playerShieldingLevel);
           if (sbCap) sbCap.textContent = `CAP ${capCurrentText}/${capTotalText}`;
           const xpNeeded = xpToNextLevel(playerLevel);
@@ -3862,6 +4128,10 @@ function startGame(configPlayer) {
           const t = String(item.item_type || '').toLowerCase();
           return t === 'rods' || t === 'wands';
         };
+        const canStrafeCastMagicWeapon = (weapon) => (
+          (playerClassKey === 'druid' || playerClassKey === 'sorcerer')
+          && Boolean(weapon && isMagicRangedWeapon(weapon))
+        );
         const magicWeaponDamageTypeSuffix = (weapon) => {
           if (!weapon || !isMagicRangedWeapon(weapon)) return '';
           const attrs = Array.isArray(weapon.attributes) ? weapon.attributes : [];
@@ -4504,6 +4774,30 @@ function startGame(configPlayer) {
           }
           playerMana = Math.max(0, playerMana - manaCost);
           spellCooldownUntil.set(articleId, now + (cdSec * 1000));
+          if (cdSec > 0) spellCdDurations.set(articleId, cdSec);
+          // Cast flash animation on the spell slot
+          const castSlotEl = document.querySelector(`.spell-slot[data-spell-id="${articleId}"] .spell-slot-img-wrap`);
+          if (castSlotEl) {
+            castSlotEl.classList.remove('spell-slot-casting');
+            void castSlotEl.offsetWidth; // reflow to restart animation
+            castSlotEl.classList.add('spell-slot-casting');
+            castSlotEl.addEventListener('animationend', () => castSlotEl.classList.remove('spell-slot-casting'), { once: true });
+          }
+          // Cooldown overlay animation
+          if (cdSec > 0) {
+            const cdOverlay = document.querySelector(`.spell-cd-overlay[data-cd-for="${articleId}"]`);
+            const cdText = document.querySelector(`.spell-cd-text[data-cd-text-for="${articleId}"]`);
+            if (cdOverlay) {
+              cdOverlay.classList.remove('cd-active');
+              void cdOverlay.offsetWidth;
+              cdOverlay.style.setProperty('--cd-dur', `${cdSec}s`);
+              cdOverlay.classList.add('cd-active');
+              cdOverlay.addEventListener('animationend', () => {
+                cdOverlay.classList.remove('cd-active');
+                if (cdText) cdText.textContent = '';
+              }, { once: true });
+            }
+          }
           const group = String(spell.group_spell || '').toLowerCase();
           if (isMagicRopeSpell) {
             updatePlayerBar();
@@ -4773,10 +5067,18 @@ function startGame(configPlayer) {
             stairRect.setVisible(true);
             stairText.setVisible(true);
             addCombatLog(`You defeated all creatures on floor ${currentLevel}. Go down the stairs.`);
-            nextPlayerActionAt = now + playerActionDelayMs;
+            if (canStrafeCastMagicWeapon(activeWeapon)) {
+              nextMagicWeaponShotAt = now + playerActionDelayMs;
+            } else {
+              nextPlayerActionAt = now + playerActionDelayMs;
+            }
             return true;
           }
-          nextPlayerActionAt = now + playerActionDelayMs;
+          if (canStrafeCastMagicWeapon(activeWeapon)) {
+            nextMagicWeaponShotAt = now + playerActionDelayMs;
+          } else {
+            nextPlayerActionAt = now + playerActionDelayMs;
+          }
           return true;
         };
         const didAttackMiss = (weapon = null) => {
@@ -5087,12 +5389,15 @@ function startGame(configPlayer) {
           const abilities = Array.isArray(creature && creature.abilities) ? creature.abilities : [];
           if (abilities.length === 0) return false;
           const dist = Math.max(Math.abs(creature.gx - gridX), Math.abs(creature.gy - gridY));
-          // Effective cast range: ranged creatures use their range value; melee use 4 tiles.
-          const castRange = creature.ranged ? creature.range : 4;
+          // Respect creature attack range at all times (also while fleeing):
+          // ranged creatures use their configured range, melee creatures only 1 tile.
+          const castRange = creature.ranged
+            ? Math.max(1, Number(creature.range || 1))
+            : 1;
           const options = abilities.filter((ab) => {
             const t = abilityType(ab);
             if (t === 'utility') return false;
-            if (t === 'heal') return creature.hp < creature.maxHp && Math.random() < 0.5;
+            if (t === 'heal') return dist <= castRange && creature.hp < creature.maxHp && Math.random() < 0.5;
             if (t === 'melee') return dist <= 1;
             if (dist > castRange) return false;
             if (!hasRangedLineOfSight(creature.gx, creature.gy, gridX, gridY)) return false;
@@ -5345,8 +5650,16 @@ function startGame(configPlayer) {
             // --- Fury / flee mode ---
             if (isFleeing) {
               acted = tryFleeCreature(creature) || acted;
-              // In fury: cast abilities much faster
-              if (now >= creature.nextAbilityAt) {
+              // Only use abilities if still within attack range — fleeing creatures should
+              // not fire from across the dungeon. castRange mirrors the check in tryUseCreatureAbility.
+              const fleeCastRange = creature.ranged
+                ? Math.max(1, Number(creature.range || 1))
+                : 1;
+              const fleeDist = Math.max(
+                Math.abs(creature.gx - gridX),
+                Math.abs(creature.gy - gridY),
+              );
+              if (now >= creature.nextAbilityAt && fleeDist <= fleeCastRange) {
                 const usedAbility = tryUseCreatureAbility(creature);
                 if (usedAbility) {
                   creature.nextAbilityAt = now + Phaser.Math.Between(ABILITY_CD_FURY_MIN, ABILITY_CD_FURY_MAX);
@@ -5460,23 +5773,13 @@ function startGame(configPlayer) {
           delay: 90,
           loop: true,
           callback: () => {
-            if (moving || gameOver || playerDead) return;
+            if (gameOver || playerDead) return;
             if (isTypingInInput()) return;
             const now = this.time.now;
-            if (now < nextPlayerActionAt) return;
             const w = getEquippedHandWeapon();
             if (!w || !isMagicRangedWeapon(w)) return;
-            const anyMoveKey = (
-              (cursors.left && cursors.left.isDown)
-              || (cursors.right && cursors.right.isDown)
-              || (cursors.up && cursors.up.isDown)
-              || (cursors.down && cursors.down.isDown)
-              || keys.A.isDown
-              || keys.D.isDown
-              || keys.W.isDown
-              || keys.S.isDown
-            );
-            if (anyMoveKey) return;
+            if (!canStrafeCastMagicWeapon(w)) return;
+            if (now < nextMagicWeaponShotAt) return;
             const t = findNearestRangedTarget(effectiveWeaponRange(w));
             if (!t) return;
             performPlayerAttack(t, w, true, now);
@@ -5512,16 +5815,17 @@ function startGame(configPlayer) {
             return Boolean(equippedHand && isMagicRangedWeapon(equippedHand));
           };
           const spellSlotToCast = (
-            Phaser.Input.Keyboard.JustDown(spellHotkeys.one) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num1) ? 1
-              : Phaser.Input.Keyboard.JustDown(spellHotkeys.two) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num2) ? 2
+            Phaser.Input.Keyboard.JustDown(spellHotkeys.one)   || Phaser.Input.Keyboard.JustDown(spellHotkeys.num1) ? 1
+              : Phaser.Input.Keyboard.JustDown(spellHotkeys.two)   || Phaser.Input.Keyboard.JustDown(spellHotkeys.num2) ? 2
                 : Phaser.Input.Keyboard.JustDown(spellHotkeys.three) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num3) ? 3
-                  : Phaser.Input.Keyboard.JustDown(spellHotkeys.four) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num4) ? 4
-                    : Phaser.Input.Keyboard.JustDown(spellHotkeys.five) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num5) ? 5
-                      : Phaser.Input.Keyboard.JustDown(spellHotkeys.six) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num6) ? 6
+                  : Phaser.Input.Keyboard.JustDown(spellHotkeys.four)  || Phaser.Input.Keyboard.JustDown(spellHotkeys.num4) ? 4
+                    : Phaser.Input.Keyboard.JustDown(spellHotkeys.five)  || Phaser.Input.Keyboard.JustDown(spellHotkeys.num5) ? 5
+                      : Phaser.Input.Keyboard.JustDown(spellHotkeys.six)   || Phaser.Input.Keyboard.JustDown(spellHotkeys.num6) ? 6
                         : Phaser.Input.Keyboard.JustDown(spellHotkeys.seven) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num7) ? 7
                           : Phaser.Input.Keyboard.JustDown(spellHotkeys.eight) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num8) ? 8
-                            : Phaser.Input.Keyboard.JustDown(spellHotkeys.nine) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num9) ? 9
-                              : 0
+                            : Phaser.Input.Keyboard.JustDown(spellHotkeys.nine)  || Phaser.Input.Keyboard.JustDown(spellHotkeys.num9) ? 9
+                              : Phaser.Input.Keyboard.JustDown(spellHotkeys.zero)  || Phaser.Input.Keyboard.JustDown(spellHotkeys.num0) ? 10
+                                : 0
           );
           if (spellSlotToCast > 0) {
             const casted = castLearnedSpell(spellSlotToCast, now);

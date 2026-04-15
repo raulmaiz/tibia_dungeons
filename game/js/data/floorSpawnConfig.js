@@ -96,3 +96,30 @@ export const FLOOR_CREATURE_COUNTS = {
   19: { 1253: 25 },
   20: { 1176: 25 },
 };
+
+/**
+ * Display label shown in the HUD for each floor.
+ * Canonical source of truth — avoids mismatches between pickGroupForLevel and FLOOR_CREATURE_COUNTS.
+ */
+export const FLOOR_DISPLAY_LABEL = {
+  1:  'Rats',
+  2:  'Wolves',
+  3:  'Rotworms',
+  4:  'Trolls',
+  5:  'Undead',
+  6:  'Humans',
+  7:  'Dwarves',
+  8:  'Minotaurs',
+  9:  'Goblins',
+  10: 'Orcs',
+  11: 'Minotaurs',
+  12: 'Dwarves',
+  13: 'Lizards',
+  14: 'Vampires',
+  15: 'Giant Spiders',
+  16: 'Wyrms',
+  17: 'Outlaws',
+  18: 'Dragons',
+  19: 'Behemoths',
+  20: 'Demons',
+};
