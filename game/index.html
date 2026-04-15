@@ -1219,79 +1219,81 @@
       }
       #changelogPanel {
         margin-top: 2em;
-        text-align: left;
+        text-align: center;
         width: 100%;
-        border-top: 1px solid rgba(56,189,248,0.15);
-        padding-top: 1em;
+        border-top: 1px solid rgba(56,189,248,0.18);
+        padding-top: 1.4em;
       }
       #changelogHeader {
-        font-size: 0.95rem;
+        font-size: 0.75rem;
         color: #38bdf8;
-        letter-spacing: 0.14em;
+        letter-spacing: 0.18em;
         text-transform: uppercase;
         font-weight: 700;
-        margin-bottom: 0.8em;
-        display: flex;
-        align-items: center;
-        gap: 0.5em;
+        opacity: 0.7;
+        margin-bottom: 1.2em;
       }
-      #changelogHeader::after {
-        content: '';
-        flex: 1;
-        height: 1px;
-        background: rgba(56,189,248,0.15);
-      }
-      #changelogList {
+      #changelogDisplay {
+        min-height: 100px;
         display: flex;
         flex-direction: column;
-        gap: 0;
-        max-height: 260px;
-        overflow: hidden;
+        align-items: center;
+        justify-content: center;
+        gap: 0.9em;
+        padding: 0 0.5em;
       }
-      .cl-entry {
-        font-size: 1.05rem;
-        color: #475569;
-        padding: 5px 0 5px 1.3em;
-        line-height: 1.5;
+      #changelogText {
+        font-size: 1.35rem;
+        font-weight: 500;
+        color: #e2e8f0;
+        line-height: 1.55;
+        text-align: center;
+        max-width: 100%;
         opacity: 0;
-        transform: translateY(5px);
-        transition: opacity 0.5s ease, transform 0.5s ease;
-        position: relative;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        transform: translateY(12px);
+        transition: opacity 0.45s ease, transform 0.45s ease;
       }
-      .cl-entry::before {
-        content: '▸';
-        position: absolute;
-        left: 0;
-        color: #1d4ed8;
-        font-size: 0.8rem;
-        top: 7px;
-      }
-      .cl-entry.cl-visible {
+      #changelogText.cl-show {
         opacity: 1;
         transform: translateY(0);
-        color: #94a3b8;
       }
-      .cl-entry.cl-current {
-        color: #cbd5e1;
+      #changelogMeta {
+        display: flex;
+        align-items: center;
+        gap: 0.7em;
+        opacity: 0;
+        transition: opacity 0.4s ease;
       }
-      .cl-entry.cl-current::before {
-        color: #38bdf8;
+      #changelogMeta.cl-show { opacity: 1; }
+      #changelogVersionTag {
+        font-size: 0.7rem;
+        color: #1d4ed8;
+        background: rgba(29,78,216,0.15);
+        border: 1px solid rgba(29,78,216,0.35);
+        border-radius: 4px;
+        padding: 1px 6px;
+        letter-spacing: 0.06em;
+        font-weight: 700;
       }
-      @keyframes cl-cursor {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0; }
+      #changelogCounter {
+        font-size: 0.72rem;
+        color: #334155;
+        letter-spacing: 0.08em;
       }
-      .cl-cursor {
-        display: inline-block;
-        width: 6px; height: 0.85em;
+      #changelogDots {
+        display: flex;
+        gap: 5px;
+        margin-top: 0.4em;
+      }
+      .cl-dot {
+        width: 5px; height: 5px;
+        border-radius: 50%;
+        background: #1e293b;
+        transition: background 0.3s ease, transform 0.3s ease;
+      }
+      .cl-dot.cl-active {
         background: #38bdf8;
-        vertical-align: middle;
-        margin-left: 2px;
-        animation: cl-cursor 0.8s step-end infinite;
-        border-radius: 1px;
+        transform: scale(1.4);
       }
     </style>
     <script src="https://unpkg.com/phaser@3/dist/phaser.min.js"></script>
@@ -1559,7 +1561,14 @@
 
         <div id="changelogPanel">
           <div id="changelogHeader">What's new</div>
-          <div id="changelogList"></div>
+          <div id="changelogDisplay">
+            <div id="changelogText"></div>
+            <div id="changelogMeta">
+              <span id="changelogVersionTag"></span>
+              <span id="changelogCounter"></span>
+            </div>
+          </div>
+          <div id="changelogDots"></div>
         </div>
       </div>
     </div>
@@ -1569,66 +1578,102 @@
       import { VERSION }   from './js/data/version.js';
       import { CHANGELOG } from './js/data/changelog.js';
 
-      // Show version badge in the loading title
+      // Version badge in title
       const verEl = document.getElementById('loadingVersion');
       if (verEl) verEl.textContent = ` v${VERSION}`;
 
-      // Flatten all entries across versions (most recent first)
+      // Flatten entries: most recent version first
       const allEntries = CHANGELOG.flatMap(release =>
         release.entries.map(text => ({ text, version: release.version }))
       );
 
-      const overlay  = document.getElementById('loadingOverlay');
-      const list     = document.getElementById('changelogList');
-      const header   = document.getElementById('changelogHeader');
-      let   started  = false;
-      let   timers   = [];
+      const overlay     = document.getElementById('loadingOverlay');
+      const header      = document.getElementById('changelogHeader');
+      const textEl      = document.getElementById('changelogText');
+      const metaEl      = document.getElementById('changelogMeta');
+      const versionTag  = document.getElementById('changelogVersionTag');
+      const counterEl   = document.getElementById('changelogCounter');
+      const dotsEl      = document.getElementById('changelogDots');
 
-      function startChangelogAnimation() {
-        if (started || !list || !allEntries.length) return;
-        started = true;
+      const DISPLAY_MS = 3000;  // how long each message is visible
+      const FADE_MS    = 450;   // css transition duration
 
-        // Update header with version
-        if (header) header.textContent = `What's new in v${CHANGELOG[0]?.version ?? VERSION}`;
+      let started = false;
+      let timers  = [];
+      let index   = 0;
+      let dots    = [];
 
-        // Build all entry elements up front (hidden)
-        const nodes = allEntries.map(({ text }) => {
-          const el = document.createElement('div');
-          el.className = 'cl-entry';
-          el.textContent = text;
-          list.appendChild(el);
-          return el;
-        });
-
-        const INTERVAL_MS  = 650;   // time between entries appearing
-        const ACTIVE_LINGER = 1200; // how long each stays "highlighted"
-
-        nodes.forEach((el, i) => {
-          // Reveal entry
-          const t1 = setTimeout(() => {
-            el.classList.add('cl-visible', 'cl-current');
-          }, i * INTERVAL_MS + 300);
-
-          // De-highlight after linger
-          const t2 = setTimeout(() => {
-            el.classList.remove('cl-current');
-          }, i * INTERVAL_MS + 300 + ACTIVE_LINGER);
-
-          timers.push(t1, t2);
-        });
+      function setDot(i) {
+        dots.forEach((d, j) => d.classList.toggle('cl-active', j === i));
       }
 
-      // Watch for the overlay becoming visible
+      function showEntry(i) {
+        const entry = allEntries[i];
+
+        // Fade out current
+        textEl.classList.remove('cl-show');
+        metaEl.classList.remove('cl-show');
+
+        const t = setTimeout(() => {
+          // Update content
+          textEl.textContent = entry.text;
+          versionTag.textContent = `v${entry.version}`;
+          counterEl.textContent  = `${i + 1} / ${allEntries.length}`;
+          setDot(i);
+
+          // Fade in
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            textEl.classList.add('cl-show');
+            metaEl.classList.add('cl-show');
+          }));
+
+          // Schedule next
+          const next = (i + 1) % allEntries.length;
+          timers.push(setTimeout(() => showEntry(next), DISPLAY_MS));
+        }, FADE_MS);
+
+        timers.push(t);
+      }
+
+      function startChangelogAnimation() {
+        if (started || !allEntries.length) return;
+        started = true;
+
+        if (header) header.textContent = `What's new in v${CHANGELOG[0]?.version ?? VERSION}`;
+
+        // Build dot indicators (max 20 dots to avoid overflow)
+        const dotCount = Math.min(allEntries.length, 20);
+        for (let i = 0; i < dotCount; i++) {
+          const d = document.createElement('div');
+          d.className = 'cl-dot';
+          dotsEl.appendChild(d);
+          dots.push(d);
+        }
+
+        // Show first entry immediately
+        textEl.textContent = allEntries[0].text;
+        versionTag.textContent = `v${allEntries[0].version}`;
+        counterEl.textContent  = `1 / ${allEntries.length}`;
+        setDot(0);
+
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          textEl.classList.add('cl-show');
+          metaEl.classList.add('cl-show');
+        }));
+
+        timers.push(setTimeout(() => showEntry(1 % allEntries.length), DISPLAY_MS));
+      }
+
+      // Start when overlay becomes visible
       const observer = new MutationObserver(() => {
         if (overlay.style.display === 'flex') {
           observer.disconnect();
-          // Small delay so the overlay fade-in finishes first
-          setTimeout(startChangelogAnimation, 600);
+          setTimeout(startChangelogAnimation, 500);
         }
       });
       observer.observe(overlay, { attributes: true, attributeFilter: ['style'] });
 
-      // Clean up timers when overlay hides (game starts)
+      // Clean up when game starts
       new MutationObserver(() => {
         if (overlay.style.display === 'none') {
           timers.forEach(clearTimeout);
