@@ -1966,18 +1966,8 @@ function startGame(configPlayer) {
         const drawMinimapDynamic = () => {
           if (!minimapCtx || !minimapBaseImageData) return;
           minimapCtx.putImageData(minimapBaseImageData, 0, 0);
-          // Alive creatures (red)
-          minimapCtx.fillStyle = '#f87171';
-          for (const c of creatures) {
-            if (!c.alive) continue;
-            minimapCtx.fillRect(
-              MMAP_PAD + c.gx * minimapMMTile,
-              MMAP_PAD + c.gy * minimapMMTile,
-              minimapMMTile,
-              minimapMMTile
-            );
-          }
-          // Player (white)
+          // Player only — creatures are intentionally hidden so the minimap
+          // stays a navigation aid, not a combat tracker.
           minimapCtx.fillStyle = '#ffffff';
           minimapCtx.fillRect(
             MMAP_PAD + gridX * minimapMMTile,
