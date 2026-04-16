@@ -76,6 +76,10 @@ export function createFloorAtmosphere(scene, opts) {
   // Transient lights — short-lived point lights anywhere in the world. Used by
   // creature-spell VFX to illuminate the projectile trajectory.
   let transientLights = []; // { x, y, radius, startTime, duration, peakAlpha }
+  // Area lights — long-lived point lights at a fixed world position (fire
+  // fields and similar). Keep their full radius for most of the duration and
+  // fade out in the final stretch, same envelope as player-cast light spells.
+  let activeAreaLights = []; // { id, x, y, radius, startTime, duration }
   let lastDarkUpdate = 0;
   let lastDarkPx = -9e9;
   let lastDarkPy = -9e9;
@@ -2024,6 +2028,25 @@ export function createFloorAtmosphere(scene, opts) {
     });
   }
 
+  function addAreaLight(id, x, y, radiusTiles, durationMs) {
+    activeAreaLights.push({
+      id,
+      x, y,
+      radius: Math.max(0, Number(radiusTiles) || 0) * tileSize,
+      startTime: scene.time.now,
+      duration: Math.max(1, Number(durationMs) || 1),
+    });
+    lastDarkUpdate = 0;
+  }
+  function removeAreaLight(id) {
+    activeAreaLights = activeAreaLights.filter((l) => l.id !== id);
+    lastDarkUpdate = 0;
+  }
+  function clearAreaLights() {
+    activeAreaLights = [];
+    lastDarkUpdate = 0;
+  }
+
   function addTransientLight(x, y, radiusTiles, durationMs, opts = {}) {
     transientLights.push({
       x, y,
@@ -2063,9 +2086,10 @@ export function createFloorAtmosphere(scene, opts) {
 
   function updateDarkness(nowMs, px, py) {
     if (!darknessRT) return;
-    // Drop expired spells / transient lights.
+    // Drop expired spells / transient lights / area lights.
     activeLightSpells = activeLightSpells.filter((l) => (nowMs - l.startTime) < l.duration);
     transientLights = transientLights.filter((l) => (nowMs - l.startTime) < l.duration);
+    activeAreaLights = activeAreaLights.filter((l) => (nowMs - l.startTime) < l.duration);
 
     // When transient lights are flashing we need smooth per-frame redraws so
     // the light trail animates properly. We also redraw when the camera
@@ -2115,6 +2139,13 @@ export function createFloorAtmosphere(scene, opts) {
     darknessRT.fill(0x000000, DARKNESS_ALPHA);
     paintLightAt(px, py, coreR, coreR * 1.5);
 
+    // World-space area lights (fire fields etc.) — steady radius with a
+    // soft tail at the end, painted at their stored world coordinates.
+    for (const al of activeAreaLights) {
+      const t = (nowMs - al.startTime) / al.duration;
+      const r = al.radius * spellEnvelope(t);
+      if (r > 8) paintLightAt(al.x, al.y, r, r * 1.4);
+    }
     // Transient lights stack on top of the main player-centred light. Each
     // one follows a fast-up / slow-down envelope so flashes feel punchy.
     for (const tl of transientLights) {
@@ -2157,6 +2188,9 @@ export function createFloorAtmosphere(scene, opts) {
     addLightSpell,
     setEquipmentLight,
     addTransientLight,
+    addAreaLight,
+    removeAreaLight,
+    clearAreaLights,
     updateDarkness,
     clearLightSpells,
   };

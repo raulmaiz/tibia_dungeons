@@ -69,6 +69,13 @@ let inventoryClearEquippedSlotVisual = null;
 // state is applied on creation so pre-scene equips (starting torch) light up
 // as soon as the dungeon renders.
 let atmosphereSetEquipmentLight = () => {};
+// The equipment-panel footer now hosts the debuff status-chip bar plus a
+// small text line below. All callers push their transient messages through
+// this helper so the status chips keep rendering alongside any text.
+function writeEquipmentFootText(text) {
+  const textEl = document.getElementById('equipmentFootText');
+  if (textEl) textEl.textContent = String(text == null ? '' : text);
+}
 let currentLightItemState = null; // { articleId, title, radius, duration, startTime, initialElapsed }
 const lightBurnElapsedByArticleId = new Map();
 // Lowercased set of image paths (e.g. "item/lit candlestick.gif") known to
@@ -563,7 +570,7 @@ function setupSelectorUI() {
       renderLootSlots(currentBagCapacity);
       if (removed) {
         const equipmentFoot = document.getElementById('equipmentFoot');
-        if (equipmentFoot) equipmentFoot.textContent = `Discarded: ${removed.title}`;
+        if (equipmentFoot) writeEquipmentFootText(`Discarded: ${removed.title}`);
       }
     });
   }
@@ -797,7 +804,7 @@ function setupSelectorUI() {
           excludeBagIndex,
         });
         if (!storedShield) {
-          equipmentFoot.textContent = 'Cannot equip two-handed weapon: no space/capacity to move shield to loot.';
+          writeEquipmentFootText('Cannot equip two-handed weapon: no space/capacity to move shield to loot.');
           return false;
         }
         clearEquippedSlotVisual('shield');
@@ -821,7 +828,7 @@ function setupSelectorUI() {
           excludeBagIndex,
         });
         if (!storedHand) {
-          equipmentFoot.textContent = 'Cannot equip shield: no space/capacity to move two-handed weapon to loot.';
+          writeEquipmentFootText('Cannot equip shield: no space/capacity to move two-handed weapon to loot.');
           return false;
         }
         clearEquippedSlotVisual('hand');
@@ -841,8 +848,7 @@ function setupSelectorUI() {
     const slotRoot = document.getElementById(`slot${rule.id}`);
     if (slotRoot) slotRoot.classList.add('equipped');
     bindTooltip(slotRoot, item);
-    equipmentFoot.textContent = equipmentFootText || `Equipped ${rule.footName}: ${item.title}`;
-    equipmentFoot.style.display = 'block';
+    writeEquipmentFootText(equipmentFootText || `Equipped ${rule.footName}: ${item.title}`);
     if (slotKey === 'ring' || slotKey === 'amulet') startAccessoryTimer(slotKey, item);
     if (slotKey === 'light') applyEquipmentLightFromItem(item);
     return true;
@@ -888,7 +894,7 @@ function setupSelectorUI() {
     slotLabel.textContent = 'Empty';
     slotRoot.title = '';
     slotRoot.classList.remove('equipped');
-    if (footText) equipmentFoot.textContent = footText;
+    if (footText) writeEquipmentFootText(footText);
     return true;
   }
   // Expose equip visual mutators to combat/runtime code outside setupSelectorUI scope.
@@ -1385,7 +1391,7 @@ function setupSelectorUI() {
         bagImg.style.display = 'none';
         bagIcon.textContent = 'BAG';
         bagLabel.textContent = 'Empty';
-        equipmentFoot.textContent = 'No item equipped';
+        writeEquipmentFootText('No item equipped');
         currentBagCapacity = 0;
         currentBagItem = null;
         bagLootItems = [];
@@ -1396,7 +1402,7 @@ function setupSelectorUI() {
         bagImg.style.display = 'none';
         bagIcon.textContent = 'BAG';
         bagLabel.textContent = 'Invalid';
-        equipmentFoot.textContent = 'BAG slot only supports Containers';
+        writeEquipmentFootText('BAG slot only supports Containers');
         currentBagCapacity = 0;
         currentBagItem = null;
         bagLootItems = [];
@@ -1442,21 +1448,21 @@ function setupSelectorUI() {
       }
       const nextCapacity = Math.max(0, Math.floor(Number(bag.weight) || 0));
       if (bagLootItems.length > nextCapacity) {
-        equipmentFoot.textContent = `Cannot equip ${bag.title}: requires ${nextCapacity} slots, carrying ${bagLootItems.length}.`;
+        writeEquipmentFootText(`Cannot equip ${bag.title}: requires ${nextCapacity} slots, carrying ${bagLootItems.length}.`);
         return false;
       }
       currentBagCapacity = nextCapacity;
       currentBagItem = bag;
       bagLabel.textContent = bag.title;
       bindTooltip(bagRoot, bag);
-      equipmentFoot.textContent = `Equipped: ${bag.title}`;
+      writeEquipmentFootText(`Equipped: ${bag.title}`);
       renderLootSlots(currentBagCapacity);
       return true;
     } catch (_err) {
       bagImg.style.display = 'none';
       bagIcon.textContent = 'BAG';
       bagLabel.textContent = 'Empty';
-      equipmentFoot.textContent = 'No item equipped';
+      writeEquipmentFootText('No item equipped');
       currentBagCapacity = 0;
       currentBagItem = null;
       bagLootItems = [];
@@ -1488,14 +1494,14 @@ function setupSelectorUI() {
         || (rule.requireSecondaryType && String(item.type_secondary || '').toLowerCase() === rule.requireSecondaryType.toLowerCase())
         || (rule.requireTypeAlt && String(item.item_type || '').toLowerCase() === rule.requireTypeAlt.toLowerCase());
       if (slotKey === 'hand' && String(item.item_type || '').toLowerCase() === 'ammunition') {
-        equipmentFoot.textContent = `Cannot equip ${item.title} in HAND slot (use AMMO slot).`;
+        writeEquipmentFootText(`Cannot equip ${item.title} in HAND slot (use AMMO slot).`);
         return false;
       }
       if (!matchesType || !matchesClass || !matchesSecondary) {
         const req = (rule.requireSecondaryType || rule.requireTypeAlt)
           ? [rule.requireTypeAlt, rule.requireSecondaryType].filter(Boolean).join(' or ')
           : (rule.requireType || `item_class ${rule.requireClass}`);
-        equipmentFoot.textContent = `Cannot equip ${item.title} in ${slotKey.toUpperCase()} slot (requires ${req}).`;
+        writeEquipmentFootText(`Cannot equip ${item.title} in ${slotKey.toUpperCase()} slot (requires ${req}).`);
         return false;
       }
       return setEquippedSlotVisual(slotKey, item, `Equipped ${rule.footName}: ${item.title}`);
@@ -1748,6 +1754,9 @@ function startGame(configPlayer) {
         }
         this.load.image(deathTextureName('male'), './data/images/other/you_are_death_male.jpg');
         this.load.image(deathTextureName('female'), './data/images/other/you_are_death_female.jpg');
+        // Hazard-field tile sprites (reused across every tile in a field).
+        this.load.image('fx_fire_field', './data/images/item/Fire.gif');
+        this.load.image('fx_poison_field', './data/images/item/Poison Gas.gif');
         const unique = new Map();
         for (const tier of typeProgressionGroups) {
           for (const c of tier.creatures) {
@@ -2315,6 +2324,31 @@ function startGame(configPlayer) {
         );
         const aliveCreatures = () => creatures.filter((c) => c.alive);
         const creatureAt = (gx, gy) => aliveCreatures().find((c) => c.gx === gx && c.gy === gy) || null;
+        // Look up a creature template by title across every tier — used by
+        // summon abilities to resolve "name" → spawnable creature. Returns
+        // null if the title isn't in any tier (e.g. flavour-only summons).
+        const findCreatureTemplateByTitle = (title) => {
+          const needle = String(title || '').trim().toLowerCase();
+          if (!needle) return null;
+          for (const g of typeProgressionGroups) {
+            const c = (g.creatures || []).find((x) => String(x.title || '').trim().toLowerCase() === needle);
+            if (c) return c;
+          }
+          return null;
+        };
+        const findWalkableAdjacentTile = (gx, gy) => {
+          const dirs = [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]];
+          Phaser.Utils.Array.Shuffle(dirs);
+          for (const [dx, dy] of dirs) {
+            const nx = gx + dx;
+            const ny = gy + dy;
+            if (!isWalkableTile(nx, ny)) continue;
+            if (creatureAt(nx, ny)) continue;
+            if (nx === gridX && ny === gridY) continue;
+            return { gx: nx, gy: ny };
+          }
+          return null;
+        };
         const groundTileKey = (gx, gy) => `${gx},${gy}`;
         const groundLootTextureKey = (imagePath) => `ground_loot_${String(imagePath || '').replace(/[^a-zA-Z0-9_]/g, '_')}`;
         const refreshGroundLootMarker = (entry) => {
@@ -3222,6 +3256,7 @@ function startGame(configPlayer) {
             if (entry.markerCount) entry.markerCount.destroy();
           }
           groundLootByTile.clear();
+          clearAllFireFields();
           if (toNext) currentLevel += 1;
           currentLevelGroup = pickGroupForLevel(currentLevel);
           // Calcular tamaño del mapa según las criaturas de este floor
@@ -5394,7 +5429,20 @@ function startGame(configPlayer) {
             updateHud();
             return true;
           }
-          if (group === 'healing' || title.includes('healing') || title.includes('exura')) {
+          if (title === 'cure poison') {
+            // Cure Poison is group="Healing" in the data but its only effect
+            // is removing the poison DoT — NOT restoring HP. Handle it here
+            // so the generic healing branch below doesn't heal instead.
+            showSpellAuraEffect(player.x, player.y, spell, 1.0);
+            if (poisonState) {
+              poisonState = null;
+              setPoisonIndicator(false);
+              showPlayerCureEffect();
+              addCombatLog(`Cast [${slotNumber}] ${spell.title}: poison removed.`, LOG_COLORS.SPELL);
+            } else {
+              addCombatLog(`Cast [${slotNumber}] ${spell.title}: no poison to cure.`, LOG_COLORS.SPELL);
+            }
+          } else if (group === 'healing' || title.includes('healing') || title.includes('exura')) {
             const heal = inferHealingAmount(spell);
             const prev = playerHp;
             playerHp = Math.min(playerMaxHp, playerHp + heal);
@@ -5766,6 +5814,542 @@ function startGame(configPlayer) {
           const hi = Phaser.Math.Clamp(Math.max(a, b), lo, safeCap);
           return Phaser.Math.Between(lo, hi);
         };
+        // Summon abilities: `effect` holds the maximum simultaneous summons
+        // (first integer in the string; falls back to 1 for "?" / malformed).
+        const parseSummonMax = (ability) => {
+          const raw = String((ability && ability.effect) || '');
+          const nums = raw.match(/\d+/g) || [];
+          if (nums.length === 0) return 1;
+          return Phaser.Math.Clamp(Math.max(1, Number(nums[0])), 1, 8);
+        };
+        const spawnSummonFromTemplate = (template, gx, gy, parent) => {
+          const textureKey = creatureKey(template);
+          if (!this.textures.exists(textureKey)) return null;
+          const sprite = this.add.sprite(centerX(gx), centerY(gy), textureKey);
+          sprite.setOrigin(0.5, 0.5);
+          applyCreatureNormalizedDisplaySize(sprite, this, tileSize);
+          sprite.setDepth(15);
+          const creatureId = Number(template.id);
+          const damageMul = Number(CREATURE_DAMAGE_MULTIPLIER_BY_ID.get(creatureId) || 1);
+          const baseMaxDamage = Math.max(1, Number(template.maxDamage || 1));
+          const adjustedMaxDamage = Math.max(1, Math.floor(baseMaxDamage * damageMul));
+          const fresh = {
+            id: creatureId,
+            sprite,
+            gx, gy,
+            hp: Math.max(1, Number(template.hitpoints || 1)),
+            maxHp: Math.max(1, Number(template.hitpoints || 1)),
+            maxDamage: adjustedMaxDamage,
+            runsAt: Math.max(0, Number(template.runs_at || 0)),
+            title: template.title,
+            experience: Number(template.experience || 0),
+            speed: Math.max(1, Number(template.speed || 100)),
+            ranged: template.ranged === true,
+            range: Math.max(1, Number(template.range || 1)),
+            alive: true,
+            nextWanderAt: 0,
+            nextActionAt: 0,
+            nextAbilityAt: 0,
+            aggroLocked: false,
+            abilities: (creatureAbilitiesById.get(creatureId) || []).slice(0, 16),
+            elementMods: mergeCreatureElementModsForId(creatureId),
+            hpBar: makeHealthBar(0xef4444),
+            nameTag: makeNameLabel(template.title, '#f3f4f6'),
+            isSummon: true,
+            summonedBy: parent || null,
+          };
+          fresh.hpBar.bg.setDepth(16);
+          fresh.hpBar.fill.setDepth(17);
+          fresh.nameTag.setDepth(18);
+          creatures.push(fresh);
+          updateCreatureBar(fresh);
+          return fresh;
+        };
+        // ── Fire fields + burn effect ──────────────────────────────────
+        // Tile-based hazard placed by creature "fire field" abilities. Each
+        // tile is stored in fireFields by "gx,gy" key. Stepping onto one
+        // inflicts a one-off hit and (re)starts a burn DoT with diminishing
+        // ticks over one minute.
+        const FIRE_FIELD_DURATION_MS = 5 * 60 * 1000;
+        const FIRE_FIELD_STEP_DAMAGE = 10;
+        const BURN_TICK_INTERVAL_MS = 10 * 1000;
+        const BURN_TICK_DAMAGES = [10, 8, 6, 4, 2, 1];
+        const POISON_FIELD_DURATION_MS = 5 * 60 * 1000;
+        const POISON_FIELD_STEP_DAMAGE = 5;
+        const fireFields = new Map();
+        const poisonFields = new Map();
+        let burnState = null; // { startedAt, nextTickAt, tickIndex }
+        let poisonState = null; // { startedAt, nextTickAt, tickIndex }
+        let electrifiedState = null; // { startedAt, nextTickAt, tickIndex }
+        const POISON_TICK_INTERVAL_MS = 10 * 1000;
+        const POISON_TICK_DAMAGES = [6, 5, 4, 3, 2, 1];
+        const ELECTRIFIED_TICK_INTERVAL_MS = 10 * 1000;
+        const ELECTRIFIED_TICK_DAMAGES = [8, 6, 5, 4, 3, 2];
+        const burnChipEl = document.getElementById('statusBurn');
+        const poisonChipEl = document.getElementById('statusPoison');
+        const electrifiedChipEl = document.getElementById('statusShock');
+        const setBurnIndicator = (active) => {
+          if (!burnChipEl) return;
+          burnChipEl.hidden = !active;
+        };
+        const setPoisonIndicator = (active) => {
+          if (!poisonChipEl) return;
+          poisonChipEl.hidden = !active;
+        };
+        const setElectrifiedIndicator = (active) => {
+          if (!electrifiedChipEl) return;
+          electrifiedChipEl.hidden = !active;
+        };
+        const fireFieldKey = (gx, gy) => `${gx},${gy}`;
+        const destroyFireFieldVisual = (ff) => {
+          if (!ff) return;
+          if (ff.sprite) ff.sprite.destroy();
+          if (ff.spriteTween && ff.spriteTween.remove) ff.spriteTween.remove();
+          if (floorAtmosphere && typeof floorAtmosphere.removeAreaLight === 'function') {
+            floorAtmosphere.removeAreaLight(ff.lightId);
+          }
+        };
+        const addFireFieldTile = (gx, gy) => {
+          if (!isWalkableTile(gx, gy)) return;
+          const key = fireFieldKey(gx, gy);
+          const existing = fireFields.get(key);
+          if (existing) {
+            existing.expiresAt = this.time.now + FIRE_FIELD_DURATION_MS;
+            return;
+          }
+          const cx = centerX(gx);
+          const cy = centerY(gy);
+          const sprite = this.add.image(cx, cy, 'fx_fire_field');
+          sprite.setOrigin(0.5, 0.5);
+          sprite.setDisplaySize(tileSize * 0.95, tileSize * 0.95);
+          sprite.setDepth(6);
+          // Subtle life-sign pulse so the tile doesn't look static.
+          const spriteTween = this.tweens.add({
+            targets: sprite,
+            scaleX: { from: sprite.scaleX * 0.95, to: sprite.scaleX * 1.08 },
+            scaleY: { from: sprite.scaleY * 1.05, to: sprite.scaleY * 0.94 },
+            alpha:  { from: 0.95, to: 0.8 },
+            yoyo: true, repeat: -1,
+            duration: 320 + Math.random() * 220,
+            ease: 'Sine.inOut',
+          });
+          const lightId = `firefield-${key}-${this.time.now}`;
+          floorAtmosphere.addAreaLight(lightId, cx, cy, 1.8, FIRE_FIELD_DURATION_MS);
+          fireFields.set(key, {
+            gx, gy,
+            expiresAt: this.time.now + FIRE_FIELD_DURATION_MS,
+            sprite, spriteTween, lightId,
+          });
+        };
+        const cleanupExpiredFireFields = (nowMs) => {
+          if (fireFields.size === 0) return;
+          for (const [key, ff] of fireFields) {
+            if (nowMs >= ff.expiresAt) {
+              destroyFireFieldVisual(ff);
+              fireFields.delete(key);
+            }
+          }
+        };
+        // Called on every floor transition: the tile-bound hazards (fire /
+        // poison fields) belong to the old map and have to be removed, but
+        // the per-player DoT status (burn, poison, shock) is a debuff on
+        // the character and carries over — including its ongoing tick
+        // schedule and visible status chip.
+        const clearAllFireFields = () => {
+          for (const ff of fireFields.values()) destroyFireFieldVisual(ff);
+          fireFields.clear();
+          for (const pf of poisonFields.values()) destroyPoisonFieldVisual(pf);
+          poisonFields.clear();
+          if (floorAtmosphere && typeof floorAtmosphere.clearAreaLights === 'function') {
+            floorAtmosphere.clearAreaLights();
+          }
+        };
+        const placeFireFieldAroundPlayer = () => {
+          for (let dy = -1; dy <= 1; dy += 1) {
+            for (let dx = -1; dx <= 1; dx += 1) {
+              addFireFieldTile(gridX + dx, gridY + dy);
+            }
+          }
+          // The player is standing on the newly-placed centre tile, so apply
+          // the step hit + (re)start the burn right away.
+          triggerFireStep();
+        };
+        const destroyPoisonFieldVisual = (pf) => {
+          if (!pf) return;
+          if (pf.sprite) pf.sprite.destroy();
+          if (pf.spriteTween && pf.spriteTween.remove) pf.spriteTween.remove();
+          if (floorAtmosphere && typeof floorAtmosphere.removeAreaLight === 'function') {
+            floorAtmosphere.removeAreaLight(pf.lightId);
+          }
+        };
+        const addPoisonFieldTile = (gx, gy) => {
+          if (!isWalkableTile(gx, gy)) return;
+          const key = fireFieldKey(gx, gy);
+          const existing = poisonFields.get(key);
+          if (existing) {
+            existing.expiresAt = this.time.now + POISON_FIELD_DURATION_MS;
+            return;
+          }
+          const cx = centerX(gx);
+          const cy = centerY(gy);
+          const sprite = this.add.image(cx, cy, 'fx_poison_field');
+          sprite.setOrigin(0.5, 0.5);
+          sprite.setDisplaySize(tileSize * 0.95, tileSize * 0.95);
+          sprite.setDepth(6);
+          const spriteTween = this.tweens.add({
+            targets: sprite,
+            scaleX: { from: sprite.scaleX * 0.96, to: sprite.scaleX * 1.06 },
+            scaleY: { from: sprite.scaleY * 1.04, to: sprite.scaleY * 0.96 },
+            alpha:  { from: 0.9, to: 0.7 },
+            yoyo: true, repeat: -1,
+            duration: 520 + Math.random() * 260,
+            ease: 'Sine.inOut',
+          });
+          // Subtle greenish glow so the cloud is visible in darkness.
+          const lightId = `poisonfield-${key}-${this.time.now}`;
+          floorAtmosphere.addAreaLight(lightId, cx, cy, 1.1, POISON_FIELD_DURATION_MS);
+          poisonFields.set(key, {
+            gx, gy,
+            expiresAt: this.time.now + POISON_FIELD_DURATION_MS,
+            sprite, spriteTween, lightId,
+          });
+        };
+        const cleanupExpiredPoisonFields = (nowMs) => {
+          if (poisonFields.size === 0) return;
+          for (const [key, pf] of poisonFields) {
+            if (nowMs >= pf.expiresAt) {
+              destroyPoisonFieldVisual(pf);
+              poisonFields.delete(key);
+            }
+          }
+        };
+        const playerOnPoisonField = () => poisonFields.has(fireFieldKey(gridX, gridY));
+        const triggerPoisonStep = (casterTitle = 'Poison Field') => {
+          if (playerDead) return;
+          const dmg = godModeEnabled ? 0 : POISON_FIELD_STEP_DAMAGE;
+          applyFireDamage(dmg, casterTitle);
+          floatingCombatText(this, player.x, player.y - tileSize * 0.5, `-${dmg} ☠`, {
+            color: '#4ade80', fontSize: '16px',
+          });
+          if (!godModeEnabled) triggerPoisonApply(casterTitle);
+          updatePlayerBar();
+          updateHud();
+        };
+        const placePoisonFieldAroundPlayer = () => {
+          for (let dy = -1; dy <= 1; dy += 1) {
+            for (let dx = -1; dx <= 1; dx += 1) {
+              addPoisonFieldTile(gridX + dx, gridY + dy);
+            }
+          }
+          triggerPoisonStep();
+        };
+        const applyFireDamage = (dmg, killedByTitle) => {
+          if (godModeEnabled || playerDead) return;
+          playerHp = Math.max(0, playerHp - dmg);
+          if (playerHp <= 0 && !playerDead) {
+            gameOver = true;
+            playerDead = true;
+            this.tweens.killTweensOf(player);
+            const deathKey = deathTextureName(configPlayer.sex === 'female' ? 'female' : 'male');
+            player.setTexture(deathKey);
+            player.setAngle(0);
+            player.setFlipX(false); player.setFlipY(false);
+            player.setScale(1, 1);
+            player.setDisplaySize(tileSize, tileSize);
+            deathCaption.setPosition(player.x, player.y + tileSize * 0.72);
+            deathCaption.setVisible(true);
+            addCombatLog('You are dead.');
+            this.time.delayedCall(3000, () => {
+              showDeathSummary({
+                name: configPlayer.name,
+                classKey: configPlayer.classKey,
+                sex: configPlayer.sex || 'male',
+                floor: currentLevel,
+                kills: runKills,
+                playerLevel,
+                gold: window.debugInventory ? window.debugInventory.getGold() : 0,
+                killedBy: killedByTitle || 'Fire',
+              });
+            });
+          }
+        };
+        const triggerFireStep = () => {
+          if (playerDead) return;
+          const dmg = godModeEnabled ? 0 : FIRE_FIELD_STEP_DAMAGE;
+          applyFireDamage(dmg, 'Fire Field');
+          burnState = {
+            startedAt: this.time.now,
+            nextTickAt: this.time.now + BURN_TICK_INTERVAL_MS,
+            tickIndex: 0,
+          };
+          setBurnIndicator(true);
+          floatingCombatText(this, player.x, player.y - tileSize * 0.5, `-${dmg} 🔥`, {
+            color: '#ef4444', fontSize: '16px',
+          });
+          addCombatLog(`You step on fire! -${dmg} HP and burning.`, LOG_COLORS.SPELL);
+          updatePlayerBar();
+          updateHud();
+        };
+        const tickBurn = (nowMs) => {
+          if (!burnState || playerDead) return;
+          if (nowMs < burnState.nextTickAt) return;
+          if (burnState.tickIndex >= BURN_TICK_DAMAGES.length) {
+            burnState = null;
+            setBurnIndicator(false);
+            return;
+          }
+          const dmg = BURN_TICK_DAMAGES[burnState.tickIndex];
+          applyFireDamage(dmg, 'Burn');
+          floatingCombatText(this, player.x, player.y - tileSize * 0.5, `-${dmg} 🔥`, {
+            color: '#ef4444', fontSize: '14px',
+          });
+          burnState.tickIndex += 1;
+          burnState.nextTickAt = nowMs + BURN_TICK_INTERVAL_MS;
+          updatePlayerBar();
+          updateHud();
+        };
+        const playerOnFireField = () => fireFields.has(fireFieldKey(gridX, gridY));
+        // Poison mirrors burn: periodic ticks with diminishing damage. A new
+        // hit with a poisoned ability restarts the schedule from the top.
+        const triggerPoisonApply = (casterTitle) => {
+          if (playerDead) return;
+          const alreadyPoisoned = Boolean(poisonState);
+          poisonState = {
+            startedAt: this.time.now,
+            nextTickAt: this.time.now + POISON_TICK_INTERVAL_MS,
+            tickIndex: 0,
+          };
+          setPoisonIndicator(true);
+          showPlayerPoisonedEffect();
+          addCombatLog(
+            alreadyPoisoned
+              ? `${casterTitle || 'Enemy'} refreshes the poison on you.`
+              : `${casterTitle || 'Enemy'} poisons you.`,
+            LOG_COLORS.SPELL,
+          );
+        };
+        const tickPoison = (nowMs) => {
+          if (!poisonState || playerDead) return;
+          if (nowMs < poisonState.nextTickAt) return;
+          if (poisonState.tickIndex >= POISON_TICK_DAMAGES.length) {
+            poisonState = null;
+            setPoisonIndicator(false);
+            return;
+          }
+          const dmg = POISON_TICK_DAMAGES[poisonState.tickIndex];
+          applyFireDamage(dmg, 'Poison');
+          floatingCombatText(this, player.x, player.y - tileSize * 0.5, `-${dmg} ☠`, {
+            color: '#4ade80', fontSize: '14px',
+          });
+          poisonState.tickIndex += 1;
+          poisonState.nextTickAt = nowMs + POISON_TICK_INTERVAL_MS;
+          updatePlayerBar();
+          updateHud();
+        };
+        const showPlayerPoisonedEffect = () => {
+          if (playerDead) return;
+          radialSparkBurst(this, player.x, player.y - 4, 0x4ade80, 8);
+          for (let i = 0; i < 6; i += 1) {
+            const ox = (Math.random() - 0.5) * tileSize * 0.6;
+            const oy = (Math.random() - 0.5) * 6;
+            const drop = this.add.circle(player.x + ox, player.y + oy, 2 + Math.random(), 0x16a34a, 0.95);
+            drop.setDepth(28);
+            this.tweens.add({
+              targets: drop,
+              y: drop.y + 8 + Math.random() * 8,
+              alpha: 0, scaleX: 0.3, scaleY: 0.3,
+              duration: 520 + Math.random() * 200, ease: 'Sine.easeOut',
+              onComplete: () => drop.destroy(),
+            });
+          }
+        };
+        const triggerElectrifiedApply = (casterTitle) => {
+          if (playerDead) return;
+          const already = Boolean(electrifiedState);
+          electrifiedState = {
+            startedAt: this.time.now,
+            nextTickAt: this.time.now + ELECTRIFIED_TICK_INTERVAL_MS,
+            tickIndex: 0,
+          };
+          setElectrifiedIndicator(true);
+          showPlayerElectrifiedEffect();
+          addCombatLog(
+            already
+              ? `${casterTitle || 'Enemy'} refreshes the shock on you.`
+              : `${casterTitle || 'Enemy'} electrifies you.`,
+            LOG_COLORS.SPELL,
+          );
+        };
+        const tickElectrified = (nowMs) => {
+          if (!electrifiedState || playerDead) return;
+          if (nowMs < electrifiedState.nextTickAt) return;
+          if (electrifiedState.tickIndex >= ELECTRIFIED_TICK_DAMAGES.length) {
+            electrifiedState = null;
+            setElectrifiedIndicator(false);
+            return;
+          }
+          const dmg = ELECTRIFIED_TICK_DAMAGES[electrifiedState.tickIndex];
+          applyFireDamage(dmg, 'Shock');
+          floatingCombatText(this, player.x, player.y - tileSize * 0.5, `-${dmg} ⚡`, {
+            color: '#c084fc', fontSize: '14px',
+          });
+          electrifiedState.tickIndex += 1;
+          electrifiedState.nextTickAt = nowMs + ELECTRIFIED_TICK_INTERVAL_MS;
+          updatePlayerBar();
+          updateHud();
+        };
+        const showPlayerElectrifiedEffect = () => {
+          if (playerDead) return;
+          radialSparkBurst(this, player.x, player.y - 4, 0x60a5fa, 10);
+          // Jagged arc lines radiating from the player.
+          for (let i = 0; i < 4; i += 1) {
+            const a = (i / 4) * Math.PI * 2 + Math.random() * 0.3;
+            const g = this.add.graphics();
+            g.setDepth(28);
+            g.lineStyle(2.2, 0xbfdbfe, 0.95);
+            g.beginPath();
+            g.moveTo(player.x, player.y);
+            const mx = player.x + Math.cos(a) * 10 + (Math.random() - 0.5) * 6;
+            const my = player.y + Math.sin(a) * 10 + (Math.random() - 0.5) * 6;
+            const tx = player.x + Math.cos(a) * 22;
+            const ty = player.y + Math.sin(a) * 22;
+            g.lineTo(mx, my);
+            g.lineTo(tx, ty);
+            g.strokePath();
+            this.tweens.add({
+              targets: g, alpha: 0, duration: 240, ease: 'Quad.easeIn',
+              onComplete: () => g.destroy(),
+            });
+          }
+          // Quick cyan tint pulse on the player.
+          player.setTint(0x60a5fa);
+          this.tweens.add({
+            targets: player, alpha: 0.8, yoyo: true, duration: 90,
+            onComplete: () => { if (!playerDead) { player.clearTint(); player.setAlpha(1); } },
+          });
+        };
+        const showPlayerCureEffect = () => {
+          if (playerDead) return;
+          // Soft cyan sparkles rising off the player.
+          for (let i = 0; i < 10; i += 1) {
+            const ox = (Math.random() - 0.5) * tileSize * 0.8;
+            const oy = (Math.random() - 0.5) * 6;
+            const s = this.add.circle(player.x + ox, player.y + oy, 1.8 + Math.random() * 1.4, 0x67e8f9, 0.95);
+            s.setDepth(28);
+            this.tweens.add({
+              targets: s,
+              y: s.y - 22 - Math.random() * 10,
+              alpha: 0, scaleX: 0.3, scaleY: 0.3,
+              duration: 640 + Math.random() * 220, ease: 'Sine.easeOut',
+              onComplete: () => s.destroy(),
+            });
+          }
+        };
+        const showPlayerLifeDrainEffect = (amount, casterSprite) => {
+          if (playerDead) return;
+          radialSparkBurst(this, player.x, player.y - 4, 0xb91c1c, 10);
+          const tx = casterSprite ? casterSprite.x : player.x;
+          const ty = casterSprite ? casterSprite.y : player.y - 24;
+          for (let i = 0; i < 8; i += 1) {
+            const a = Math.random() * Math.PI * 2;
+            const ox = Math.cos(a) * 6;
+            const oy = Math.sin(a) * 6;
+            const p = this.add.circle(player.x + ox, player.y + oy, 2.2, 0x7f1d1d, 0.95);
+            p.setDepth(28);
+            this.tweens.add({
+              targets: p, x: tx, y: ty,
+              alpha: 0, scaleX: 0.3, scaleY: 0.3,
+              duration: 460 + Math.random() * 180, delay: i * 28,
+              ease: 'Sine.easeIn',
+              onComplete: () => p.destroy(),
+            });
+          }
+          floatingCombatText(this, player.x, player.y - tileSize * 0.65, `-${amount} HP`, {
+            color: '#ef4444', fontSize: '17px',
+          });
+        };
+        const showPlayerManaDrainEffect = (amount, casterSprite) => {
+          if (playerDead) return;
+          radialSparkBurst(this, player.x, player.y - 4, 0x60a5fa, 10);
+          const tx = casterSprite ? casterSprite.x : player.x;
+          const ty = casterSprite ? casterSprite.y : player.y - 24;
+          for (let i = 0; i < 10; i += 1) {
+            const a = Math.random() * Math.PI * 2;
+            const ox = Math.cos(a) * 6;
+            const oy = Math.sin(a) * 6;
+            const p = this.add.circle(player.x + ox, player.y + oy, 2.2, 0x93c5fd, 0.95);
+            p.setDepth(28);
+            this.tweens.add({
+              targets: p, x: tx, y: ty,
+              alpha: 0, scaleX: 0.3, scaleY: 0.3,
+              duration: 520 + Math.random() * 200, delay: i * 26,
+              ease: 'Sine.easeIn',
+              onComplete: () => p.destroy(),
+            });
+          }
+          // Brief cyan pulse on the player sprite.
+          if (!playerDead) {
+            player.setTint(0x60a5fa);
+            this.tweens.add({
+              targets: player, alpha: 0.75, yoyo: true, duration: 120,
+              onComplete: () => { if (!playerDead) { player.clearTint(); player.setAlpha(1); } },
+            });
+          }
+          floatingCombatText(this, player.x, player.y - tileSize * 0.5, `-${amount} MP`, {
+            color: '#93c5fd', fontSize: '16px',
+          });
+        };
+        const showCreatureSummonEffect = (caster, summoned) => {
+          if (!caster || !summoned) return;
+          const sx = caster.sprite.x;
+          const sy = caster.sprite.y;
+          const tx = summoned.sprite.x;
+          const ty = summoned.sprite.y;
+          // Purple rune circle expanding on the summoner.
+          const rune = this.add.circle(sx, sy, 8, 0x7c3aed, 0);
+          rune.setStrokeStyle(2, 0xa855f7, 0.9);
+          rune.setDepth(27);
+          this.tweens.add({
+            targets: rune, scaleX: 2.8, scaleY: 2.8, alpha: 0,
+            duration: 520, ease: 'Quad.easeOut',
+            onComplete: () => rune.destroy(),
+          });
+          // Dark vortex at the summon target tile.
+          const portal = this.add.circle(tx, ty, 14, 0x3b0764, 0.7);
+          portal.setDepth(14);
+          this.tweens.add({
+            targets: portal, scaleX: 2.2, scaleY: 0.6, alpha: 0,
+            duration: 560, ease: 'Sine.easeOut',
+            onComplete: () => portal.destroy(),
+          });
+          // Arc of purple sparks from caster to target.
+          const arcSteps = 8;
+          for (let i = 0; i < arcSteps; i += 1) {
+            const t = i / arcSteps;
+            const px = sx + (tx - sx) * t + (Math.random() - 0.5) * 6;
+            const py = sy + (ty - sy) * t - Math.sin(t * Math.PI) * 16;
+            this.time.delayedCall(Math.floor(t * 220), () => {
+              const dot = this.add.circle(px, py, 2.4, 0xc084fc, 0.95);
+              dot.setDepth(28);
+              this.tweens.add({
+                targets: dot, alpha: 0, scaleX: 0.3, scaleY: 0.3,
+                duration: 320, ease: 'Sine.easeOut',
+                onComplete: () => dot.destroy(),
+              });
+            });
+          }
+          // Pop-in bounce on the summoned sprite.
+          summoned.sprite.setAlpha(0);
+          summoned.sprite.setScale((summoned.sprite.scaleX || 1) * 0.4, (summoned.sprite.scaleY || 1) * 0.4);
+          this.tweens.add({
+            targets: summoned.sprite,
+            alpha: 1,
+            scaleX: summoned.sprite.scaleX * (1 / 0.4),
+            scaleY: summoned.sprite.scaleY * (1 / 0.4),
+            duration: 260, ease: 'Back.easeOut',
+            onComplete: () => applyCreatureNormalizedDisplaySize(summoned.sprite, this, tileSize),
+          });
+        };
         // Healing abilities use the ability.effect range for the shape of the
         // roll but clamp the result to 10–40 % of the creature's own maxHp so
         // Tibia-scale numbers (0–200 000) don't trivialise or waste the cast.
@@ -6067,11 +6651,14 @@ function startGame(configPlayer) {
           const n = String((ability && ability.name) || '').toLowerCase();
           const el = String((ability && ability.element) || '').toLowerCase();
           if (n === 'none' || n.includes('probably other') || n.includes('and more')) return 'utility';
+          if (el === 'summon') return 'summon';
           if (el.includes('healing') || n.includes('self-heal') || n.includes('self healing') || (n.includes('self') && n.includes('heal'))) {
             return 'heal';
           }
           if (inferCreatureAbilityPattern(ability).kind === 'none') return 'utility';
-          if (el.includes('summon') || n.includes('summon')) return 'utility';
+          // Narrative "Summons 3 Vampires" / "rarely Summons" strings that
+          // don't carry the summon element are still too ambiguous to resolve.
+          if (n.includes('summon')) return 'utility';
           if (n.includes('invisib')) return 'utility';
           if (n.includes('melee')) return 'melee';
           return 'offensive';
@@ -6110,6 +6697,20 @@ function startGame(configPlayer) {
             const t = abilityType(ab);
             if (t === 'utility') return false;
             if (t === 'heal') return creature.hp < creature.maxHp && Math.random() < 0.5;
+            if (t === 'summon') {
+              // Summons are cast only by "original" creatures — their own
+              // summons can't chain into more summons, avoids exponential
+              // growth. Also gated by the per-ability max count.
+              if (creature.isSummon) return false;
+              const summonTitle = String(ab.name || '').trim();
+              if (!summonTitle) return false;
+              if (!findCreatureTemplateByTitle(summonTitle)) return false;
+              const maxCount = parseSummonMax(ab);
+              const active = Array.isArray(creature.summons)
+                ? creature.summons.filter((s) => s && s.alive).length : 0;
+              if (active >= maxCount) return false;
+              return Math.random() < 0.4;
+            }
             if (t === 'melee') return dist <= 1;
             let pattern;
             try { pattern = inferCreatureAbilityPattern(ab); } catch { return false; }
@@ -6138,6 +6739,19 @@ function startGame(configPlayer) {
             addCombatLog(`${creature.title} uses ${ability.name} (+${heal} HP).`, LOG_COLORS.SPELL);
             return true;
           }
+          if (t === 'summon') {
+            const tmpl = findCreatureTemplateByTitle(ability.name);
+            if (!tmpl) return false;
+            const spot = findWalkableAdjacentTile(creature.gx, creature.gy);
+            if (!spot) return false;
+            const summoned = spawnSummonFromTemplate(tmpl, spot.gx, spot.gy, creature);
+            if (!summoned) return false;
+            if (!Array.isArray(creature.summons)) creature.summons = [];
+            creature.summons.push(summoned);
+            showCreatureSummonEffect(creature, summoned);
+            addCombatLog(`${creature.title} summons ${summoned.title}.`, LOG_COLORS.SPELL);
+            return true;
+          }
           if (!playerInAbilityTiles(abilityTiles)) {
             return false;
           }
@@ -6158,10 +6772,83 @@ function startGame(configPlayer) {
           const rawDamage = crit ? applyCriticalDamage(scaledBase) : scaledBase;
           const pressuredDamage = applyMultiAttackerPressure(rawDamage);
           const dmg = clampIncomingCreatureDamage(pressuredDamage, creature.maxDamage);
+          const elNorm = String((ability && ability.element) || '').toLowerCase().replace(/\s+/g, '');
+          const isManaDrain = elNorm === 'manadrain';
+          const isLifeDrain = elNorm === 'lifedrain';
+          const isFireField = elNorm === 'firefield';
+          const isPoisonField = elNorm === 'poisonfield';
+          const isPoisoned = elNorm === 'poisoned';
+          // Fire field: drop a 3×3 field centred on the player's tile. Burn +
+          // step damage are handled by the fire-field system itself.
+          if (isFireField) {
+            placeFireFieldAroundPlayer();
+            addCombatLog(
+              `${creature.title} casts ${ability.name} — a fire field surrounds you!`,
+              LOG_COLORS.SPELL,
+            );
+            return true;
+          }
+          // Poison field: 3×3 of poisonous gas on the player's tile. Stepping
+          // on one applies a small instant hit and (re)starts the poison DoT.
+          if (isPoisonField) {
+            placePoisonFieldAroundPlayer();
+            addCombatLog(
+              `${creature.title} casts ${ability.name} — a poison cloud surrounds you!`,
+              LOG_COLORS.SPELL,
+            );
+            return true;
+          }
+          // Poisoned: applies the poison DoT status. No direct HP damage on
+          // cast — damage comes from the subsequent ticks.
+          if (isPoisoned) {
+            if (!godModeEnabled) triggerPoisonApply(creature.title);
+            return true;
+          }
+          // Electrified: same pattern as poison but energy-themed. No direct
+          // cast damage; damage is applied via ticks over ~one minute.
+          if (elNorm === 'electrified') {
+            if (!godModeEnabled) triggerElectrifiedApply(creature.title);
+            return true;
+          }
+          // Mana drain: siphons MP from the player instead of HP. Shielding
+          // doesn't apply — it guards against physical/magical HP damage —
+          // but god mode still grants full immunity.
+          if (isManaDrain) {
+            const maxMp = Math.max(0, Number(playerMaxMana || 0));
+            const available = Math.max(0, Math.min(maxMp, Number(playerMana || 0)));
+            const mpDrain = godModeEnabled ? 0 : Math.min(available, Math.max(1, dmg));
+            if (!godModeEnabled) playerMana = Math.max(0, playerMana - mpDrain);
+            attackersPressureInTurn += 1;
+            showPlayerManaDrainEffect(mpDrain, creature.sprite);
+            addCombatLog(
+              `${creature.title} drains ${mpDrain} mana with ${ability.name}.`,
+              LOG_COLORS.SPELL,
+            );
+            updatePlayerBar();
+            updateHud();
+            return true;
+          }
           const reduced = godModeEnabled ? 0 : applyShieldingReduction(dmg);
           if (!godModeEnabled) playerHp = Math.max(0, playerHp - reduced);
           attackersPressureInTurn += 1;
           if (reduced < dmg && getEquippedShield()) gainShieldingSkillUse(1);
+          if (isLifeDrain) {
+            // Siphon feedback + vampiric heal on the caster for half of the
+            // damage that actually landed (ignoring blocked portion).
+            showPlayerLifeDrainEffect(reduced, creature.sprite);
+            const heal = Math.max(0, Math.floor(reduced * 0.5));
+            if (heal > 0 && creature.hp < creature.maxHp) {
+              const applied = Math.min(heal, creature.maxHp - creature.hp);
+              creature.hp += applied;
+              updateCreatureBar(creature);
+              showCreatureHealEffect(creature, applied);
+            }
+            addCombatLog(
+              `${creature.title} drains ${reduced} HP with ${ability.name}.`,
+              LOG_COLORS.SPELL,
+            );
+            return true;
+          }
           showPlayerHitEffect(reduced);
           addCombatLog(
             crit
@@ -6512,6 +7199,13 @@ function startGame(configPlayer) {
             // banner if it happens to be open.
             updateOpenMarketButton();
             updateMarketBanner();
+            // Fire / poison field expiry + ongoing burn / poison / shock DoT.
+            const nowMs = this.time.now;
+            cleanupExpiredFireFields(nowMs);
+            cleanupExpiredPoisonFields(nowMs);
+            tickBurn(nowMs);
+            tickPoison(nowMs);
+            tickElectrified(nowMs);
             if (playerDead || gameOver) return;
             if (hungerSecondsLeft <= 0) {
               if (!isHungry) setHungryState(true, 0);
@@ -6642,6 +7336,8 @@ function startGame(configPlayer) {
               player.setOrigin(0.5, 0.5);
               pickupGroundLootAtPlayer();
               moving = false;
+              if (playerOnFireField()) triggerFireStep();
+              if (playerOnPoisonField()) triggerPoisonStep();
               if (hasStairsAtPlayer() && aliveCreatures().length === 0) {
                 descendLevel();
               }
