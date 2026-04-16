@@ -4118,9 +4118,16 @@ function startGame(configPlayer) {
           'tools and other equipment::valuables',
         ]);
         const normMarketKey = (s) => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+        // Virtual re-classification: some items live under otherwise-hidden
+        // classes in the data (Household / Other Items) but we still want
+        // them in the market under a friendlier parent category.
+        const resolveMarketClass = (it) => {
+          if (normMarketKey(it.item_type) === 'containers') return 'Tools and other Equipment';
+          return it.item_class;
+        };
         const getVisibleMarketCatalog = () => (itemsShopCatalog || []).filter((it) => {
           const t = normMarketKey(it.item_type);
-          const c = normMarketKey(it.item_class);
+          const c = normMarketKey(resolveMarketClass(it));
           // Items with no item_class end up in a synthetic "Misc" bucket —
           // hide them entirely instead of exposing that fallback group.
           if (!c) return false;
@@ -4135,7 +4142,7 @@ function startGame(configPlayer) {
         const buildMarketTree = () => {
           const byClass = new Map();
           for (const it of getVisibleMarketCatalog()) {
-            const cls = String(it.item_class || 'Misc').trim() || 'Misc';
+            const cls = String(resolveMarketClass(it) || 'Misc').trim() || 'Misc';
             const typ = String(it.item_type || 'Other').trim() || 'Other';
             if (!byClass.has(cls)) byClass.set(cls, new Map());
             const types = byClass.get(cls);
