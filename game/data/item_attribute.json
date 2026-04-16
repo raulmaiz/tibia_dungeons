@@ -108723,5 +108723,185 @@
     "item_id": 79960,
     "name": "map_color",
     "value": "186"
+  },
+  {
+    "item_id": 1396,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 3517,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 3519,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 3669,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 9073,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 12227,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 46528,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 54159,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 59870,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 59899,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 65361,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 65363,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 65377,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 67645,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 71151,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 71740,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 77470,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 77471,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 78250,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 78253,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 78489,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 78491,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 79532,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 89746,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 90284,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 96949,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 96953,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 96956,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 101814,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 101880,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 101882,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 101885,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 101887,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 101889,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 109287,
+    "name": "duration",
+    "value": "5 minutes"
+  },
+  {
+    "item_id": 109365,
+    "name": "duration",
+    "value": "5 minutes"
   }
 ]

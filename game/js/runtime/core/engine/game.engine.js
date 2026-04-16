@@ -6,6 +6,7 @@ import {
   getSpellsCatalogWithPrices,
   getCreatureAbilitiesById,
   getCreatureDamageModifiersById,
+  getManifest,
 } from '../../../dataService.js';
 import {
   parseDamageRangeString,
@@ -15,6 +16,7 @@ import {
 import { LootPityTracker } from '../../../mechanics/loot.js';
 import { generateLevelMap as buildDungeonLevelMap, computeDungeonSize } from '../../../dungeon/generator.js';
 import { createFloorAtmosphere } from './floorAtmosphere.js';
+import { castCreatureSpellVfx, isElementalAbility } from './creatureSpellVfx.js';
 import { wirePanelLayoutSync } from '../../../ui/panelLayout.js';
 import { isBlockedSpellTitle } from '../../../spells/filters.js';
 import { inferCreatureAbilityPattern } from '../../../creatures/abilityPatterns.js';
@@ -67,8 +69,29 @@ let inventoryClearEquippedSlotVisual = null;
 // state is applied on creation so pre-scene equips (starting torch) light up
 // as soon as the dungeon renders.
 let atmosphereSetEquipmentLight = () => {};
-let currentLightItemState = null; // { articleId, radius, duration, startTime, initialElapsed }
+let currentLightItemState = null; // { articleId, title, radius, duration, startTime, initialElapsed }
 const lightBurnElapsedByArticleId = new Map();
+// Lowercased set of image paths (e.g. "item/lit candlestick.gif") known to
+// exist in the manifest. Used to check whether the "Lit X.gif" / "Used X.gif"
+// variants are shipped for a given light-source item before picking them.
+let knownItemImages = null;
+async function loadKnownItemImages() {
+  try {
+    const m = await getManifest();
+    const s = new Set();
+    for (const it of (m && m.items) || []) {
+      const img = String((it && it.image) || '').trim().toLowerCase();
+      if (img) s.add(img);
+    }
+    knownItemImages = s;
+  } catch {
+    knownItemImages = new Set();
+  }
+}
+function hasItemImage(filename) {
+  if (!knownItemImages) return false;
+  return knownItemImages.has(`item/${filename}`.toLowerCase());
+}
 function lightRadiusForLightSourceItem(item) {
   const id = Number((item && (item.article_id || item.id)) || 0);
   if (id === 1396) return 3; // Torch → utevo lux
@@ -98,7 +121,8 @@ function bridgeClockNow() {
 }
 function applyEquipmentLightFromItem(item) {
   const now = bridgeClockNow();
-  // First, snapshot accumulated burn time for any previously-lit item.
+  // Snapshot accumulated burn time for the previously-lit item so that the
+  // torch's progression carries over if the player unequips and re-equips it.
   if (currentLightItemState) {
     const cur = currentLightItemState;
     const sessionElapsed = now - cur.startTime;
@@ -114,31 +138,68 @@ function applyEquipmentLightFromItem(item) {
   const radius = lightRadiusForLightSourceItem(item);
   const durationMs = durationMsFromItemAttrs(item);
   const initialElapsed = Number(lightBurnElapsedByArticleId.get(articleId) || 0);
-  if (durationMs > 0 && initialElapsed >= durationMs) {
-    // Fully burnt out — equip the item for inventory purposes but emit no light.
-    currentLightItemState = {
-      articleId, radius: 0, duration: durationMs, startTime: now, initialElapsed,
-    };
-    atmosphereSetEquipmentLight(0, 0, 0);
-    return;
-  }
   currentLightItemState = {
-    articleId, radius, duration: durationMs, startTime: now, initialElapsed,
+    articleId,
+    title: String(item.title || '').trim(),
+    radius,
+    duration: durationMs,
+    startTime: now,
+    initialElapsed,
   };
+  // Pass the real duration/elapsed to the atmosphere so it can hard-cutoff
+  // the light when the torch burns out. The atmosphere keeps the radius
+  // constant until then (no linear fade) — see updateDarkness.
   atmosphereSetEquipmentLight(radius, durationMs, initialElapsed);
   updateEquippedLightSlotImage();
 }
 // Slot icon for the equipped light item — changes as the flame burns down.
-function getLightItemImage(articleId, elapsed, duration) {
-  if (Number(articleId) === 1396) { // Torch
-    if (!(duration > 0)) return 'item/Lit Torch (Sparkling).gif';
-    const remaining = duration - elapsed;
-    if (remaining <= 0) return 'item/Burnt Down Torch.gif';
-    if (remaining < 60 * 1000) return 'item/Lit Torch (Small).gif';
+// Torch (1396) has a 4-stage progression; every other Light-Sources item
+// follows the generic <title> / Lit <title> / Used <title> pattern.
+//   [0%, 50%)   Lit Torch.gif             (full flame)
+//   [50%, 80%)  Lit Torch (Medium).gif    (half-consumed)
+//   [80%, 100%) Lit Torch (Small).gif     (nearly out)
+//   [100%, ∞)   Torch (Small).gif         (extinguished, no more light)
+// For any other light item:
+//   equipped & lit      → "Lit <title>.gif"  (fallback: "<title>.gif")
+//   equipped & expired  → "Used <title>.gif" (fallback: "<title>.gif")
+function getLightItemImage(articleId, title, elapsed, duration) {
+  if (Number(articleId) === 1396) { // Torch — special 4-stage progression
+    if (!(duration > 0)) return 'item/Lit Torch.gif';
+    if (elapsed >= duration)      return 'item/Torch (Small).gif';
+    if (elapsed >= duration * 0.8) return 'item/Lit Torch (Small).gif';
     if (elapsed >= duration * 0.5) return 'item/Lit Torch (Medium).gif';
-    return 'item/Lit Torch (Sparkling).gif';
+    return 'item/Lit Torch.gif';
   }
-  return null; // use the item's default manifest image
+  const name = String(title || '').trim();
+  if (!name) return null;
+  const isExpired = duration > 0 && elapsed >= duration;
+  if (isExpired) {
+    return hasItemImage(`Used ${name}.gif`) ? `item/Used ${name}.gif` : `item/${name}.gif`;
+  }
+  return hasItemImage(`Lit ${name}.gif`) ? `item/Lit ${name}.gif` : `item/${name}.gif`;
+}
+
+// Image for a light-source item sitting in the loot bag (i.e. not equipped).
+// Returns null for non-light items so the caller can keep the default image.
+function getLootLightItemImage(item) {
+  if (!item) return null;
+  const itemType = String(item.item_type || '').toLowerCase();
+  if (itemType !== 'light sources') return null;
+  const articleId = Number(item.article_id || item.id || 0);
+  const title = String(item.title || '').trim();
+  const duration = durationMsFromItemAttrs(item);
+  let elapsed = Number(lightBurnElapsedByArticleId.get(articleId) || 0);
+  // If this item is the one currently equipped, account for the live session.
+  if (currentLightItemState && currentLightItemState.articleId === articleId) {
+    elapsed = currentLightItemState.initialElapsed + (bridgeClockNow() - currentLightItemState.startTime);
+  }
+  const isExpired = duration > 0 && elapsed >= duration;
+  if (articleId === 1396) { // Torch
+    return isExpired ? 'item/Torch (Small).gif' : 'item/Torch.gif';
+  }
+  if (!title) return null;
+  if (isExpired && hasItemImage(`Used ${title}.gif`)) return `item/Used ${title}.gif`;
+  return `item/${title}.gif`;
 }
 function getCurrentLightElapsedMs() {
   if (!currentLightItemState) return 0;
@@ -150,7 +211,7 @@ function updateEquippedLightSlotImage() {
   if (!slotImg || !currentLightItemState) return;
   const cur = currentLightItemState;
   const elapsed = getCurrentLightElapsedMs();
-  const img = getLightItemImage(cur.articleId, elapsed, cur.duration);
+  const img = getLightItemImage(cur.articleId, cur.title, elapsed, cur.duration);
   if (!img) return;
   const desiredSrc = `./data/images/${img}`;
   if (!slotImg.src.endsWith(img)) slotImg.src = desiredSrc;
@@ -160,11 +221,7 @@ function applyCurrentLightStateToAtmosphere() {
   const cur = currentLightItemState;
   const sessionElapsed = bridgeClockNow() - cur.startTime;
   const totalElapsed = cur.initialElapsed + sessionElapsed;
-  if (cur.duration > 0 && totalElapsed >= cur.duration) {
-    atmosphereSetEquipmentLight(0, 0, 0);
-  } else {
-    atmosphereSetEquipmentLight(cur.radius, cur.duration, totalElapsed);
-  }
+  atmosphereSetEquipmentLight(cur.radius, cur.duration, totalElapsed);
 }
 const CREATURE_DAMAGE_MULTIPLIER_BY_ID = new Map([
   [37051, 0.5],
@@ -942,9 +999,12 @@ function setupSelectorUI() {
       if (lootItem) {
         cell.className = 'loot-slot';
         cell.title = '';
-        if (lootItem.image) {
+        // Light-source items show their "used" image once burnt out, so the
+        // loot bag reflects whether the lamp/candle has any charge left.
+        const resolvedImage = getLootLightItemImage(lootItem) || lootItem.image;
+        if (resolvedImage) {
           const img = document.createElement('img');
-          img.src = `./data/images/${lootItem.image}`;
+          img.src = `./data/images/${resolvedImage}`;
           img.alt = lootItem.title || 'Loot item';
           cell.appendChild(img);
         } else {
@@ -1627,6 +1687,7 @@ function setupSelectorUI() {
       ensureCoinTemplatesLoaded().then(onJsonDone),
       (async () => { spellsCatalog = await getSpellsCatalogWithPrices(); })().then(onJsonDone),
       (async () => { itemsShopCatalog = await getItemShopCatalog(); })().then(onJsonDone),
+      loadKnownItemImages(),
     ]);
 
     setLoadingProgress(45, 'Starting game engine...');
@@ -3213,6 +3274,11 @@ function startGame(configPlayer) {
           currentFloors = reachable;
           floorAtmosphere.setThemeForLevel(currentLevel);
           refreshMapVisuals();
+          // refreshMapVisuals recreates the darkness render texture. The
+          // equipment-light radius survives in the atmosphere closure, but
+          // re-syncing from the UI layer ensures a floor change never leaves
+          // the player with only the base halo while a torch is equipped.
+          applyCurrentLightStateToAtmosphere();
           floorAtmosphere.showPit(false);
           drawMinimapBase();
           const canRopeUp = currentLevel > 1;
@@ -3995,6 +4061,450 @@ function startGame(configPlayer) {
             renderItemsShop('');
           }
         });
+
+        // ── Full Market overlay ─────────────────────────────────────────
+        // Browse the whole itemsShopCatalog grouped by item_class → item_type
+        // in a modal, with details panel and multi-qty purchase. The Open
+        // Market button is gated to "room cleared" (no alive creatures).
+        const marketEls = {
+          overlay: document.getElementById('marketOverlay'),
+          tree: document.getElementById('marketTree'),
+          grid: document.getElementById('marketGrid'),
+          detail: document.getElementById('marketDetail'),
+          sort: document.getElementById('marketSort'),
+          breadcrumb: document.getElementById('marketBreadcrumb'),
+          gold: document.getElementById('marketGold'),
+          banner: document.getElementById('marketBanner'),
+          openBtn: document.getElementById('openMarketBtn'),
+          closeBtn: document.getElementById('marketCloseBtn'),
+        };
+        let marketOpen = false;
+        const marketState = {
+          selectedClass: null,
+          selectedType: null,
+          selectedItemId: null,
+          sort: 'name',
+        };
+        const getMarketGoldNow = () => (
+          window.debugInventory && typeof window.debugInventory.getGold === 'function'
+            ? Math.max(0, Number(window.debugInventory.getGold() || 0)) : 0
+        );
+        // Whitelist for Light Sources — the catalog contains lots of
+        // state-derived entries (Lit / Burnt Down / stub variants) that
+        // shouldn't be purchasable separately. Only the "fresh" items.
+        const LIGHT_SOURCES_WHITELIST = new Set([1396, 1671, 3517, 3519]);
+        // Whole item_class categories hidden from the market tree.
+        const MARKET_HIDDEN_CLASSES = new Set([
+          'fireworks',
+          'flora and minerals',
+          'household items',
+          'imbuement scrolls',
+          'misc',
+          'other items',
+          'plants, animal products, food and drink',
+          'quest items',
+          'runes',
+          'wall coverings',
+        ]);
+        // item_type subcategories hidden within a given class. Keyed as
+        // `${class}::${type}` so the same type name can be kept elsewhere.
+        const MARKET_HIDDEN_TYPES = new Set([
+          'body equipment::extra slot',
+          'body equipment::quivers',
+          'body equipment::spellbooks',
+          'body equipment::valuables',
+          'tools and other equipment::creature products',
+          'tools and other equipment::taming items',
+          'tools and other equipment::valuables',
+        ]);
+        const normMarketKey = (s) => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+        const getVisibleMarketCatalog = () => (itemsShopCatalog || []).filter((it) => {
+          const t = normMarketKey(it.item_type);
+          const c = normMarketKey(it.item_class);
+          // Items with no item_class end up in a synthetic "Misc" bucket —
+          // hide them entirely instead of exposing that fallback group.
+          if (!c) return false;
+          if (/^exercise\s*weapons?$/.test(t)) return false;
+          if (t === 'rods' && playerClassKey !== 'druid') return false;
+          if (t === 'wands' && playerClassKey !== 'sorcerer') return false;
+          if (t === 'light sources' && !LIGHT_SOURCES_WHITELIST.has(Number(it.id))) return false;
+          if (MARKET_HIDDEN_CLASSES.has(c)) return false;
+          if (MARKET_HIDDEN_TYPES.has(`${c}::${t}`)) return false;
+          return true;
+        });
+        const buildMarketTree = () => {
+          const byClass = new Map();
+          for (const it of getVisibleMarketCatalog()) {
+            const cls = String(it.item_class || 'Misc').trim() || 'Misc';
+            const typ = String(it.item_type || 'Other').trim() || 'Other';
+            if (!byClass.has(cls)) byClass.set(cls, new Map());
+            const types = byClass.get(cls);
+            if (!types.has(typ)) types.set(typ, []);
+            types.get(typ).push(it);
+          }
+          return byClass;
+        };
+        const sortMarketItems = (items) => {
+          const out = [...items];
+          if (marketState.sort === 'price-asc') {
+            out.sort((a, b) => Number(a.price) - Number(b.price));
+          } else if (marketState.sort === 'price-desc') {
+            out.sort((a, b) => Number(b.price) - Number(a.price));
+          } else {
+            out.sort((a, b) => String(a.title).localeCompare(String(b.title)));
+          }
+          return out;
+        };
+        const renderMarketTree = () => {
+          if (!marketEls.tree) return;
+          const tree = buildMarketTree();
+          marketEls.tree.innerHTML = '';
+          const frag = document.createDocumentFragment();
+          const sortedClasses = [...tree.keys()].sort();
+          for (const cls of sortedClasses) {
+            const details = document.createElement('details');
+            details.className = 'market-tree-class';
+            details.open = cls === marketState.selectedClass;
+            const summary = document.createElement('summary');
+            const types = tree.get(cls);
+            const total = [...types.values()].reduce((a, v) => a + v.length, 0);
+            summary.innerHTML = `<span>${cls}</span><span class="count">${total}</span>`;
+            details.appendChild(summary);
+            const sortedTypes = [...types.keys()].sort();
+            for (const typ of sortedTypes) {
+              const row = document.createElement('div');
+              row.className = 'market-tree-type';
+              if (marketState.selectedClass === cls && marketState.selectedType === typ) {
+                row.classList.add('active');
+              }
+              row.innerHTML = `<span>${typ}</span><span class="count">${types.get(typ).length}</span>`;
+              row.addEventListener('click', () => {
+                marketState.selectedClass = cls;
+                marketState.selectedType = typ;
+                marketState.selectedItemId = null;
+                renderMarketTree();
+                renderMarketGrid();
+                renderMarketDetail();
+              });
+              details.appendChild(row);
+            }
+            frag.appendChild(details);
+          }
+          marketEls.tree.appendChild(frag);
+        };
+        const renderMarketCards = (items) => {
+          if (!marketEls.grid) return;
+          const currentGold = getMarketGoldNow();
+          const frag = document.createDocumentFragment();
+          for (const item of items) {
+            const card = document.createElement('div');
+            card.className = 'market-card';
+            if (item.id === marketState.selectedItemId) card.classList.add('selected');
+            const price = Math.max(0, Number(item.price || 0));
+            if (currentGold < price) card.classList.add('cant-afford');
+            const imgWrap = document.createElement('div');
+            imgWrap.className = 'card-img-wrap';
+            if (item.image) {
+              const img = document.createElement('img');
+              img.src = `./data/images/${item.image}`;
+              img.alt = item.title || '';
+              imgWrap.appendChild(img);
+            }
+            card.appendChild(imgWrap);
+            const title = document.createElement('div');
+            title.className = 'card-title';
+            title.textContent = item.title || `Item ${item.id}`;
+            card.appendChild(title);
+            const priceEl = document.createElement('div');
+            priceEl.className = 'card-price';
+            priceEl.textContent = `${price} gp`;
+            card.appendChild(priceEl);
+            bindItemShopTooltip(card, item);
+            card.addEventListener('click', () => {
+              marketState.selectedItemId = item.id;
+              renderMarketGrid();
+              renderMarketDetail();
+            });
+            frag.appendChild(card);
+          }
+          marketEls.grid.innerHTML = '';
+          marketEls.grid.appendChild(frag);
+        };
+        const renderMarketGrid = () => {
+          if (!marketEls.grid || !marketEls.breadcrumb) return;
+          if (!marketState.selectedClass || !marketState.selectedType) {
+            marketEls.breadcrumb.innerHTML = '<strong>Select a category</strong>';
+            marketEls.grid.innerHTML = '';
+            return;
+          }
+          const tree = buildMarketTree();
+          const list = (tree.get(marketState.selectedClass) || new Map()).get(marketState.selectedType) || [];
+          marketEls.breadcrumb.innerHTML = `${marketState.selectedClass} › <strong>${marketState.selectedType}</strong> <span style="color:#64748b">(${list.length})</span>`;
+          renderMarketCards(sortMarketItems(list));
+        };
+        const renderMarketDetail = () => {
+          if (!marketEls.detail) return;
+          const detailEl = marketEls.detail;
+          if (!marketState.selectedItemId) {
+            detailEl.innerHTML = '<div class="detail-empty">Select an item to see details</div>';
+            return;
+          }
+          const item = (itemsShopCatalog || []).find((it) => it.id === marketState.selectedItemId);
+          if (!item) {
+            detailEl.innerHTML = '<div class="detail-empty">Item not found</div>';
+            return;
+          }
+          const price = Math.max(0, Number(item.price || 0));
+          const isStackable = Number((item.raw && item.raw.is_stackable) || 0) === 1;
+          const currentGold = getMarketGoldNow();
+          const roomCleared = aliveCreatures().length === 0;
+          detailEl.innerHTML = '';
+          const head = document.createElement('div');
+          head.className = 'detail-head';
+          const imgWrap = document.createElement('div');
+          imgWrap.className = 'detail-img-wrap';
+          if (item.image) {
+            const img = document.createElement('img');
+            img.src = `./data/images/${item.image}`;
+            img.alt = item.title || '';
+            imgWrap.appendChild(img);
+          }
+          head.appendChild(imgWrap);
+          const nameBlock = document.createElement('div');
+          const nameEl = document.createElement('div');
+          nameEl.className = 'detail-name';
+          nameEl.textContent = item.title || `Item ${item.id}`;
+          nameBlock.appendChild(nameEl);
+          if (item.item_class || item.item_type) {
+            const sub = document.createElement('div');
+            sub.className = 'detail-subline';
+            sub.textContent = `${item.item_class || ''}${item.item_class && item.item_type ? ' › ' : ''}${item.item_type || ''}`;
+            nameBlock.appendChild(sub);
+          }
+          head.appendChild(nameBlock);
+          detailEl.appendChild(head);
+          const statsRows = [];
+          if (Number(item.attack_value) > 0) statsRows.push(['Attack', item.attack_value]);
+          if (Number(item.armor_value) > 0) statsRows.push(['Armor', item.armor_value]);
+          if (Number(item.shielding_value) > 0) statsRows.push(['Defense', item.shielding_value]);
+          if (Number(item.range_value) > 1) statsRows.push(['Range', item.range_value]);
+          if (item.type_secondary) statsRows.push(['Subtype', item.type_secondary]);
+          if (isStackable) statsRows.push(['Stackable', 'Yes']);
+          if (statsRows.length > 0) {
+            const stats = document.createElement('div');
+            stats.className = 'detail-stats';
+            for (const [k, v] of statsRows) {
+              const keyEl = document.createElement('div');
+              keyEl.className = 'stat-k';
+              keyEl.textContent = k;
+              const valEl = document.createElement('div');
+              valEl.textContent = String(v);
+              stats.appendChild(keyEl);
+              stats.appendChild(valEl);
+            }
+            detailEl.appendChild(stats);
+          }
+          if (item.description) {
+            const desc = document.createElement('div');
+            desc.className = 'detail-desc';
+            desc.textContent = item.description;
+            detailEl.appendChild(desc);
+          }
+          if (Array.isArray(item.attributes) && item.attributes.length > 0) {
+            const attrs = document.createElement('div');
+            attrs.className = 'detail-attrs';
+            for (const a of item.attributes) {
+              if (!a || !a.name) continue;
+              const row = document.createElement('div');
+              row.className = 'attr';
+              const k = document.createElement('span');
+              k.textContent = a.name;
+              const v = document.createElement('span');
+              v.textContent = String(a.value);
+              row.appendChild(k);
+              row.appendChild(v);
+              attrs.appendChild(row);
+            }
+            detailEl.appendChild(attrs);
+          }
+          const priceEl = document.createElement('div');
+          priceEl.className = 'detail-price';
+          priceEl.textContent = `${price} gp each`;
+          detailEl.appendChild(priceEl);
+          const row = document.createElement('div');
+          row.className = 'detail-buy-row';
+          const qtys = isStackable ? [1, 10, 100] : [1];
+          for (const qty of qtys) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            const totalPrice = price * qty;
+            const disabledReason = !roomCleared ? 'room'
+              : (currentGold < totalPrice ? 'gold' : null);
+            btn.textContent = `Buy x${qty}`;
+            btn.disabled = disabledReason !== null;
+            btn.title = disabledReason === 'room' ? 'Clear all creatures first'
+              : (disabledReason === 'gold' ? `Need ${totalPrice} gp` : `${totalPrice} gp`);
+            btn.addEventListener('click', () => { performMarketBuy(item, qty, btn); });
+            row.appendChild(btn);
+          }
+          while (row.children.length < 3) {
+            const ph = document.createElement('div');
+            row.appendChild(ph);
+          }
+          detailEl.appendChild(row);
+        };
+        // Big centred splash shown on successful buy. Auto-removes after
+        // the animation. Replaces any previous splash so rapid purchases
+        // restart the animation cleanly.
+        let marketBuySplashEl = null;
+        const spawnMarketBuySplash = (item, qty, totalPrice) => {
+          if (marketBuySplashEl) marketBuySplashEl.remove();
+          const splash = document.createElement('div');
+          splash.className = 'market-buy-splash';
+          const label = document.createElement('div');
+          label.className = 'splash-label';
+          label.textContent = 'Purchased';
+          splash.appendChild(label);
+          const imgWrap = document.createElement('div');
+          imgWrap.className = 'splash-img';
+          if (item.image) {
+            const img = document.createElement('img');
+            img.src = `./data/images/${item.image}`;
+            img.alt = item.title || '';
+            imgWrap.appendChild(img);
+          }
+          splash.appendChild(imgWrap);
+          const title = document.createElement('div');
+          title.className = 'splash-title';
+          title.textContent = item.title || `Item ${item.id}`;
+          splash.appendChild(title);
+          const qtyEl = document.createElement('div');
+          qtyEl.className = 'splash-qty';
+          qtyEl.textContent = `× ${qty}  •  ${totalPrice} gp`;
+          splash.appendChild(qtyEl);
+          document.body.appendChild(splash);
+          marketBuySplashEl = splash;
+          setTimeout(() => {
+            if (splash === marketBuySplashEl) marketBuySplashEl = null;
+            splash.remove();
+          }, 2450);
+        };
+        const flashMarketGold = () => {
+          if (!marketEls.gold) return;
+          marketEls.gold.classList.remove('spent');
+          // Force reflow so the animation restarts if the user buys twice quickly.
+          void marketEls.gold.offsetWidth;
+          marketEls.gold.classList.add('spent');
+          setTimeout(() => marketEls.gold && marketEls.gold.classList.remove('spent'), 540);
+        };
+        const performMarketBuy = (item, qty, anchorEl = null) => {
+          if (aliveCreatures().length > 0) {
+            addCombatLog('Clear all creatures on this floor before buying items.');
+            updateMarketBanner();
+            return;
+          }
+          const price = Math.max(0, Number(item.price || 0));
+          const totalPrice = price * qty;
+          const isStackable = Number((item.raw && item.raw.is_stackable) || 0) === 1;
+          const spent = window.debugInventory && typeof window.debugInventory.spendGold === 'function'
+            ? window.debugInventory.spendGold(totalPrice) : false;
+          if (!spent) {
+            addCombatLog(`Not enough gold to buy ${item.title} x${qty}.`);
+            renderMarketDetail();
+            return;
+          }
+          const stored = window.debugInventory && typeof window.debugInventory.addLoot === 'function'
+            ? window.debugInventory.addLoot({
+              id: item.id,
+              title: item.title,
+              image: item.image,
+              item_type: item.item_type,
+              item_class: item.item_class,
+              type_secondary: item.type_secondary,
+              armor_value: item.armor_value,
+              shielding_value: item.shielding_value,
+              attack_value: item.attack_value,
+              range_value: item.range_value,
+              throwable: item.throwable,
+              attributes: item.attributes,
+              raw: item.raw,
+              isStackable,
+              count: qty,
+            })
+            : false;
+          if (!stored) {
+            if (window.debugInventory && typeof window.debugInventory.addGold === 'function') {
+              window.debugInventory.addGold(totalPrice);
+            }
+            addCombatLog(`Cannot carry ${item.title}.`);
+            renderMarketDetail();
+            return;
+          }
+          addCombatLog(`Bought item: ${item.title} x${qty} for ${totalPrice} gp.`);
+          spawnMarketBuySplash(item, qty, totalPrice);
+          flashMarketGold();
+          updateHud();
+          updateMarketGold();
+          renderMarketGrid();
+          renderMarketDetail();
+        };
+        const updateMarketGold = () => {
+          if (marketEls.gold) {
+            marketEls.gold.innerHTML = `<span class="gold-icon"></span>${getMarketGoldNow()} gp`;
+          }
+        };
+        const updateMarketBanner = () => {
+          if (!marketEls.banner) return;
+          const show = marketOpen && aliveCreatures().length > 0;
+          marketEls.banner.dataset.show = show ? 'true' : 'false';
+        };
+        const openMarket = () => {
+          if (aliveCreatures().length > 0) {
+            addCombatLog('Clear all creatures on this floor before opening the market.');
+            return;
+          }
+          marketOpen = true;
+          if (marketEls.overlay) {
+            marketEls.overlay.dataset.open = 'true';
+            marketEls.overlay.setAttribute('aria-hidden', 'false');
+          }
+          renderMarketTree();
+          renderMarketGrid();
+          renderMarketDetail();
+          updateMarketGold();
+          updateMarketBanner();
+        };
+        const closeMarket = () => {
+          marketOpen = false;
+          if (marketEls.overlay) {
+            marketEls.overlay.dataset.open = 'false';
+            marketEls.overlay.setAttribute('aria-hidden', 'true');
+          }
+        };
+        const updateOpenMarketButton = () => {
+          if (!marketEls.openBtn) return;
+          const clear = aliveCreatures().length === 0;
+          marketEls.openBtn.disabled = !clear;
+          marketEls.openBtn.title = clear ? '' : 'Clear all creatures first';
+        };
+        if (marketEls.openBtn) marketEls.openBtn.addEventListener('click', openMarket);
+        if (marketEls.closeBtn) marketEls.closeBtn.addEventListener('click', closeMarket);
+        if (marketEls.sort) {
+          marketEls.sort.addEventListener('change', () => {
+            marketState.sort = marketEls.sort.value;
+            renderMarketGrid();
+          });
+        }
+        document.addEventListener('keydown', (e) => {
+          if (marketOpen && e.key === 'Escape') { closeMarket(); }
+        });
+        window.addEventListener('coins-changed', () => {
+          if (!marketOpen) return;
+          updateMarketGold();
+          renderMarketGrid();
+          renderMarketDetail();
+        });
+        updateOpenMarketButton();
         const renderTopStatsPanel = () => {
           const statsGridEl = document.getElementById('statsGrid');
           const statsFootEl = document.getElementById('statsFoot');
@@ -5408,6 +5918,20 @@ function startGame(configPlayer) {
           void affectedTiles;
           const dist = Math.max(Math.abs(creature.gx - gridX), Math.abs(creature.gy - gridY));
           const ranged = dist > 1 && !String((ability && ability.name) || '').toLowerCase().includes('melee');
+          // Non-melee / non-physical abilities get the rich elemental VFX
+          // with per-element projectile, trail, impact and trajectory lights.
+          if (ranged && isElementalAbility(ability)) {
+            castCreatureSpellVfx(
+              this,
+              floorAtmosphere,
+              creature.sprite.x,
+              creature.sprite.y,
+              player.x,
+              player.y,
+              ability,
+            );
+            return;
+          }
           if (ranged) {
             spellProjectileLine(
               this,
@@ -5453,20 +5977,33 @@ function startGame(configPlayer) {
           const abilities = Array.isArray(creature && creature.abilities) ? creature.abilities : [];
           if (abilities.length === 0) return false;
           const dist = Math.max(Math.abs(creature.gx - gridX), Math.abs(creature.gy - gridY));
-          // Respect creature attack range at all times (also while fleeing):
-          // ranged creatures use their configured range, melee creatures only 1 tile.
-          const castRange = creature.ranged
-            ? Math.max(1, Number(creature.range || 1))
-            : 1;
+          // Each ability advertises its own reach via its pattern. That takes
+          // precedence over the creature-level `ranged` flag, so melee bosses
+          // (dragons, demons…) still fire their Fire Wave / Fireball / etc.
+          const abilityCastRange = (ab, pattern) => {
+            const creatureRange = Math.max(1, Number((creature && creature.range) || 1));
+            switch (pattern && pattern.kind) {
+              case 'line_to_player': return Math.max(creatureRange, Number(pattern.maxLen || 5));
+              case 'cone_to_player': return Math.max(creatureRange, Number(pattern.depth || 3) + 2);
+              case 'nova_at_player':
+              case 'plus_on_player':
+              case 'ring_at_player':
+              case 'player_cell':    return Math.max(creatureRange, 6);
+              case 'nova_creature':  return Math.max(creatureRange, (Number(pattern.radius || 1) + 1));
+              default: return creature.ranged ? creatureRange : 1;
+            }
+          };
           const options = abilities.filter((ab) => {
             const t = abilityType(ab);
             if (t === 'utility') return false;
-            if (t === 'heal') return dist <= castRange && creature.hp < creature.maxHp && Math.random() < 0.5;
+            if (t === 'heal') return creature.hp < creature.maxHp && Math.random() < 0.5;
             if (t === 'melee') return dist <= 1;
-            if (dist > castRange) return false;
+            let pattern;
+            try { pattern = inferCreatureAbilityPattern(ab); } catch { return false; }
+            const range = abilityCastRange(ab, pattern);
+            if (dist > range) return false;
             if (!hasRangedLineOfSight(creature.gx, creature.gy, gridX, gridY)) return false;
             try {
-              const pattern = inferCreatureAbilityPattern(ab);
               const tiles = resolveCreatureAbilityTiles(creature, pattern);
               return playerInAbilityTiles(tiles);
             } catch {
@@ -5714,16 +6251,9 @@ function startGame(configPlayer) {
             // --- Fury / flee mode ---
             if (isFleeing) {
               acted = tryFleeCreature(creature) || acted;
-              // Only use abilities if still within attack range — fleeing creatures should
-              // not fire from across the dungeon. castRange mirrors the check in tryUseCreatureAbility.
-              const fleeCastRange = creature.ranged
-                ? Math.max(1, Number(creature.range || 1))
-                : 1;
-              const fleeDist = Math.max(
-                Math.abs(creature.gx - gridX),
-                Math.abs(creature.gy - gridY),
-              );
-              if (now >= creature.nextAbilityAt && fleeDist <= fleeCastRange) {
+              // tryUseCreatureAbility gates per-ability cast range itself, so fleeing
+              // creatures will only fire spells whose pattern actually reaches the player.
+              if (now >= creature.nextAbilityAt) {
                 const usedAbility = tryUseCreatureAbility(creature);
                 if (usedAbility) {
                   creature.nextAbilityAt = now + Phaser.Math.Between(ABILITY_CD_FURY_MIN, ABILITY_CD_FURY_MAX);
@@ -5858,6 +6388,15 @@ function startGame(configPlayer) {
           delay: 1000,
           loop: true,
           callback: () => {
+            // Torch / light-source burn-down progression — refreshed every
+            // second so the slot icon walks through Lit → Medium → Small →
+            // extinguished. Runs even when dead so the icon reflects reality.
+            updateEquippedLightSlotImage();
+            // Enable/disable the "Open Market" button based on whether the
+            // floor is clear. Also refresh the market's "combat started"
+            // banner if it happens to be open.
+            updateOpenMarketButton();
+            updateMarketBanner();
             if (playerDead || gameOver) return;
             if (hungerSecondsLeft <= 0) {
               if (!isHungry) setHungryState(true, 0);

@@ -39,7 +39,12 @@ export function createFloorAtmosphere(scene, opts) {
   const pitLayer        = scene.add.container(0, 0).setDepth(4);
   const ropeLayer       = scene.add.container(0, 0).setDepth(6);
   const ambientTint     = scene.add.graphics().setDepth(119).setScrollFactor(0);
-  const vignette        = scene.add.graphics().setDepth(120).setScrollFactor(0);
+  // Vignette is a RenderTexture (not a Graphics) so we can carve a halo hole
+  // at the player's screen position whenever a light source is active. This
+  // stops the corner-band gradient from darkening the halo when the camera
+  // clamps at the edge of the dungeon.
+  let vignetteRT    = null;
+  let vignetteBrush = null;
 
   // One seed per scene lifetime — determines how floors 21+ are themed for
   // this run. A fresh scene (new run) re-rolls it, so each playthrough has
@@ -54,9 +59,11 @@ export function createFloorAtmosphere(scene, opts) {
   const particleSprites = [];
 
   // ── Darkness / light system ────────────────────────────────────────
-  // Player sees only ~2 tiles by default. Light spells cast by the
-  // player add extra light that fades linearly over 5 minutes.
-  const BASE_LIGHT_TILES  = 2;
+  // Without any light source the player can only see their own tile and a
+  // sliver of the neighbours — a real "grope in the dark" feel. Equipping a
+  // torch / light item or casting an illumination spell dominates via
+  // max(base, equipment, spell) in updateDarkness.
+  const BASE_LIGHT_TILES  = 1;
   const DARKNESS_ALPHA    = 0.97;
   let darknessRT    = null;
   let lightBrushG   = null;
@@ -66,9 +73,14 @@ export function createFloorAtmosphere(scene, opts) {
   let equipmentLightRadiusPx = 0;
   let equipmentLightDurationMs = 0;
   let equipmentLightStartTime = 0;
+  // Transient lights — short-lived point lights anywhere in the world. Used by
+  // creature-spell VFX to illuminate the projectile trajectory.
+  let transientLights = []; // { x, y, radius, startTime, duration, peakAlpha }
   let lastDarkUpdate = 0;
   let lastDarkPx = -9e9;
   let lastDarkPy = -9e9;
+  let lastCamSx = -9e9;
+  let lastCamSy = -9e9;
 
   function setThemeForLevel(newLevel) {
     level = Number(newLevel) || 1;
@@ -1924,22 +1936,64 @@ export function createFloorAtmosphere(scene, opts) {
   }
 
   // ── Vignette + ambient tint (screen-space overlays) ─────────────────
+  function ensureVignetteRT() {
+    const cam = scene.cameras.main;
+    const w = Math.max(1, Math.floor(cam.width));
+    const h = Math.max(1, Math.floor(cam.height));
+    if (!vignetteBrush) vignetteBrush = scene.make.graphics({ add: false });
+    if (!vignetteRT) {
+      vignetteRT = scene.add.renderTexture(0, 0, w, h)
+        .setScrollFactor(0).setOrigin(0, 0).setDepth(120);
+    } else if (vignetteRT.width !== w || vignetteRT.height !== h) {
+      vignetteRT.setSize(w, h);
+    }
+  }
+
   function rebuildVignette() {
     const cam = scene.cameras.main;
     const w = cam.width, h = cam.height;
     const p = theme.palette;
-    vignette.clear();
     ambientTint.clear();
-
     ambientTint.fillStyle(p.ambientTint, p.ambientTintAlpha);
     ambientTint.fillRect(0, 0, w, h);
+    ensureVignetteRT();
+    // Actual vignette gradient + halo is painted each frame by
+    // repaintVignetteScreenSpace from updateDarkness.
+  }
 
+  // Composes the corner-gradient vignette onto the screen-space RT, then
+  // carves a soft halo centred on the player's screen position whenever
+  // there's an effective light radius. This guarantees that the area around
+  // the player is visible even at the edges of the dungeon, where the camera
+  // clamps and the player ends up under the vignette's dark band.
+  function repaintVignetteScreenSpace(playerScreenX, playerScreenY, haloRadius) {
+    ensureVignetteRT();
+    const cam = scene.cameras.main;
+    const w = cam.width, h = cam.height;
+    const p = theme.palette;
     const a = p.vignetteAlpha;
     const bandH = h * 0.38, bandW = w * 0.32;
-    vignette.fillGradientStyle(0, 0, 0, 0, a, a, 0, 0); vignette.fillRect(0, 0, w, bandH);
-    vignette.fillGradientStyle(0, 0, 0, 0, 0, 0, a, a); vignette.fillRect(0, h - bandH, w, bandH);
-    vignette.fillGradientStyle(0, 0, 0, 0, a, 0, a, 0); vignette.fillRect(0, 0, bandW, h);
-    vignette.fillGradientStyle(0, 0, 0, 0, 0, a, 0, a); vignette.fillRect(w - bandW, 0, bandW, h);
+
+    const g = vignetteBrush;
+    g.clear();
+    g.fillGradientStyle(0, 0, 0, 0, a, a, 0, 0); g.fillRect(0, 0, w, bandH);
+    g.fillGradientStyle(0, 0, 0, 0, 0, 0, a, a); g.fillRect(0, h - bandH, w, bandH);
+    g.fillGradientStyle(0, 0, 0, 0, a, 0, a, 0); g.fillRect(0, 0, bandW, h);
+    g.fillGradientStyle(0, 0, 0, 0, 0, a, 0, a); g.fillRect(w - bandW, 0, bandW, h);
+
+    vignetteRT.clear();
+    vignetteRT.draw(g);
+
+    if (haloRadius > 8) {
+      ensureLightBrush();
+      const b = lightBrushG;
+      b.clear();
+      const falloff = haloRadius * 1.5;
+      b.fillStyle(0xffffff, 0.20); b.fillCircle(playerScreenX, playerScreenY, falloff);
+      b.fillStyle(0xffffff, 0.55); b.fillCircle(playerScreenX, playerScreenY, (haloRadius + falloff) / 2);
+      b.fillStyle(0xffffff, 0.98); b.fillCircle(playerScreenX, playerScreenY, haloRadius);
+      vignetteRT.erase(b);
+    }
   }
 
   scene.scale.on('resize', rebuildVignette);
@@ -1970,6 +2024,18 @@ export function createFloorAtmosphere(scene, opts) {
     });
   }
 
+  function addTransientLight(x, y, radiusTiles, durationMs, opts = {}) {
+    transientLights.push({
+      x, y,
+      radius: Math.max(0, Number(radiusTiles) || 0) * tileSize,
+      startTime: scene.time.now,
+      duration: Math.max(1, Number(durationMs) || 1),
+      peakAlpha: Number.isFinite(opts.peakAlpha) ? opts.peakAlpha : 1.0,
+    });
+    // Force redraw so the transient shows up immediately.
+    lastDarkUpdate = 0;
+  }
+
   function setEquipmentLight(radiusTiles, durationMs = 0, elapsedMs = 0) {
     equipmentLightRadiusPx = Math.max(0, Number(radiusTiles) || 0) * tileSize;
     equipmentLightDurationMs = Math.max(0, Number(durationMs) || 0);
@@ -1997,38 +2063,74 @@ export function createFloorAtmosphere(scene, opts) {
 
   function updateDarkness(nowMs, px, py) {
     if (!darknessRT) return;
-    // Drop expired spells
+    // Drop expired spells / transient lights.
     activeLightSpells = activeLightSpells.filter((l) => (nowMs - l.startTime) < l.duration);
+    transientLights = transientLights.filter((l) => (nowMs - l.startTime) < l.duration);
 
-    // Throttle: redraw immediately on movement, otherwise ~8 times / sec for decay smoothing.
+    // When transient lights are flashing we need smooth per-frame redraws so
+    // the light trail animates properly. We also redraw when the camera
+    // scrolls even if the player is still — otherwise the screen-space halo
+    // on the vignette would lag behind the camera smoothing. Otherwise
+    // throttle to ~8 Hz.
+    const cam = scene.cameras.main;
     const dx = px - lastDarkPx;
     const dy = py - lastDarkPy;
-    const moved = (dx * dx + dy * dy) > 0.5;
-    if (!moved && (nowMs - lastDarkUpdate < 120)) return;
+    const cdx = cam.scrollX - lastCamSx;
+    const cdy = cam.scrollY - lastCamSy;
+    const moved = (dx * dx + dy * dy) > 0.5 || (cdx * cdx + cdy * cdy) > 0.5;
+    const hasTransient = transientLights.length > 0;
+    if (!moved && !hasTransient && (nowMs - lastDarkUpdate < 120)) return;
     lastDarkPx = px; lastDarkPy = py; lastDarkUpdate = nowMs;
+    lastCamSx = cam.scrollX; lastCamSy = cam.scrollY;
 
-    // Compute effective light radius = max(base, equipment, spells). Using the
-    // single largest source instead of stacking erases keeps the visible halo
-    // clearly proportional to the strongest light.
+    // Compute effective player-centred radius = max(base, equipment, spells).
+    // Spells keep their full radius for 75% of the duration and then fade
+    // linearly to 0. Equipment lights (torch, lantern…) stay at their full
+    // radius for the whole duration and hard-cut to 0 when they burn out —
+    // the slot icon shows the visual progression separately.
+    const FADE_START_T = 0.75;
+    const spellEnvelope = (t) => {
+      if (!(t > 0)) return 1;
+      if (t >= 1) return 0;
+      if (t <= FADE_START_T) return 1;
+      return (1 - t) / (1 - FADE_START_T);
+    };
     const baseCore = BASE_LIGHT_TILES * tileSize;
     let coreR = baseCore;
     if (equipmentLightRadiusPx > 0) {
       let eqR = equipmentLightRadiusPx;
       if (equipmentLightDurationMs > 0) {
         const t = (nowMs - equipmentLightStartTime) / equipmentLightDurationMs;
-        eqR = equipmentLightRadiusPx * Math.max(0, 1 - t);
+        eqR = t >= 1 ? 0 : equipmentLightRadiusPx;
       }
       if (eqR > coreR) coreR = eqR;
     }
     for (const spell of activeLightSpells) {
       const t = (nowMs - spell.startTime) / spell.duration;
-      const sR = spell.initialRadius * Math.max(0, 1 - t);
+      const sR = spell.initialRadius * spellEnvelope(t);
       if (sR > coreR) coreR = sR;
     }
 
     darknessRT.clear();
     darknessRT.fill(0x000000, DARKNESS_ALPHA);
     paintLightAt(px, py, coreR, coreR * 1.5);
+
+    // Transient lights stack on top of the main player-centred light. Each
+    // one follows a fast-up / slow-down envelope so flashes feel punchy.
+    for (const tl of transientLights) {
+      const age = nowMs - tl.startTime;
+      const u = age / tl.duration;
+      const env = u < 0.18 ? (u / 0.18) : Math.max(0, 1 - (u - 0.18) / 0.82);
+      const r = tl.radius * env * tl.peakAlpha;
+      if (r > 8) paintLightAt(tl.x, tl.y, r, r * 1.4);
+    }
+
+    // Repaint the screen-space vignette with a matching halo at the player's
+    // screen position. Without this, the corner gradients still darken the
+    // player's surroundings whenever the camera clamps at the dungeon edge.
+    const screenX = (px - cam.scrollX) * cam.zoom;
+    const screenY = (py - cam.scrollY) * cam.zoom;
+    repaintVignetteScreenSpace(screenX, screenY, coreR * cam.zoom);
   }
 
   function clearLightSpells() { activeLightSpells = []; }
@@ -2054,6 +2156,7 @@ export function createFloorAtmosphere(scene, opts) {
     setWorldSize,
     addLightSpell,
     setEquipmentLight,
+    addTransientLight,
     updateDarkness,
     clearLightSpells,
   };
