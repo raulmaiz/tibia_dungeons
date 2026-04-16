@@ -5326,7 +5326,7 @@ function startGame(configPlayer) {
             impacted.push({ target, dmg });
             if (target.hp <= 0) {
               target.alive = false;
-              target.sprite.setVisible(false);
+              playCreatureDeathEffect(target);
               updateCreatureBar(target);
               grantPlayerXp(effectiveXpFromCreature(target));
               runKills += 1;
@@ -5465,7 +5465,7 @@ function startGame(configPlayer) {
                 addCombatLog(`${spell.title} hits ${frontTarget.title} for ${dmg}.`, LOG_COLORS.SPELL);
                 if (frontTarget.hp <= 0) {
                   frontTarget.alive = false;
-                  frontTarget.sprite.setVisible(false);
+                  playCreatureDeathEffect(frontTarget);
                   updateCreatureBar(frontTarget);
                   grantPlayerXp(effectiveXpFromCreature(frontTarget));
                   addCombatLog(`${frontTarget.title} dies from ${spell.title}.`);
@@ -5498,7 +5498,7 @@ function startGame(configPlayer) {
               addCombatLog(`${spell.title} hits ${target.title} for ${dmg}.`, LOG_COLORS.SPELL);
               if (target.hp <= 0) {
                 target.alive = false;
-                target.sprite.setVisible(false);
+                playCreatureDeathEffect(target);
                 updateCreatureBar(target);
                 grantPlayerXp(effectiveXpFromCreature(target));
                 runKills += 1;
@@ -5588,7 +5588,7 @@ function startGame(configPlayer) {
             );
             if (targetCreature.hp <= 0) {
               targetCreature.alive = false;
-              targetCreature.sprite.setVisible(false);
+              playCreatureDeathEffect(targetCreature);
               updateCreatureBar(targetCreature);
               grantPlayerXp(effectiveXpFromCreature(targetCreature));
               runKills += 1;
@@ -5763,6 +5763,60 @@ function startGame(configPlayer) {
           floatingCombatText(this, player.x, player.y - tileSize * 0.65, `-${dmg}`, {
             color: '#ff9b9b',
             fontSize: '17px',
+          });
+        };
+        const playCreatureDeathEffect = (creature) => {
+          if (!creature || !creature.sprite || !creature.sprite.scene) {
+            if (creature && creature.sprite) creature.sprite.setVisible(false);
+            return;
+          }
+          const sprite = creature.sprite;
+          const cx = sprite.x;
+          const cy = sprite.y;
+          // Dark ground ring — reads as "something hit the floor".
+          const ring = this.add.graphics();
+          ring.setDepth(5);
+          ring.lineStyle(2, 0x0f172a, 0.75);
+          ring.strokeEllipse(cx, cy + tileSize * 0.22, tileSize * 0.55, tileSize * 0.22);
+          this.tweens.add({
+            targets: ring,
+            scaleX: 1.7, scaleY: 0.9,
+            alpha: 0,
+            duration: 440, ease: 'Quad.easeOut',
+            onComplete: () => ring.destroy(),
+          });
+          // Rising dark smoke puffs so the disappearance has weight.
+          for (let i = 0; i < 5; i += 1) {
+            const ox = (Math.random() - 0.5) * tileSize * 0.5;
+            const oy = (Math.random() - 0.5) * 4;
+            const smoke = this.add.circle(cx + ox, cy + oy, 2 + Math.random() * 2, 0x475569, 0.75);
+            smoke.setDepth(16);
+            this.tweens.add({
+              targets: smoke,
+              y: smoke.y - 14 - Math.random() * 10,
+              alpha: 0,
+              scaleX: 1.8, scaleY: 1.8,
+              duration: 520 + Math.random() * 160, ease: 'Sine.easeOut',
+              onComplete: () => smoke.destroy(),
+            });
+          }
+          // The sprite collapses: red tint + tilt + shrink + fade.
+          sprite.setTint(0x991b1b);
+          const tiltDir = Math.random() < 0.5 ? -1 : 1;
+          this.tweens.killTweensOf(sprite);
+          this.tweens.add({
+            targets: sprite,
+            angle: tiltDir * 22,
+            scaleX: sprite.scaleX * 0.6,
+            scaleY: sprite.scaleY * 0.6,
+            alpha: 0,
+            duration: 420, ease: 'Cubic.easeIn',
+            onComplete: () => {
+              sprite.setVisible(false);
+              sprite.clearTint();
+              sprite.setAngle(0);
+              sprite.setAlpha(1);
+            },
           });
         };
         const showCreatureHitEffect = (creature, dmg) => {
