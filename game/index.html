@@ -544,14 +544,8 @@
         display: grid;
         grid-template-columns: repeat(4, 1fr);
         gap: 4px;
-        max-height: 250px;
-        overflow-y: auto;
-        overflow-x: hidden;
-        padding-right: 1px;
+        overflow: visible;
       }
-      .loot-grid::-webkit-scrollbar { width: 3px; }
-      .loot-grid::-webkit-scrollbar-track { background: transparent; }
-      .loot-grid::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.2); border-radius: 2px; }
       .loot-slot {
         aspect-ratio: 1;
         border: 1px solid rgba(55,70,95,0.6);
