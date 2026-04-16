@@ -82,39 +82,40 @@ export function shockwaveRing(scene, x, y, color, opts = {}) {
 }
 
 /**
- * Floating combat number with optional crit styling.
+ * Unified combat-feedback typography. Every floating number in the game —
+ * damage, heal, drain, DoT ticks — should go through this helper so they
+ * all share weight, outline, shadow, and the subtle overshoot-on-spawn that
+ * makes the HUD feel alive.
  */
+const COMBAT_FONT_BLACK = 'Segoe UI Black, Segoe UI, system-ui, sans-serif';
+
 export function floatingCombatText(scene, x, y, text, opts = {}) {
   const {
-    color = '#ff8b8b',
-    fontSize = '17px',
+    color = '#f87171',
+    fontSize = '18px',
     crit = false,
     depth = FX_DEPTH + 2,
   } = opts;
+  const basePx = parseInt(fontSize, 10);
   const t = scene.add.text(x, y - 4, text, {
-    color,
-    fontSize: crit ? `${parseInt(fontSize, 10) + 4}px` : fontSize,
-    fontStyle: 'bold',
-    fontFamily: 'Segoe UI, system-ui, sans-serif',
+    color: crit ? '#fde047' : color,
+    fontSize: `${crit ? basePx + 10 : basePx}px`,
+    fontFamily: COMBAT_FONT_BLACK,
   });
-  t.setOrigin(0.5, 0.5);
+  t.setOrigin(0.5, 1);
   t.setDepth(depth);
-  if (crit) {
-    t.setColor('#fff1a6');
-    t.setStroke('#7f1d1d', 5);
-    t.setShadow(0, 0, '#fbbf24', 12, true, true);
-  } else {
-    t.setStroke('#1a0a0a', 4);
-    t.setShadow(0, 2, '#000000', 6, true, false);
-  }
-  scene.tweens.add({
+  t.setStroke(crit ? '#7f1d1d' : '#0a0a0a', crit ? 6 : 4);
+  t.setShadow(0, 2, 'rgba(0,0,0,0.85)', 6, false, true);
+  if (crit) t.setShadow(0, 0, '#fbbf24', 20, true, true);
+  t.setScale(0.55);
+  t.setAlpha(0);
+  // Two-stage: pop-in with overshoot, hold briefly, then drift upward + fade.
+  scene.tweens.chain({
     targets: t,
-    y: t.y - (crit ? 28 : 22),
-    alpha: 0,
-    scaleX: crit ? 1.12 : 1.05,
-    scaleY: crit ? 1.12 : 1.05,
-    duration: crit ? 520 : 400,
-    ease: 'Cubic.easeOut',
+    tweens: [
+      { scale: 1, alpha: 1, duration: crit ? 200 : 150, ease: 'Back.easeOut' },
+      { y: t.y - (crit ? 34 : 26), alpha: 0, duration: crit ? 560 : 440, ease: 'Cubic.easeIn' },
+    ],
     onComplete: () => t.destroy(),
   });
 }
@@ -279,72 +280,233 @@ export function rangedProjectileLine(scene, x0, y0, x1, y1, visual, duration = 1
 }
 
 /**
- * Miss: dissolving shards + label.
+ * Miss indicator. Single clean "MISS" label with a quick horizontal slash
+ * behind it — no particle cloud, no camera effect. Reads as "glancing blow".
  */
 export function missEffect(scene, x, y, tileSize) {
-  const puffs = [
-    { dx: -9, dy: -5, r: 8 },
-    { dx: 0, dy: -9, r: 9 },
-    { dx: 9, dy: -4, r: 8 },
-    { dx: -4, dy: 4, r: 7 },
-    { dx: 5, dy: 5, r: 7 },
-  ];
-  for (const puff of puffs) {
-    const cloud = scene.add.circle(x + puff.dx, y + puff.dy, puff.r, 0xb8c0cc, 0.45);
-    cloud.setDepth(FX_DEPTH);
-    scene.tweens.add({
-      targets: cloud,
-      y: cloud.y - 14,
-      alpha: 0,
-      scaleX: 1.35,
-      scaleY: 1.35,
-      duration: 300,
-      ease: 'Sine.easeOut',
-      onComplete: () => cloud.destroy(),
-    });
-  }
-  const miss = scene.add.text(x, y - tileSize * 0.75, 'MISS', {
-    color: '#e2e8f0',
-    fontSize: '15px',
-    fontStyle: 'bold',
-    fontFamily: 'Segoe UI, system-ui, sans-serif',
+  const baseY = y - tileSize * 0.75;
+  const slash = scene.add.rectangle(x, baseY + 2, 46, 2, 0xcbd5e1, 0.9);
+  slash.setDepth(FX_DEPTH);
+  slash.setScale(0.1, 1);
+  scene.tweens.chain({
+    targets: slash,
+    tweens: [
+      { scaleX: 1, duration: 120, ease: 'Cubic.easeOut' },
+      { alpha: 0, duration: 220, ease: 'Sine.easeOut' },
+    ],
+    onComplete: () => slash.destroy(),
   });
-  miss.setOrigin(0.5, 0.5);
-  miss.setDepth(FX_DEPTH + 1);
+  const miss = scene.add.text(x, baseY, 'MISS', {
+    color: '#e2e8f0',
+    fontSize: '14px',
+    fontFamily: COMBAT_FONT_BLACK,
+  });
+  miss.setOrigin(0.5, 1);
   miss.setStroke('#0f172a', 4);
-  scene.tweens.add({
+  miss.setShadow(0, 2, 'rgba(0,0,0,0.8)', 5, false, true);
+  miss.setDepth(FX_DEPTH + 1);
+  miss.setScale(0.5);
+  miss.setAlpha(0);
+  scene.tweens.chain({
     targets: miss,
-    y: miss.y - 18,
-    alpha: 0,
-    duration: 380,
-    ease: 'Cubic.easeOut',
+    tweens: [
+      { scale: 1, alpha: 1, duration: 140, ease: 'Back.easeOut' },
+      { alpha: 0, y: miss.y - 18, duration: 340, ease: 'Cubic.easeIn' },
+    ],
     onComplete: () => miss.destroy(),
   });
 }
 
 /**
- * Crit banner text.
+ * Crit banner — big "CRITICAL" over the target with a radial gold ring,
+ * starburst sparks and a scale pop. No camera shake (reserved for more
+ * meaningful events to stay readable).
  */
 export function critBanner(scene, x, y, tileSize) {
-  const crit = scene.add.text(x, y - tileSize * 0.92, 'CRIT!', {
-    color: '#fff7ed',
-    fontSize: '16px',
-    fontStyle: 'bold',
-    fontFamily: 'Segoe UI Black, Segoe UI, sans-serif',
+  const anchorY = y - tileSize * 0.5;
+  // Expanding gold ring.
+  const ring = scene.add.circle(x, anchorY, 12, 0xfbbf24, 0);
+  ring.setStrokeStyle(2, 0xfde047, 1);
+  ring.setDepth(FX_DEPTH);
+  scene.tweens.add({
+    targets: ring,
+    scaleX: 4.5, scaleY: 4.5, alpha: 0,
+    duration: 460, ease: 'Quad.easeOut',
+    onComplete: () => ring.destroy(),
+  });
+  // Inner golden flash.
+  const flash = scene.add.circle(x, anchorY, 14, 0xfde68a, 0.9);
+  flash.setDepth(FX_DEPTH);
+  scene.tweens.add({
+    targets: flash,
+    scaleX: 2.4, scaleY: 2.4, alpha: 0,
+    duration: 260, ease: 'Cubic.easeOut',
+    onComplete: () => flash.destroy(),
+  });
+  radialSparkBurst(scene, x, anchorY, 0xfde047, 12);
+  // CRITICAL text.
+  const crit = scene.add.text(x, y - tileSize * 0.95, 'CRITICAL', {
+    color: '#fef3c7',
+    fontSize: '19px',
+    fontFamily: COMBAT_FONT_BLACK,
   });
   crit.setOrigin(0.5, 0.5);
+  crit.setStroke('#78350f', 6);
+  crit.setShadow(0, 0, '#fbbf24', 20, true, true);
   crit.setDepth(FX_DEPTH + 3);
-  crit.setStroke('#991b1b', 5);
-  crit.setShadow(0, 0, '#fbbf24', 16, true, true);
-  scene.tweens.add({
+  crit.setScale(0.35);
+  crit.setAlpha(0);
+  scene.tweens.chain({
     targets: crit,
-    y: crit.y - 26,
-    alpha: 0,
-    scaleX: 1.15,
-    scaleY: 1.15,
-    duration: 720,
-    ease: 'Cubic.easeOut',
+    tweens: [
+      { scale: 1.2, alpha: 1, duration: 180, ease: 'Back.easeOut' },
+      { scale: 1, duration: 100, ease: 'Sine.easeInOut' },
+      { y: crit.y - 16, alpha: 0, duration: 520, ease: 'Cubic.easeIn' },
+    ],
     onComplete: () => crit.destroy(),
   });
-  shakeCamera(scene, 110, 0.014);
+}
+
+/**
+ * Full-screen level-up banner: horizontal gold streak, "LEVEL" label,
+ * oversized number, "UP!" kicker, and radial sparks. Screen-space, centred.
+ */
+export function levelUpBanner(scene, level) {
+  const cam = scene.cameras.main;
+  const cx = cam.width / 2;
+  const cy = cam.height / 2;
+  // Thin horizontal streak that expands outwards.
+  const streakH = 3;
+  const streak = scene.add.rectangle(cx, cy, 40, streakH, 0xfde047, 0.9);
+  streak.setScrollFactor(0);
+  streak.setDepth(598);
+  streak.setAlpha(0);
+  scene.tweens.chain({
+    targets: streak,
+    tweens: [
+      { alpha: 0.85, scaleX: Math.max(8, cam.width / 40 * 0.72), duration: 300, ease: 'Cubic.easeOut' },
+      { alpha: 0, duration: 520, ease: 'Sine.easeIn' },
+    ],
+    onComplete: () => streak.destroy(),
+  });
+  // Soft rect halo behind the number for contrast against any background.
+  const halo = scene.add.rectangle(cx, cy, 280, 110, 0x78350f, 0.0);
+  halo.setScrollFactor(0);
+  halo.setDepth(599);
+  scene.tweens.chain({
+    targets: halo,
+    tweens: [
+      { fillAlpha: 0.35, duration: 180, ease: 'Sine.easeOut' },
+      { fillAlpha: 0, duration: 820, ease: 'Sine.easeIn' },
+    ],
+    onComplete: () => halo.destroy(),
+  });
+  // "LEVEL" small label
+  const label = scene.add.text(cx, cy - 38, 'LEVEL', {
+    color: '#fef3c7',
+    fontSize: '20px',
+    fontFamily: COMBAT_FONT_BLACK,
+  });
+  label.setOrigin(0.5, 0.5);
+  label.setStroke('#78350f', 4);
+  label.setShadow(0, 0, '#fbbf24', 10, true, true);
+  label.setScrollFactor(0);
+  label.setDepth(601);
+  label.setAlpha(0);
+  // Big number
+  const num = scene.add.text(cx, cy + 6, String(level), {
+    color: '#fffbeb',
+    fontSize: '80px',
+    fontFamily: COMBAT_FONT_BLACK,
+  });
+  num.setOrigin(0.5, 0.5);
+  num.setStroke('#78350f', 10);
+  num.setShadow(0, 0, '#fbbf24', 30, true, true);
+  num.setScrollFactor(0);
+  num.setDepth(601);
+  num.setScale(0.3);
+  num.setAlpha(0);
+  // "UP!" kicker
+  const up = scene.add.text(cx, cy + 58, 'UP!', {
+    color: '#fef3c7',
+    fontSize: '22px',
+    fontFamily: COMBAT_FONT_BLACK,
+  });
+  up.setOrigin(0.5, 0.5);
+  up.setStroke('#78350f', 4);
+  up.setShadow(0, 0, '#fbbf24', 10, true, true);
+  up.setScrollFactor(0);
+  up.setDepth(601);
+  up.setAlpha(0);
+  radialSparkBurst(scene, cx, cy, 0xfde047, 18);
+  // Labels fade in together, number pops with overshoot, everything drifts + fades out.
+  scene.tweens.add({
+    targets: [label, up],
+    alpha: 1,
+    duration: 200, delay: 60,
+    ease: 'Sine.easeOut',
+  });
+  scene.tweens.chain({
+    targets: num,
+    tweens: [
+      { scale: 1.08, alpha: 1, duration: 220, ease: 'Back.easeOut' },
+      { scale: 1, duration: 110, ease: 'Sine.easeInOut' },
+      { y: num.y - 22, alpha: 0, duration: 720, delay: 260, ease: 'Cubic.easeIn' },
+    ],
+    onComplete: () => num.destroy(),
+  });
+  scene.tweens.add({
+    targets: [label, up],
+    alpha: 0, y: '-=16',
+    duration: 620, delay: 540,
+    ease: 'Cubic.easeIn',
+    onComplete: () => { label.destroy(); up.destroy(); },
+  });
+}
+
+/**
+ * Compact banner for a skill level-up. Appears at the top of the viewport
+ * as a pill with icon + label + "Lv N". Colour keyed to the stat family.
+ */
+export function skillUpBanner(scene, label, level, color = 0x34d399) {
+  const cam = scene.cameras.main;
+  const cx = cam.width / 2;
+  const cy = Math.max(70, cam.height * 0.12);
+  const pillH = 36;
+  const pillW = Math.min(360, Math.max(220, label.length * 10 + 80));
+  const pill = scene.add.rectangle(cx, cy, pillW, pillH, color, 0.22);
+  pill.setStrokeStyle(1, color, 0.9);
+  pill.setScrollFactor(0);
+  pill.setDepth(619);
+  pill.setScale(0.5, 1);
+  pill.setAlpha(0);
+  const t = scene.add.text(cx, cy, `${label}   Lv ${level}`, {
+    color: '#ecfdf5',
+    fontSize: '15px',
+    fontFamily: COMBAT_FONT_BLACK,
+  });
+  t.setOrigin(0.5, 0.5);
+  t.setStroke('#052e16', 4);
+  const hex = color.toString(16).padStart(6, '0');
+  t.setShadow(0, 0, `#${hex}`, 10, true, true);
+  t.setScrollFactor(0);
+  t.setDepth(620);
+  t.setAlpha(0);
+  radialSparkBurst(scene, cx, cy, color, 10);
+  scene.tweens.add({
+    targets: pill,
+    alpha: 1, scaleX: 1,
+    duration: 220, ease: 'Back.easeOut',
+  });
+  scene.tweens.add({
+    targets: t,
+    alpha: 1,
+    duration: 220, ease: 'Sine.easeOut',
+  });
+  scene.tweens.add({
+    targets: [pill, t],
+    alpha: 0, y: '-=10',
+    duration: 520, delay: 620, ease: 'Cubic.easeIn',
+    onComplete: () => { pill.destroy(); t.destroy(); },
+  });
 }
