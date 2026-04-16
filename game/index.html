@@ -574,11 +574,14 @@
         pointer-events: none;
       }
       .loot-slot:not(:empty):hover {
-        border-color: rgba(56,189,248,0.45);
+        border-color: rgba(56,189,248,0.55);
         background: rgba(12,22,42,0.95);
-        transform: scale(1.06);
-        box-shadow: 0 4px 14px rgba(0,0,0,0.6), 0 0 0 1px rgba(56,189,248,0.15) inset;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.6), 0 0 0 1px rgba(56,189,248,0.25) inset;
         z-index: 2;
+      }
+      .loot-slot:not(:empty):hover img {
+        transform: scale(1.08);
+        transition: transform 120ms ease;
       }
       .loot-slot img {
         width: 26px;

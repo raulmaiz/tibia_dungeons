@@ -2599,8 +2599,6 @@ function startGame(configPlayer) {
         };
         const showFullFoodEffect = () => {
           if (playerDead || gameOver) return;
-          flashCamera(this, 80, 255, 200, 80);
-          shakeCamera(this, 70, 0.008);
           player.setTint(0xfbbf24);
           this.tweens.add({
             targets: player,
