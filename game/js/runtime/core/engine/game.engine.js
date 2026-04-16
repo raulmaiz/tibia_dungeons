@@ -4661,13 +4661,10 @@ function startGame(configPlayer) {
         if (saveGameBtnEl) {
           saveGameBtnEl.addEventListener('click', () => {
             if (aliveCreatures().length > 0) return;
-            const token = (window.tdAuth && window.tdAuth.getToken && window.tdAuth.getToken()) || '';
-            if (!token) {
-              addCombatLog('Save: sign in required (play as guest ends at death).');
-              return;
-            }
             // Capture the run and hand it off to the Save Game screen — the
-            // actual POST happens there when the player picks a slot.
+            // actual POST happens there when the player picks a slot. Guests
+            // keep the snapshot in sessionStorage and are routed to the
+            // registration form first (auth.js picks this up).
             try {
               const snapshot = captureSaveSnapshot();
               const existingId = (window.tdGame && typeof window.tdGame.getCurrentSaveId === 'function')

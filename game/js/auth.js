@@ -380,6 +380,10 @@ function wireSavesScreen() {
   if (list) list.addEventListener('click', handleSavesListClick);
 }
 
+// Exposed by wireAuthForm so bootstrapAuth can flip the form into the
+// "register" tab when we detect a guest run that needs to be saved.
+let authSetMode = null;
+
 function wireAuthForm() {
   const form       = document.getElementById('authForm');
   const nameEl     = document.getElementById('authName');
@@ -401,10 +405,20 @@ function wireAuthForm() {
     tabReg.classList.toggle('active', m === 'register');
     if (repGroup) repGroup.style.display = m === 'register' ? '' : 'none';
     submit.textContent = m === 'register' ? 'Create account' : 'Log in';
-    if (subtitleEl) subtitleEl.textContent = m === 'register' ? 'Create your account' : 'Sign in to play';
+    const hasPendingSave = !!readPendingSnapshot();
+    if (subtitleEl) {
+      if (hasPendingSave) {
+        subtitleEl.textContent = m === 'register'
+          ? 'Create an account to save your run'
+          : 'Sign in to save your run';
+      } else {
+        subtitleEl.textContent = m === 'register' ? 'Create your account' : 'Sign in to play';
+      }
+    }
     errEl.textContent = '';
     if (repEl) repEl.value = '';
   };
+  authSetMode = setMode;
 
   tabLogin.addEventListener('click', (ev) => { ev.preventDefault(); setMode('login'); });
   tabReg.addEventListener('click',  (ev) => { ev.preventDefault(); setMode('register'); });
@@ -446,6 +460,13 @@ function wireAuthForm() {
       return;
     }
     setAuth(result.token, result.name);
+    // If the player arrived from an in-game "Save and Exit" while still a
+    // guest, there's a pending snapshot waiting — drop them on the Save
+    // Game screen so they can commit it right away.
+    if (window.location.hash === '#/saves/save' && readPendingSnapshot()) {
+      showSavesOverlay('save');
+      return;
+    }
     showCharacterOverlay(result.name);
   });
 
@@ -492,6 +513,12 @@ async function bootstrapAuth() {
   }
   clearAuth();
   showAuthOverlay();
+  // Guest player who just hit "Save and Exit" — nudge them straight to
+  // the Register tab so the default submit creates an account and then
+  // commits the pending snapshot.
+  if (window.location.hash === '#/saves/save' && readPendingSnapshot() && typeof authSetMode === 'function') {
+    authSetMode('register');
+  }
 }
 
 // Run immediately; the overlays are in the DOM because this module is
