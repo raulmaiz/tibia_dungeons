@@ -42,8 +42,6 @@ import {
   rangedProjectileLine,
   missEffect,
   critBanner,
-  levelUpBanner,
-  skillUpBanner,
 } from '../../../vfx.js';
 
 let game;
@@ -1968,8 +1966,18 @@ function startGame(configPlayer) {
         const drawMinimapDynamic = () => {
           if (!minimapCtx || !minimapBaseImageData) return;
           minimapCtx.putImageData(minimapBaseImageData, 0, 0);
-          // Player only — creatures are intentionally hidden so the minimap
-          // stays a navigation aid, not a combat tracker.
+          // Alive creatures (red)
+          minimapCtx.fillStyle = '#f87171';
+          for (const c of creatures) {
+            if (!c.alive) continue;
+            minimapCtx.fillRect(
+              MMAP_PAD + c.gx * minimapMMTile,
+              MMAP_PAD + c.gy * minimapMMTile,
+              minimapMMTile,
+              minimapMMTile
+            );
+          }
+          // Player (white)
           minimapCtx.fillStyle = '#ffffff';
           minimapCtx.fillRect(
             MMAP_PAD + gridX * minimapMMTile,
@@ -2113,13 +2121,38 @@ function startGame(configPlayer) {
           return Math.max(6, Math.floor(4 + dl * 0.75));
         };
         const showSkillLevelUpText = (label, level) => {
-          // Skill family → chip colour (keeps banners visually classified).
-          const lc = String(label || '').toLowerCase();
-          let colour = 0x34d399; // default green for combat skills
-          if (lc.includes('magic')) colour = 0x60a5fa;       // blue
-          else if (lc.includes('shield')) colour = 0xfacc15; // yellow
-          else if (lc.includes('fist')) colour = 0xfb923c;   // orange
-          skillUpBanner(this, label, level, colour);
+          const txt = this.add.text(this.scale.width / 2, 88, `${label} +1 (Lv ${level})`, {
+            color: '#bbf7d0',
+            fontSize: '22px',
+            fontStyle: 'bold',
+            fontFamily: 'Segoe UI, system-ui, sans-serif',
+          });
+          txt.setOrigin(0.5, 0.5);
+          txt.setScrollFactor(0);
+          txt.setDepth(620);
+          txt.setStroke('#052e16', 5);
+          txt.setShadow(0, 0, '#34d399', 14, true, true);
+          const glow = this.add.circle(this.scale.width / 2, 88, 40, 0x34d399, 0.18);
+          glow.setScrollFactor(0);
+          glow.setDepth(619);
+          this.tweens.add({
+            targets: glow,
+            alpha: 0,
+            scaleX: 2.1,
+            scaleY: 2.1,
+            duration: 520,
+            ease: 'Sine.easeOut',
+            onComplete: () => glow.destroy(),
+          });
+          radialSparkBurst(this, this.scale.width / 2, 88, 0x34d399, 12);
+          this.tweens.add({
+            targets: txt,
+            y: txt.y - 16,
+            alpha: 0,
+            duration: 760,
+            ease: 'Cubic.easeOut',
+            onComplete: () => txt.destroy(),
+          });
         };
         const weaponSkillTypeKey = (item) => {
           if (!item) return null;
@@ -2204,7 +2237,41 @@ function startGame(configPlayer) {
           playerActionDelayMs = Phaser.Math.Clamp(320 - (playerLevel - 1) * 5, 220, 320);
         };
         const showLevelUpText = () => {
-          levelUpBanner(this, playerLevel);
+          const cx = this.scale.width / 2;
+          const cy = this.scale.height / 2;
+          const glow = this.add.circle(cx, cy, 80, 0xfbbf24, 0.12);
+          glow.setScrollFactor(0);
+          glow.setDepth(600);
+          this.tweens.add({
+            targets: glow,
+            alpha: 0,
+            scaleX: 2.2,
+            scaleY: 2.2,
+            duration: 700,
+            ease: 'Sine.easeOut',
+            onComplete: () => glow.destroy(),
+          });
+          const txt = this.add.text(cx, cy, 'LEVEL UP!', {
+            color: '#fffbeb',
+            fontSize: '58px',
+            fontStyle: 'bold',
+            fontFamily: 'Segoe UI Black, Segoe UI, system-ui, sans-serif',
+          });
+          txt.setOrigin(0.5, 0.5);
+          txt.setStroke('#78350f', 10);
+          txt.setShadow(0, 0, '#fbbf24', 28, true, true);
+          txt.setScrollFactor(0);
+          txt.setDepth(601);
+          this.tweens.add({
+            targets: txt,
+            y: txt.y - 36,
+            alpha: 0,
+            scaleX: 1.12,
+            scaleY: 1.12,
+            duration: 1000,
+            ease: 'Cubic.easeOut',
+            onComplete: () => txt.destroy(),
+          });
         };
         const grantPlayerXp = (amount) => {
           const raw = Number(amount);
@@ -5706,8 +5773,8 @@ function startGame(configPlayer) {
             },
           });
           floatingCombatText(this, player.x, player.y - tileSize * 0.65, `-${dmg}`, {
-            color: '#f87171',
-            fontSize: '20px',
+            color: '#ff9b9b',
+            fontSize: '17px',
           });
         };
         const showCreatureHitEffect = (creature, dmg) => {
@@ -5730,8 +5797,8 @@ function startGame(configPlayer) {
             },
           });
           floatingCombatText(this, creature.sprite.x, creature.sprite.y - tileSize * 0.65, `-${dmg}`, {
-            color: '#fecaca',
-            fontSize: '18px',
+            color: '#ff9b9b',
+            fontSize: '17px',
           });
         };
         const parseAbilityDamage = (ability, fallbackMax) => {
