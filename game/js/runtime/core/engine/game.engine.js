@@ -1657,13 +1657,26 @@ function setupSelectorUI() {
   };
 
   let _starting = false;
-  startBtn.addEventListener('click', async () => {
+  // Save id of the currently-active run, so subsequent in-game "Save"
+  // clicks can overwrite that slot instead of spawning new entries.
+  //   null        → this run has never been saved (fresh game or guest)
+  //   "<hex>"     → the id returned by the server on a previous save /
+  //                 the id of the save we resumed from
+  let currentSaveId = null;
+  // Unified boot path used by both the "Enter Dungeon" click and the
+  // "Resume" action from the Saved Games screen.
+  //   cfg = { name, sex, classKey, resumeSnapshot?, resumeSaveId? }
+  async function bootGame(cfg) {
     if (_starting) return;
     _starting = true;
-    startBtn.disabled = true;
-    const playerName = (playerNameInput.value || '').trim() || 'Adventurer';
-    currentPlayerCapacity = progressionStatsForLevel(1, selectedClass).capacity;
-    playerConfig = { name: playerName, sex: selectedSex, classKey: selectedClass };
+    if (startBtn) startBtn.disabled = true;
+    const snap = (cfg && cfg.resumeSnapshot) || null;
+    currentSaveId = snap && typeof cfg.resumeSaveId === 'string' ? cfg.resumeSaveId : null;
+    const playerName = String((cfg && cfg.name) || 'Adventurer').trim() || 'Adventurer';
+    const sex = (cfg && cfg.sex) || 'male';
+    const classKey = (cfg && cfg.classKey) || 'knight';
+    currentPlayerCapacity = progressionStatsForLevel(1, classKey).capacity;
+    playerConfig = { name: playerName, sex, classKey, resumeSnapshot: snap };
 
     const loadingOverlay = document.getElementById('loadingOverlay');
     if (loadingOverlay) loadingOverlay.style.display = 'flex';
@@ -1684,9 +1697,10 @@ function setupSelectorUI() {
       );
     };
 
+    const bagToEquip = snap && Number(snap.bagArticleId) ? Number(snap.bagArticleId) : START_BAG_ARTICLE_ID;
     await Promise.all([
       loadProgressionDatabase().then(onJsonDone),
-      equipBagByArticleId(START_BAG_ARTICLE_ID).then(onJsonDone),
+      equipBagByArticleId(bagToEquip).then(onJsonDone),
       (async () => { creatureDropTable = await getCreatureDropTable(); })().then(onJsonDone),
       (async () => { creatureAbilitiesById = await getCreatureAbilitiesById(); })().then(onJsonDone),
       (async () => { creatureDamageModifiersById = await getCreatureDamageModifiersById(); })().then(onJsonDone),
@@ -1698,12 +1712,73 @@ function setupSelectorUI() {
 
     setLoadingProgress(45, 'Starting game engine...');
     addCoinsToInventory(0);
-    // Starting inventory: torch equipped and lit (3-tile radius).
-    await equipItemInSlot('light', 1396);
+    if (snap) {
+      // Restore the saved inventory: equipped slots + bag items + gold.
+      // We equip by article_id; equipItemInSlot hydrates the full item from
+      // the catalog so stats/sprites match the shop entries.
+      const eq = (snap && snap.equippedSlots) || {};
+      for (const [slotKey, item] of Object.entries(eq)) {
+        if (!item) continue;
+        const articleId = Number(item.article_id || item.id || 0);
+        if (!articleId) continue;
+        try { await equipItemInSlot(slotKey, articleId); } catch { /* skip bad slot */ }
+      }
+      const bag = Array.isArray(snap.bagLootItems) ? snap.bagLootItems : [];
+      for (const item of bag) {
+        if (!item) continue;
+        try { addLootItemToBag({ ...item }); } catch { /* skip bad entry */ }
+      }
+      if (Number.isFinite(Number(snap.gold)) && Number(snap.gold) > 0) {
+        addCoinsToInventory(Math.floor(Number(snap.gold)));
+      }
+    } else {
+      // Default starting inventory: torch equipped and lit (3-tile radius).
+      await equipItemInSlot('light', 1396);
+    }
     document.getElementById('startOverlay').style.display = 'none';
+    const savesOv = document.getElementById('savesOverlay');
+    if (savesOv) savesOv.style.display = 'none';
     startGame(playerConfig);
-    // _starting stays true — the game is now running, no more starts needed
+  }
+  startBtn.addEventListener('click', () => {
+    const playerName = (playerNameInput.value || '').trim() || 'Adventurer';
+    bootGame({ name: playerName, sex: selectedSex, classKey: selectedClass });
   });
+  // Exposed so the saves screen ("Resume") can re-enter the game.
+  window.tdGame = {
+    resume(snapshot, saveId) {
+      if (!snapshot) return;
+      // Clear the saves-screen hash so a subsequent refresh lands on the
+      // character overlay (or the game, if it's already running).
+      if (window.location.hash === '#/saves') window.location.hash = '';
+      bootGame({
+        name:     snapshot.name,
+        sex:      snapshot.sex,
+        classKey: snapshot.classKey,
+        resumeSnapshot: snapshot,
+        resumeSaveId:   saveId || null,
+      });
+    },
+    // Shared-state accessors for the in-game Save button.
+    getCurrentSaveId() { return currentSaveId; },
+    setCurrentSaveId(id) { currentSaveId = id || null; },
+    // Wipe the active run's save slot — called from death flows so a
+    // completed/failed run doesn't keep polluting the Load Game list.
+    async deleteCurrentSave() {
+      const id = currentSaveId;
+      if (!id) return false;
+      const token = (window.tdAuth && window.tdAuth.getToken && window.tdAuth.getToken()) || '';
+      if (!token) return false;
+      currentSaveId = null;
+      try {
+        await fetch(`/api/saves?id=${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        return true;
+      } catch { return false; }
+    },
+  };
 
   // Un único listener de Enter para el input (el document listener era redundante y causaba doble disparo)
   playerNameInput.addEventListener('keydown', (event) => {
@@ -4515,6 +4590,96 @@ function startGame(configPlayer) {
           marketEls.openBtn.disabled = !clear;
           marketEls.openBtn.title = clear ? '' : 'Clear all creatures first';
         };
+        const saveGameBtnEl = document.getElementById('saveGameBtn');
+        const updateSaveGameButton = () => {
+          if (!saveGameBtnEl) return;
+          const clear = aliveCreatures().length === 0;
+          saveGameBtnEl.disabled = !clear;
+          saveGameBtnEl.title = clear ? '' : 'Clear all creatures first';
+        };
+        // Capture everything that's needed to resume the run on another
+        // device: character meta, progression stats, full inventory, learned
+        // spells, active DoT timers, the current floor and the player's
+        // position on it. The map tiles themselves are regenerated per
+        // floor, so we intentionally don't snapshot those.
+        const captureSaveSnapshot = () => {
+          // Pull inventory state through the debugInventory bridge — the
+          // underlying equippedSlots / bagLootItems live in a different
+          // closure (setupSelectorUI) and aren't directly reachable here.
+          let invState = null;
+          try {
+            invState = (window.debugInventory && typeof window.debugInventory.state === 'function')
+              ? window.debugInventory.state() : null;
+          } catch { invState = null; }
+          const goldAmount = window.debugInventory && typeof window.debugInventory.getGold === 'function'
+            ? Math.max(0, Number(window.debugInventory.getGold() || 0)) : 0;
+          const weaponSkills = {};
+          if (weaponSkillLevelByType && typeof weaponSkillLevelByType.entries === 'function') {
+            for (const [k, v] of weaponSkillLevelByType.entries()) weaponSkills[k] = Number(v) || 0;
+          }
+          return {
+            version: 1,
+            // Character identity
+            name:             String((configPlayer && configPlayer.name) || ''),
+            classKey:         String(playerClassKey || 'knight'),
+            sex:              (configPlayer && configPlayer.sex === 'female') ? 'female' : 'male',
+            // Progression
+            playerLevel:      Number(playerLevel) || 1,
+            playerXp:         Number(playerXp) || 0,
+            playerHp:         Number(playerHp) || 0,
+            playerMana:       Number(playerMana) || 0,
+            playerMaxHp:      Number(playerMaxHp) || 0,
+            playerMaxMana:    Number(playerMaxMana) || 0,
+            playerMagicLevel: Number(playerMagicLevel) || 0,
+            playerFistLevel:  Number(playerFistLevel) || 0,
+            playerShieldingLevel: Number(playerShieldingLevel) || 0,
+            weaponSkillLevels: weaponSkills,
+            // Run state
+            currentLevel:     Number(currentLevel) || 1,
+            gridX:            Number(gridX) || 0,
+            gridY:            Number(gridY) || 0,
+            hungerSecondsLeft: Number(hungerSecondsLeft) || 0,
+            runKills:         Number(runKills) || 0,
+            gold:             goldAmount,
+            // Inventory snapshot (via bridge so this survives scope isolation).
+            bagArticleId:     (invState && invState.bag && invState.bag.article_id) || null,
+            bagSlots:         (invState && invState.bagSlots) || 0,
+            equippedSlots:    invState && invState.equipped
+              ? Object.fromEntries(Object.entries(invState.equipped).map(([k, v]) => [k, v || null]))
+              : {},
+            bagLootItems:     (invState && Array.isArray(invState.items))
+              ? invState.items.map((i) => ({ ...i })) : [],
+            // Spells
+            learnedSpellIds:  Array.from(learnedSpellIds || []),
+            learnedSpellSlots: Array.from(learnedSpellSlots || []),
+            // DoT statuses (if any)
+            burnState:        burnState ? { ...burnState } : null,
+            poisonState:      poisonState ? { ...poisonState } : null,
+            electrifiedState: electrifiedState ? { ...electrifiedState } : null,
+          };
+        };
+        if (saveGameBtnEl) {
+          saveGameBtnEl.addEventListener('click', () => {
+            if (aliveCreatures().length > 0) return;
+            const token = (window.tdAuth && window.tdAuth.getToken && window.tdAuth.getToken()) || '';
+            if (!token) {
+              addCombatLog('Save: sign in required (play as guest ends at death).');
+              return;
+            }
+            // Capture the run and hand it off to the Save Game screen — the
+            // actual POST happens there when the player picks a slot.
+            try {
+              const snapshot = captureSaveSnapshot();
+              const existingId = (window.tdGame && typeof window.tdGame.getCurrentSaveId === 'function')
+                ? window.tdGame.getCurrentSaveId() : null;
+              sessionStorage.setItem('td.pendingSnapshot', JSON.stringify(snapshot));
+              if (existingId) sessionStorage.setItem('td.pendingSaveId', existingId);
+              else sessionStorage.removeItem('td.pendingSaveId');
+            } catch { /* sessionStorage quota shouldn't realistically hit */ }
+            window.location.hash = '#/saves/save';
+            window.location.reload();
+          });
+        }
         if (marketEls.openBtn) marketEls.openBtn.addEventListener('click', openMarket);
         if (marketEls.closeBtn) marketEls.closeBtn.addEventListener('click', closeMarket);
         if (marketEls.sort) {
@@ -4533,6 +4698,7 @@ function startGame(configPlayer) {
           renderMarketDetail();
         });
         updateOpenMarketButton();
+        updateSaveGameButton();
         const renderTopStatsPanel = () => {
           const statsGridEl = document.getElementById('statsGrid');
           const statsFootEl = document.getElementById('statsFoot');
@@ -6091,6 +6257,9 @@ function startGame(configPlayer) {
           if (playerHp <= 0 && !playerDead) {
             gameOver = true;
             playerDead = true;
+            if (window.tdGame && typeof window.tdGame.deleteCurrentSave === 'function') {
+              window.tdGame.deleteCurrentSave();
+            }
             this.tweens.killTweensOf(player);
             const deathKey = deathTextureName(configPlayer.sex === 'female' ? 'female' : 'male');
             player.setTexture(deathKey);
@@ -7161,6 +7330,9 @@ function startGame(configPlayer) {
               if (!godModeEnabled && playerHp <= 0) {
                 gameOver = true;
                 playerDead = true;
+                if (window.tdGame && typeof window.tdGame.deleteCurrentSave === 'function') {
+                  window.tdGame.deleteCurrentSave();
+                }
                 const killedByTitle = creature.title || 'Unknown';
                 this.tweens.killTweensOf(player);
                 const deathKey = deathTextureName(configPlayer.sex === 'female' ? 'female' : 'male');
@@ -7195,6 +7367,83 @@ function startGame(configPlayer) {
         };
 
         descendLevel(false); // initialize first level with random dungeon composition
+
+        // Resume flow — apply everything from the snapshot that needs the
+        // live scene (progression stats, the saved floor, learned spells,
+        // DoT statuses). Inventory + gold were already restored by bootGame
+        // before the scene was created.
+        const resumeSnap = configPlayer && configPlayer.resumeSnapshot;
+        if (resumeSnap) {
+          // Progression stats.
+          playerLevel          = Math.max(1, Number(resumeSnap.playerLevel) || 1);
+          playerXp             = Math.max(0, Number(resumeSnap.playerXp) || 0);
+          playerMaxHp          = Math.max(1, Number(resumeSnap.playerMaxHp) || playerMaxHp);
+          playerMaxMana        = Math.max(0, Number(resumeSnap.playerMaxMana) || playerMaxMana);
+          playerMagicLevel     = Math.max(0, Number(resumeSnap.playerMagicLevel) || 0);
+          playerFistLevel      = Math.max(10, Number(resumeSnap.playerFistLevel) || 10);
+          playerShieldingLevel = Math.max(10, Number(resumeSnap.playerShieldingLevel) || 10);
+          if (weaponSkillLevelByType && typeof weaponSkillLevelByType.clear === 'function') {
+            weaponSkillLevelByType.clear();
+            for (const [k, v] of Object.entries(resumeSnap.weaponSkillLevels || {})) {
+              weaponSkillLevelByType.set(k, Math.max(10, Number(v) || 10));
+            }
+          }
+          playerHp     = Phaser.Math.Clamp(Number(resumeSnap.playerHp)   || playerMaxHp, 1, playerMaxHp);
+          playerMana   = Phaser.Math.Clamp(Number(resumeSnap.playerMana) || playerMaxMana, 0, playerMaxMana);
+          hungerSecondsLeft = Math.max(0, Number(resumeSnap.hungerSecondsLeft) || MAX_FOOD_SECONDS);
+          runKills     = Math.max(0, Number(resumeSnap.runKills) || 0);
+          if (typeof onPlayerLevelStatsUpdate === 'function') onPlayerLevelStatsUpdate(playerLevel);
+          updatePlayerTimingsByLevel();
+
+          // Jump to the saved floor (regenerates the dungeon for that level).
+          const savedFloor = Math.max(1, Number(resumeSnap.currentLevel) || 1);
+          while (currentLevel < savedFloor) descendLevel(true);
+
+          // Learned spells (IDs + hotkey slots).
+          if (learnedSpellIds && typeof learnedSpellIds.clear === 'function') {
+            learnedSpellIds.clear();
+            for (const id of (resumeSnap.learnedSpellIds || [])) {
+              const n = Number(id);
+              if (Number.isFinite(n) && n > 0) learnedSpellIds.add(n);
+            }
+          }
+          if (Array.isArray(resumeSnap.learnedSpellSlots)) {
+            for (let i = 0; i < learnedSpellSlots.length; i += 1) {
+              const v = resumeSnap.learnedSpellSlots[i];
+              learnedSpellSlots[i] = (v != null && v !== undefined) ? Number(v) : null;
+            }
+          }
+          try { renderLearnedSpells(); } catch { /* best effort */ }
+
+          // DoT statuses — retime their tick schedule to the current clock.
+          if (resumeSnap.burnState) {
+            burnState = {
+              startedAt: this.time.now,
+              nextTickAt: this.time.now + BURN_TICK_INTERVAL_MS,
+              tickIndex: Math.max(0, Number(resumeSnap.burnState.tickIndex) || 0),
+            };
+            setBurnIndicator(true);
+          }
+          if (resumeSnap.poisonState) {
+            poisonState = {
+              startedAt: this.time.now,
+              nextTickAt: this.time.now + POISON_TICK_INTERVAL_MS,
+              tickIndex: Math.max(0, Number(resumeSnap.poisonState.tickIndex) || 0),
+            };
+            setPoisonIndicator(true);
+          }
+          if (resumeSnap.electrifiedState) {
+            electrifiedState = {
+              startedAt: this.time.now,
+              nextTickAt: this.time.now + ELECTRIFIED_TICK_INTERVAL_MS,
+              tickIndex: Math.max(0, Number(resumeSnap.electrifiedState.tickIndex) || 0),
+            };
+            setElectrifiedIndicator(true);
+          }
+
+          addCombatLog(`Resumed save: Lv ${playerLevel} on floor ${currentLevel}.`, LOG_COLORS.SPELL);
+        }
+
         updatePlayerBar();
         updateHud();
         this.time.addEvent({
@@ -7240,6 +7489,7 @@ function startGame(configPlayer) {
             // floor is clear. Also refresh the market's "combat started"
             // banner if it happens to be open.
             updateOpenMarketButton();
+            updateSaveGameButton();
             updateMarketBanner();
             // Fire / poison field expiry + ongoing burn / poison / shock DoT.
             const nowMs = this.time.now;

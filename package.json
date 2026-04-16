@@ -2,6 +2,7 @@
   "name": "tibia-dungeons",
   "private": true,
   "scripts": {
+    "dev":     "node scripts/dev-server.js",
     "push":    "node scripts/bump-patch.js && git add game/js/data/version.js && git commit -m \"chore: bump patch version\" && git push",
     "release": "node scripts/bump-minor.js && git add game/js/data/version.js && git commit -m \"chore: release minor version\" && git push"
   }
