@@ -16,7 +16,7 @@ import {
 import { LootPityTracker } from '../../../mechanics/loot.js';
 import { generateLevelMap as buildDungeonLevelMap, computeDungeonSize } from '../../../dungeon/generator.js';
 import { createFloorAtmosphere } from './floorAtmosphere.js';
-import { castCreatureSpellVfx, isElementalAbility } from './creatureSpellVfx.js';
+import { castCreatureSpellVfx, castFireballExplosion, isElementalAbility, isFireballAbility } from './creatureSpellVfx.js';
 import { wirePanelLayoutSync } from '../../../ui/panelLayout.js';
 import { isBlockedSpellTitle } from '../../../spells/filters.js';
 import { inferCreatureAbilityPattern } from '../../../creatures/abilityPatterns.js';
@@ -1877,11 +1877,11 @@ function startGame(configPlayer) {
           CRIT: '#fde047',
           SPELL: '#7dd3fc',
         };
-        const gameLogEls = [0, 1, 2].map((i) => document.getElementById(`gameLog${i}`));
+        const gameLogEls = [0, 1, 2, 3, 4].map((i) => document.getElementById(`gameLog${i}`));
         const combatLogLines = [];
         const addCombatLog = (msg, color = LOG_COLORS.DEFAULT) => {
           combatLogLines.push({ msg, color });
-          if (combatLogLines.length > 3) combatLogLines.shift();
+          if (combatLogLines.length > 5) combatLogLines.shift();
           for (let i = 0; i < gameLogEls.length; i += 1) {
             const el = gameLogEls[i];
             if (!el) continue;
@@ -2228,8 +2228,6 @@ function startGame(configPlayer) {
           playerActionDelayMs = Phaser.Math.Clamp(320 - (playerLevel - 1) * 5, 220, 320);
         };
         const showLevelUpText = () => {
-          flashCamera(this, 140, 255, 230, 140);
-          shakeCamera(this, 160, 0.012);
           const cx = this.scale.width / 2;
           const cy = this.scale.height / 2;
           const glow = this.add.circle(cx, cy, 80, 0xfbbf24, 0.12);
@@ -5708,7 +5706,6 @@ function startGame(configPlayer) {
         };
         const showPlayerHitEffect = (dmg) => {
           if (playerDead) return;
-          flashCamera(this, 55, 90, 18, 24);
           radialSparkBurst(this, player.x, player.y - 4, 0xff6b6b, 12);
           shockwaveRing(this, player.x, player.y, 0xff5555, { startR: 10, endScale: 2, duration: 220 });
           player.setTint(0xff4d4d);
@@ -5768,6 +5765,97 @@ function startGame(configPlayer) {
           const lo = Phaser.Math.Clamp(Math.min(a, b), 1, safeCap);
           const hi = Phaser.Math.Clamp(Math.max(a, b), lo, safeCap);
           return Phaser.Math.Between(lo, hi);
+        };
+        // Healing abilities use the ability.effect range for the shape of the
+        // roll but clamp the result to 10–40 % of the creature's own maxHp so
+        // Tibia-scale numbers (0–200 000) don't trivialise or waste the cast.
+        const parseAbilityHeal = (ability, creature) => {
+          const raw = String((ability && ability.effect) || '');
+          const nums = raw.match(/\d+/g) || [];
+          const maxHp = Math.max(1, Number((creature && creature.maxHp) || 1));
+          const minHeal = Math.max(1, Math.floor(maxHp * 0.10));
+          const maxHeal = Math.max(minHeal + 1, Math.floor(maxHp * 0.40));
+          if (nums.length === 0) return Phaser.Math.Between(minHeal, maxHeal);
+          if (nums.length === 1) {
+            return Phaser.Math.Clamp(Math.max(1, Number(nums[0])), minHeal, maxHeal);
+          }
+          const a = Math.max(1, Number(nums[0]));
+          const b = Math.max(1, Number(nums[1]));
+          const lo = Phaser.Math.Clamp(Math.min(a, b), minHeal, maxHeal);
+          const hi = Phaser.Math.Clamp(Math.max(a, b), lo, maxHeal);
+          return Phaser.Math.Between(lo, hi);
+        };
+        const showCreatureHealEffect = (creature, healAmount) => {
+          if (!creature || !creature.sprite || !creature.sprite.scene) return;
+          const x = creature.sprite.x;
+          const y = creature.sprite.y;
+          // Expanding green ring.
+          const ring = this.add.circle(x, y, 6, 0x22c55e, 0);
+          ring.setStrokeStyle(2, 0x4ade80, 0.9);
+          ring.setDepth(27);
+          this.tweens.add({
+            targets: ring,
+            scaleX: 3.5, scaleY: 3.5, alpha: 0,
+            duration: 560, ease: 'Quad.easeOut',
+            onComplete: () => ring.destroy(),
+          });
+          // Soft green glow under the creature.
+          const glow = this.add.circle(x, y, 14, 0x34d399, 0.45);
+          glow.setDepth(26);
+          this.tweens.add({
+            targets: glow,
+            scaleX: 1.8, scaleY: 1.8, alpha: 0,
+            duration: 520, ease: 'Sine.easeOut',
+            onComplete: () => glow.destroy(),
+          });
+          // Rising sparkles.
+          for (let i = 0; i < 8; i += 1) {
+            const ox = (Math.random() - 0.5) * tileSize * 0.7;
+            const oy = tileSize * 0.2 + (Math.random() - 0.5) * 4;
+            const spark = this.add.circle(x + ox, y + oy, 1.8 + Math.random() * 1.6, 0x86efac, 0.95);
+            spark.setDepth(28);
+            this.tweens.add({
+              targets: spark,
+              y: spark.y - 16 - Math.random() * 12,
+              alpha: 0, scaleX: 0.35, scaleY: 0.35,
+              duration: 700 + Math.random() * 260, ease: 'Sine.easeOut',
+              onComplete: () => spark.destroy(),
+            });
+          }
+          // Floating "+" cross glyph.
+          const plus = this.add.text(x, y - tileSize * 0.35, '✚', {
+            fontSize: '22px',
+            color: '#bbf7d0',
+            fontStyle: 'bold',
+          });
+          plus.setOrigin(0.5, 0.5);
+          plus.setDepth(29);
+          plus.setShadow(0, 0, '#22c55e', 10, true, true);
+          this.tweens.add({
+            targets: plus,
+            y: plus.y - tileSize * 0.4,
+            scaleX: 1.4, scaleY: 1.4, alpha: 0,
+            duration: 620, ease: 'Sine.easeOut',
+            onComplete: () => plus.destroy(),
+          });
+          // Brief green sprite tint + gentle bounce so the target is unambiguous.
+          creature.sprite.setTint(0x4ade80);
+          this.tweens.add({
+            targets: creature.sprite,
+            scaleX: creature.sprite.scaleX * 1.08,
+            scaleY: creature.sprite.scaleY * 1.08,
+            yoyo: true,
+            duration: 140,
+            ease: 'Sine.easeOut',
+            onComplete: () => {
+              creature.sprite.clearTint();
+              applyCreatureNormalizedDisplaySize(creature.sprite, this, tileSize);
+            },
+          });
+          floatingCombatText(this, x, y - tileSize * 0.65, `+${healAmount}`, {
+            color: '#34d399',
+            fontSize: '18px',
+          });
         };
         const bresenhamLineTiles = (x0, y0, x1, y1) => {
           const pts = [];
@@ -5920,11 +6008,29 @@ function startGame(configPlayer) {
           if (el.includes('healing') || n.includes('heal')) return { color: 0x60a5fa, glyph: '✚' };
           return { color: 0xe2e8f0, glyph: '✦' };
         };
+        // Fireball-family abilities don't shoot a projectile — they detonate
+        // an area explosion on the target tile whose size scales with the
+        // ability's effect range (bigger damage → bigger blast).
+        const fireballSizeTilesForEffect = (ability) => {
+          const raw = String((ability && ability.effect) || '');
+          const nums = raw.match(/\d+/g) || [];
+          let maxDmg = 0;
+          for (const n of nums) maxDmg = Math.max(maxDmg, Number(n) || 0);
+          // Default for unknown effect ("?") — medium.
+          if (maxDmg <= 0) return 2.2;
+          return Phaser.Math.Clamp(1.5 + maxDmg / 250, 1.5, 4.5);
+        };
         const showCreatureAbilityEffect = (creature, ability, affectedTiles = null) => {
           const style = abilityStyle(ability);
           void affectedTiles;
           const dist = Math.max(Math.abs(creature.gx - gridX), Math.abs(creature.gy - gridY));
           const ranged = dist > 1 && !String((ability && ability.name) || '').toLowerCase().includes('melee');
+          // Fireball variants: area explosion at the target, no projectile.
+          if (isFireballAbility(ability)) {
+            const sizeTiles = fireballSizeTilesForEffect(ability);
+            castFireballExplosion(this, floorAtmosphere, player.x, player.y, sizeTiles);
+            return;
+          }
           // Non-melee / non-physical abilities get the rich elemental VFX
           // with per-element projectile, trail, impact and trajectory lights.
           if (ranged && isElementalAbility(ability)) {
@@ -6023,11 +6129,13 @@ function startGame(configPlayer) {
           const pattern = inferCreatureAbilityPattern(ability);
           const abilityTiles = resolveCreatureAbilityTiles(creature, pattern);
           if (t === 'heal') {
-            const heal = Math.max(5, Math.floor(parseAbilityDamage(ability, creature.maxDamage) * 0.35));
+            const missing = Math.max(0, Number(creature.maxHp || 0) - Number(creature.hp || 0));
+            const rolled = parseAbilityHeal(ability, creature);
+            const heal = Math.max(1, Math.min(missing, rolled));
             creature.hp = Math.min(creature.maxHp, creature.hp + heal);
-            showCreatureAbilityEffect(creature, ability, abilityTiles);
+            showCreatureHealEffect(creature, heal);
             updateCreatureBar(creature);
-            addCombatLog(`${creature.title} uses ${ability.name} (+${heal} HP).`);
+            addCombatLog(`${creature.title} uses ${ability.name} (+${heal} HP).`, LOG_COLORS.SPELL);
             return true;
           }
           if (!playerInAbilityTiles(abilityTiles)) {

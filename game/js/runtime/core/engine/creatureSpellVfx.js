@@ -806,3 +806,94 @@ export function isElementalAbility(ability) {
   if (el === 'physical') return false;
   return true;
 }
+
+/**
+ * Fire explosion centred at (x, y) scaled to `sizeTiles` — meant for abilities
+ * like Fireball / Great Fireball / Huge Fireball where the visual should be an
+ * area detonation on the target tile, not a projectile from the caster.
+ * Adds a matching transient light to the darkness system so the blast reveals
+ * the surroundings for a moment.
+ */
+export function castFireballExplosion(scene, atmosphere, x, y, sizeTiles = 2, opts = {}) {
+  const style = ARCHETYPE_STYLES.fire;
+  const radiusPx = Math.max(16, Number(sizeTiles) * 32 * 0.9);
+  const scale = radiusPx / 48; // tune the base fireExplosion (which uses ~45 px) to requested radius.
+
+  // Transient light pulse (diameter in tiles ≈ sizeTiles * 1.8).
+  if (atmosphere && typeof atmosphere.addTransientLight === 'function') {
+    atmosphere.addTransientLight(x, y, Math.max(2, sizeTiles * 1.8), 620, { peakAlpha: 1 });
+  }
+
+  // Outer shockwave ring.
+  const ring = scene.add.circle(x, y, 6, style.mid, 0.85);
+  ring.setDepth(FX_IMPACT);
+  scene.tweens.add({
+    targets: ring,
+    scaleX: scale * 10, scaleY: scale * 10, alpha: 0,
+    duration: 560, ease: 'Quad.easeOut',
+    onComplete: () => ring.destroy(),
+  });
+
+  // Inner white-hot flash.
+  const flash = scene.add.circle(x, y, 12, style.inner, 0.95);
+  flash.setDepth(FX_IMPACT + 1);
+  scene.tweens.add({
+    targets: flash,
+    scaleX: scale * 4.2, scaleY: scale * 4.2, alpha: 0,
+    duration: 360, ease: 'Cubic.easeOut',
+    onComplete: () => flash.destroy(),
+  });
+
+  // Secondary orange dome that hangs a bit longer.
+  const dome = scene.add.circle(x, y, radiusPx * 0.75, style.outer, 0.55);
+  dome.setDepth(FX_IMPACT);
+  scene.tweens.add({
+    targets: dome,
+    scaleX: 1.4, scaleY: 1.4, alpha: 0,
+    duration: 640, ease: 'Sine.easeOut',
+    onComplete: () => dome.destroy(),
+  });
+
+  // Ember spray — count scales with size so a Huge Fireball feels fuller.
+  const embers = Math.max(16, Math.floor(22 * scale));
+  for (let i = 0; i < embers; i += 1) {
+    const a = (i / embers) * Math.PI * 2 + Math.random() * 0.25;
+    const d = radiusPx * (0.45 + Math.random() * 0.9);
+    const col = Math.random() < 0.5 ? style.mid : style.outer;
+    const spark = scene.add.circle(x, y, 1.8 + Math.random() * 2.6, col, 0.95);
+    spark.setDepth(FX_IMPACT);
+    scene.tweens.add({
+      targets: spark,
+      x: x + Math.cos(a) * d,
+      y: y + Math.sin(a) * d,
+      alpha: 0,
+      scaleX: 0.2, scaleY: 0.2,
+      duration: 500 + Math.random() * 320,
+      ease: 'Quad.easeOut',
+      onComplete: () => spark.destroy(),
+    });
+  }
+
+  // Rising smoke puff on top.
+  const smoke = scene.add.circle(x, y, radiusPx * 0.5, 0x1a1a1a, 0.35);
+  smoke.setDepth(FX_IMPACT - 1);
+  scene.tweens.add({
+    targets: smoke,
+    y: y - 18,
+    scaleX: 1.5, scaleY: 1.5,
+    alpha: 0,
+    duration: 780, ease: 'Sine.easeOut',
+    onComplete: () => smoke.destroy(),
+  });
+
+  if (typeof opts.onArrive === 'function') opts.onArrive();
+}
+
+/**
+ * Heuristic for fireball-family abilities so the caller can short-circuit
+ * the projectile VFX and use castFireballExplosion instead.
+ */
+export function isFireballAbility(ability) {
+  const name = String((ability && ability.name) || '').trim().toLowerCase();
+  return /\bfireball\b/.test(name);
+}
