@@ -5550,6 +5550,7 @@ function startGame(configPlayer) {
             const distanceFighting = Math.max(10, Number(getWeaponSkillLevelByType('distance weapons')) || 10);
             return Math.max(1, (equippedWeaponDamage + distanceFighting) * 10);
           }
+          if (playerClassKey === 'sorcerer') return Math.max(1, Math.floor(baseSpellDamage * 1.25));
           if (playerClassKey !== 'knight') return baseSpellDamage;
           const currentWeaponDamage = Math.max(1, Number(currentPlayerDamage()) || 1);
           const area = Boolean(opts.area);
@@ -6004,6 +6005,253 @@ function startGame(configPlayer) {
             updateCreatureBar(target);
             showSpellAuraEffect(target.sprite.x, target.sprite.y, spell, 1.2);
             addCombatLog(`You convinced ${target.title}! It fights by your side now (${convinceCost} MP).`, LOG_COLORS.SPELL);
+            updatePlayerBar();
+            updateHud();
+            return true;
+          }
+          // ── Summon Creature ──────────────────────────────────
+          if (title === 'summon creature') {
+            // Build candidate list: all creatures with summon_cost > 0 and texture loaded
+            const candidates = [];
+            for (const g of typeProgressionGroups) {
+              for (const c of (g.creatures || [])) {
+                const cost = Math.max(0, Number(c.summon_cost || 0));
+                if (cost <= 0) continue;
+                if (cost > playerMana) continue;
+                const texKey = `creature_${c.id}`;
+                if (!this.textures.exists(texKey)) continue;
+                candidates.push(c);
+              }
+            }
+            if (candidates.length === 0) {
+              addCombatLog('Not enough mana to summon any creature.', LOG_COLORS.SPELL);
+              playerMana = Math.min(playerMaxMana, playerMana + manaCost);
+              updatePlayerBar();
+              return true;
+            }
+            // Pick the strongest affordable: highest summon_cost (= strongest)
+            candidates.sort((a, b) => Number(b.summon_cost) - Number(a.summon_cost));
+            const best = candidates[0];
+            const summonCost = Math.max(0, Number(best.summon_cost || 0));
+            // Find a free tile adjacent to the player
+            const offsets = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]];
+            const spawnTile = offsets
+              .map(([ox, oy]) => ({ gx: gridX + ox, gy: gridY + oy }))
+              .find(t => isWalkable(t.gx, t.gy) && !creatureAt(t.gx, t.gy));
+            if (!spawnTile) {
+              addCombatLog('No free space to summon a creature.', LOG_COLORS.SPELL);
+              playerMana = Math.min(playerMaxMana, playerMana + manaCost);
+              updatePlayerBar();
+              return true;
+            }
+            // Deduct mana
+            playerMana = Math.max(0, playerMana - summonCost);
+            // Release oldest ally if at max
+            const currentAllies = aliveAllies();
+            if (currentAllies.length >= MAX_CONVINCED) {
+              const oldest = currentAllies[0];
+              oldest.alive = false;
+              playCreatureDeathEffect(oldest);
+              updateCreatureBar(oldest);
+              addCombatLog(`${oldest.title} (ally) was released.`);
+            }
+            // Spawn the summoned ally
+            const texKey = `creature_${best.id}`;
+            const sprite = this.add.sprite(centerX(spawnTile.gx), centerY(spawnTile.gy), texKey);
+            sprite.setOrigin(0.5, 0.5);
+            applyCreatureNormalizedDisplaySize(sprite, this, tileSize);
+            sprite.setDepth(15);
+            sprite.setTint(0x88ffaa);
+            const ally = {
+              id: Number(best.id),
+              sprite,
+              gx: spawnTile.gx, gy: spawnTile.gy,
+              hp: Math.max(1, Number(best.hitpoints || 1)),
+              maxHp: Math.max(1, Number(best.hitpoints || 1)),
+              maxDamage: Math.max(1, Number(best.maxDamage || 1)),
+              runsAt: 0,
+              title: best.title,
+              experience: 0,
+              speed: Math.max(1, Number(best.speed || 100)),
+              ranged: best.ranged === true,
+              range: Math.max(1, Number(best.range || 1)),
+              alive: true,
+              nextWanderAt: 0, nextActionAt: 0, nextAbilityAt: 0,
+              aggroLocked: false,
+              abilities: (creatureAbilitiesById.get(Number(best.id)) || []).slice(0, 16),
+              elementMods: mergeCreatureElementModsForId(Number(best.id)),
+              hpBar: makeHealthBar(0x22c55e),
+              nameTag: makeNameLabel(best.title, '#4ade80'),
+              convinceCost: Math.max(0, Number(best.convince_cost || 0)),
+              isConvinced: true,
+            };
+            ally.hpBar.bg.setDepth(16);
+            ally.hpBar.fill.setDepth(17);
+            ally.nameTag.setDepth(18);
+            creatures.push(ally);
+            updateCreatureBar(ally);
+            showSpellAuraEffect(sprite.x, sprite.y, spell, 1.2);
+            addCombatLog(`You summoned ${best.title}! (${summonCost} MP).`, LOG_COLORS.SPELL);
+            updatePlayerBar();
+            updateHud();
+            return true;
+          }
+          // ── Challenge ────────────────────────────────────────
+          if (title === 'challenge') {
+            const range = 5;
+            let taunted = 0;
+            for (const c of aliveCreatures()) {
+              const dist = Math.max(Math.abs(c.gx - gridX), Math.abs(c.gy - gridY));
+              if (dist > range) continue;
+              c.aggroLocked = true;
+              taunted++;
+              showSpellAuraEffect(c.sprite.x, c.sprite.y, spell, 0.6);
+            }
+            showSpellAuraEffect(player.x, player.y, spell, 1.0);
+            addCombatLog(
+              taunted > 0
+                ? `Cast [${slotNumber}] ${spell.title}: ${taunted} creature${taunted > 1 ? 's' : ''} taunted!`
+                : `Cast [${slotNumber}] ${spell.title}: no creatures nearby.`,
+              LOG_COLORS.SPELL
+            );
+            updatePlayerBar();
+            updateHud();
+            return true;
+          }
+          // ── Party spells ─────────────────────────────────────
+          if (title.includes('party')) {
+            const allies = aliveAllies();
+            const PARTY_DURATION = 120000; // 2 minutes
+            showSpellAuraEffect(player.x, player.y, spell, 1.0);
+            for (const ally of allies) {
+              showSpellAuraEffect(ally.sprite.x, ally.sprite.y, spell, 0.8);
+            }
+            if (title === 'heal party') {
+              // HP regen: heal player + allies every 2s for 2 min
+              const healPerTick = Math.max(3, Math.floor(4 + playerMagicLevel * 0.5));
+              let ticks = 0;
+              const maxTicks = Math.floor(PARTY_DURATION / 2000);
+              const healTimer = this.time.addEvent({
+                delay: 2000, loop: true,
+                callback: () => {
+                  if (++ticks >= maxTicks || gameOver) { healTimer.remove(); return; }
+                  playerHp = Math.min(playerMaxHp, playerHp + healPerTick);
+                  for (const a of aliveAllies()) {
+                    a.hp = Math.min(a.maxHp, a.hp + healPerTick);
+                    updateCreatureBar(a);
+                  }
+                  updatePlayerBar();
+                },
+              });
+              addCombatLog(`Cast [${slotNumber}] ${spell.title}: +${healPerTick} HP/2s for 2 min (you + allies).`, LOG_COLORS.SPELL);
+            } else if (title === 'train party') {
+              // Boost fist/weapon skill by 3 for 2 min
+              playerFistLevel += 3;
+              for (const a of allies) a.maxDamage = Math.floor(a.maxDamage * 1.25);
+              this.time.delayedCall(PARTY_DURATION, () => {
+                playerFistLevel = Math.max(10, playerFistLevel - 3);
+                for (const a of aliveAllies()) a.maxDamage = Math.max(1, Math.floor(a.maxDamage / 1.25));
+                addCombatLog('Train Party effect expired.');
+                updateHud();
+              });
+              addCombatLog(`Cast [${slotNumber}] ${spell.title}: fighting skills +3, allies +25% damage for 2 min.`, LOG_COLORS.SPELL);
+            } else if (title === 'enchant party') {
+              // +1 magic level for 2 min, allies +15% damage
+              playerMagicLevel += 1;
+              for (const a of allies) a.maxDamage = Math.floor(a.maxDamage * 1.15);
+              this.time.delayedCall(PARTY_DURATION, () => {
+                playerMagicLevel = Math.max(0, playerMagicLevel - 1);
+                for (const a of aliveAllies()) a.maxDamage = Math.max(1, Math.floor(a.maxDamage / 1.15));
+                addCombatLog('Enchant Party effect expired.');
+                updateHud();
+              });
+              addCombatLog(`Cast [${slotNumber}] ${spell.title}: magic level +1, allies +15% damage for 2 min.`, LOG_COLORS.SPELL);
+            } else if (title === 'protect party') {
+              // +3 shielding for 2 min, allies take 20% less damage
+              playerShieldingLevel += 3;
+              for (const a of allies) a._protectParty = true;
+              this.time.delayedCall(PARTY_DURATION, () => {
+                playerShieldingLevel = Math.max(10, playerShieldingLevel - 3);
+                for (const a of aliveAllies()) a._protectParty = false;
+                addCombatLog('Protect Party effect expired.');
+                updateHud();
+              });
+              addCombatLog(`Cast [${slotNumber}] ${spell.title}: shielding +3, allies take 20% less damage for 2 min.`, LOG_COLORS.SPELL);
+            } else if (title === 'enlighten party') {
+              // MP regen for player every 2s for 2 min
+              const manaPerTick = Math.max(5, Math.floor(6 + playerMagicLevel * 0.6));
+              let ticks = 0;
+              const maxTicks = Math.floor(PARTY_DURATION / 2000);
+              const manaTimer = this.time.addEvent({
+                delay: 2000, loop: true,
+                callback: () => {
+                  if (++ticks >= maxTicks || gameOver) { manaTimer.remove(); return; }
+                  playerMana = Math.min(playerMaxMana, playerMana + manaPerTick);
+                  updatePlayerBar();
+                },
+              });
+              addCombatLog(`Cast [${slotNumber}] ${spell.title}: +${manaPerTick} MP/2s for 2 min.`, LOG_COLORS.SPELL);
+            } else {
+              addCombatLog(`Cast [${slotNumber}] ${spell.title}.`, LOG_COLORS.SPELL);
+            }
+            updatePlayerBar();
+            updateHud();
+            return true;
+          }
+          // ── Mass Healing ─────────────────────────────────────
+          if (title === 'mass healing') {
+            const heal = inferHealingAmount(spell);
+            // Heal player
+            const prevPlayerHp = playerHp;
+            playerHp = Math.min(playerMaxHp, playerHp + heal);
+            const playerGained = playerHp - prevPlayerHp;
+            showSpellAuraEffect(player.x, player.y, spell, 1.1);
+            if (playerGained > 0) showDrinkEffect(`+${playerGained} HP`, '#60a5fa');
+            // Heal all allies
+            const allies = aliveAllies();
+            let allyHealLog = '';
+            for (const ally of allies) {
+              const prevHp = ally.hp;
+              ally.hp = Math.min(ally.maxHp, ally.hp + heal);
+              const gained = ally.hp - prevHp;
+              updateCreatureBar(ally);
+              showSpellAuraEffect(ally.sprite.x, ally.sprite.y, spell, 0.9);
+              if (gained > 0) {
+                floatingCombatText(this, ally.sprite.x, ally.sprite.y - tileSize * 0.65, `+${gained}`, {
+                  color: '#4ade80', fontSize: '15px',
+                });
+                allyHealLog += `, ${ally.title} +${gained}`;
+              }
+            }
+            addCombatLog(`Cast [${slotNumber}] ${spell.title}: you +${playerGained} HP${allyHealLog}.`, LOG_COLORS.SPELL);
+            updatePlayerBar();
+            updateHud();
+            return true;
+          }
+          // ── Heal Friend ──────────────────────────────────────
+          if (title === 'heal friend') {
+            const allies = aliveAllies();
+            if (allies.length === 0) {
+              addCombatLog('You have no allies to heal.', LOG_COLORS.SPELL);
+              playerMana = Math.min(playerMaxMana, playerMana + manaCost);
+              updatePlayerBar();
+              return true;
+            }
+            // Pick ally with lowest HP ratio
+            const target = allies.reduce((worst, a) =>
+              (a.hp / a.maxHp) < (worst.hp / worst.maxHp) ? a : worst
+            );
+            const heal = inferHealingAmount(spell);
+            const prevHp = target.hp;
+            target.hp = Math.min(target.maxHp, target.hp + heal);
+            const gained = target.hp - prevHp;
+            updateCreatureBar(target);
+            showSpellAuraEffect(target.sprite.x, target.sprite.y, spell, 1.1);
+            showDrinkEffect(`+${gained} HP`, '#4ade80');
+            floatingCombatText(this, target.sprite.x, target.sprite.y - tileSize * 0.65, `+${gained}`, {
+              color: '#4ade80', fontSize: '17px',
+            });
+            addCombatLog(`Cast [${slotNumber}] ${spell.title}: healed ${target.title} for ${gained} HP.`, LOG_COLORS.SPELL);
             updatePlayerBar();
             updateHud();
             return true;
@@ -7935,7 +8183,8 @@ function startGame(configPlayer) {
                   showMissSmoke(adjacentAlly.sprite.x, adjacentAlly.sprite.y);
                   addCombatLog(`${creature.title} misses ${adjacentAlly.title}.`);
                 } else {
-                  const dmg = Math.max(1, Phaser.Math.Between(1, creature.maxDamage));
+                  let dmg = Math.max(1, Phaser.Math.Between(1, creature.maxDamage));
+                  if (adjacentAlly._protectParty) dmg = Math.max(1, Math.floor(dmg * 0.8));
                   adjacentAlly.hp = Math.max(0, adjacentAlly.hp - dmg);
                   showCreatureHitEffect(adjacentAlly, dmg);
                   addCombatLog(`${creature.title} hits ${adjacentAlly.title} (ally) for ${dmg}.`);
