@@ -5668,10 +5668,10 @@ function startGame(configPlayer) {
           // Keep current ammo equipped if it is a different type:
           // conjured arrows should go to loot (stacking there if possible).
           if (equippedAmmo) {
-            const storedInBag = addLootItemToBag(
-              { ...ammoItem, isStackable: true, count: qty },
-              { disableAutoEquip: true }
-            );
+            const inv = window.debugInventory;
+            const storedInBag = inv && typeof inv.addLoot === 'function'
+              ? inv.addLoot({ ...ammoItem, isStackable: true, count: qty })
+              : false;
             return storedInBag ? 'bag' : null;
           }
 
@@ -6751,12 +6751,25 @@ function startGame(configPlayer) {
             return;
           }
           rangedProjectileLine(this, player.x, player.y, target.sprite.x, target.sprite.y, visual, 150);
-          // Ammo impact effect on hit
-          if (visual.impact) {
-            this.time.delayedCall(150, () => {
-              showAmmoImpactEffect(target.sprite.x, target.sprite.y, visual.impact);
+          // Impact flash light + VFX on hit
+          this.time.delayedCall(150, () => {
+            if (!target.sprite || !target.sprite.scene) return;
+            const ix = target.sprite.x;
+            const iy = target.sprite.y;
+            // Brief light at impact point
+            const lightId = `impact_${Date.now()}_${Math.random()}`;
+            floorAtmosphere.addAreaLight(lightId, ix, iy, 1.5, 800);
+            // Small flash glow matching projectile color
+            const colorHex = Number(String(visual.color || '#f59e0b').replace('#', '0x'));
+            const flash = this.add.circle(ix, iy, tileSize * 0.3, colorHex, 0.4);
+            flash.setDepth(4);
+            this.tweens.add({
+              targets: flash, scaleX: 1.8, scaleY: 1.8, alpha: 0,
+              duration: 350, ease: 'Quad.easeOut', onComplete: () => flash.destroy(),
             });
-          }
+            // Ammo-specific impact effect
+            if (visual.impact) showAmmoImpactEffect(ix, iy, visual.impact);
+          });
         };
         const showCritText = (x, y) => {
           critBanner(this, x, y, tileSize);
@@ -6848,6 +6861,7 @@ function startGame(configPlayer) {
             alpha: 0,
             duration: 420, ease: 'Cubic.easeIn',
             onComplete: () => {
+              if (!sprite || !sprite.scene) return;
               sprite.setVisible(false);
               sprite.clearTint();
               sprite.setAngle(0);
@@ -6867,6 +6881,7 @@ function startGame(configPlayer) {
             duration: 80,
             ease: 'Sine.easeOut',
             onComplete: () => {
+              if (!creature.sprite || !creature.sprite.scene) return;
               creature.sprite.clearTint();
               if (creature.isConvinced) creature.sprite.setTint(0x88ffaa);
               applyCreatureNormalizedDisplaySize(creature.sprite, this, tileSize);
