@@ -5798,6 +5798,7 @@ function startGame(configPlayer) {
               updateCreatureBar(target);
               grantPlayerXp(effectiveXpFromCreature(target));
               runKills += 1;
+              killSummonsOf(target);
             }
           }
           if (impacted.length === 0) {
@@ -5937,6 +5938,7 @@ function startGame(configPlayer) {
                   updateCreatureBar(frontTarget);
                   grantPlayerXp(effectiveXpFromCreature(frontTarget));
                   addCombatLog(`${frontTarget.title} dies from ${spell.title}.`);
+                  killSummonsOf(frontTarget);
                 }
               }
             } else if (didAttackMiss()) {
@@ -5971,6 +5973,7 @@ function startGame(configPlayer) {
                 grantPlayerXp(effectiveXpFromCreature(target));
                 runKills += 1;
                 addCombatLog(`${target.title} dies from ${spell.title}.`);
+                killSummonsOf(target);
               }
             }
           } else {
@@ -6125,6 +6128,7 @@ function startGame(configPlayer) {
                   }
                 }
               }
+              killSummonsOf(targetCreature);
             } else {
               addCombatLog(
                 isCrit
@@ -6232,6 +6236,18 @@ function startGame(configPlayer) {
             color: '#ff9b9b',
             fontSize: '17px',
           });
+        };
+        const killSummonsOf = (parent) => {
+          if (!parent) return;
+          for (const c of creatures) {
+            if (!c.alive) continue;
+            if (c.summonedBy !== parent) continue;
+            c.hp = 0;
+            c.alive = false;
+            playCreatureDeathEffect(c);
+            updateCreatureBar(c);
+            addCombatLog(`${c.title} (summoned by ${parent.title}) vanishes.`);
+          }
         };
         const playCreatureDeathEffect = (creature) => {
           if (!creature || !creature.sprite || !creature.sprite.scene) {
