@@ -513,10 +513,13 @@ function setupSelectorUI() {
 
   const itemTooltip = document.getElementById('itemTooltip');
   let lootContextIndex = -1;
+  let _activeTouchSlotCleanup = null;
   const hideItemTooltip = () => {
     if (!itemTooltip) return;
     itemTooltip.style.display = 'none';
     itemTooltip.textContent = '';
+    itemTooltip.classList.remove('touch-mode');
+    if (_activeTouchSlotCleanup) { _activeTouchSlotCleanup(); _activeTouchSlotCleanup = null; }
   };
 
   function setHungryUi(isHungry, secondsLeft = 0) {
@@ -538,7 +541,11 @@ function setupSelectorUI() {
     if (document.hidden) hideItemTooltip();
   });
   document.addEventListener('keydown', hideItemTooltip);
-  document.addEventListener('click', hideItemTooltip);
+  document.addEventListener('click', (ev) => {
+    // Don't dismiss touch-mode tooltip when clicking inside it (action buttons)
+    if (itemTooltip && itemTooltip.classList.contains('touch-mode') && itemTooltip.contains(ev.target)) return;
+    hideItemTooltip();
+  });
   const hideLootContextMenu = () => {
     if (!lootContextMenu) return;
     lootContextMenu.style.display = 'none';
@@ -743,6 +750,8 @@ function setupSelectorUI() {
     return `<div class="tt-header"><div class="tt-title">${safeTitle}</div></div><div class="tt-body">${bodyRows}</div><div class="tt-footer">${actionRow}</div>`;
   }
 
+  const _isTouchDevice = () => 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
   function bindTooltip(el, item) {
     if (!el || !itemTooltip || !item) return;
     const text = formatItemTooltip(item);
@@ -753,7 +762,8 @@ function setupSelectorUI() {
       const tipH = itemTooltip.offsetHeight || 80;
       // Always LEFT of the item, clamped to viewport
       let x = rect.left - tipW - 4;
-      if (x < 4) x = 4;
+      if (x < 4) x = rect.right + 4;
+      if (x + tipW > window.innerWidth - 4) x = 4;
       // Vertically center the tooltip on the item cell
       let y = rect.top + (rect.height / 2) - (tipH / 2);
       if (y + tipH > window.innerHeight - 6) y = Math.max(4, window.innerHeight - tipH - 6);
@@ -761,22 +771,96 @@ function setupSelectorUI() {
       itemTooltip.style.left = `${Math.floor(x)}px`;
       itemTooltip.style.top = `${Math.floor(y)}px`;
     };
-    const show = (ev) => {
+    const show = () => {
       itemTooltip.innerHTML = text;
+      itemTooltip.classList.remove('touch-mode');
       itemTooltip.style.display = 'block';
-      void itemTooltip.offsetWidth; // force reflow so offsetWidth is accurate
+      void itemTooltip.offsetWidth;
       placeNearElement();
     };
-    const move = (ev) => {
-      void ev;
-      placeNearElement();
-    };
-    const hide = () => {
-      hideItemTooltip();
-    };
+    const move = () => { placeNearElement(); };
+    const hide = () => { hideItemTooltip(); };
     el.addEventListener('mouseenter', show);
     el.addEventListener('mousemove', move);
     el.addEventListener('mouseleave', hide);
+  }
+
+  // Touch-friendly tooltip with action buttons for loot items
+  function showTouchLootTooltip(el, item, lootIndex) {
+    if (!el || !itemTooltip || !item) return;
+    // Clean up previous
+    if (_activeTouchSlotCleanup) { _activeTouchSlotCleanup(); _activeTouchSlotCleanup = null; }
+    hideItemTooltip();
+
+    const text = formatItemTooltip(item);
+    if (!text) return;
+
+    // Determine action label
+    const typeLower = (item.item_type || '').toLowerCase();
+    let useLabel = 'Equip';
+    if (typeLower === 'food') useLabel = 'Eat';
+    else if (typeLower === 'liquids') useLabel = 'Drink';
+    else if (typeLower === 'tools') useLabel = 'Use';
+
+    const sellPrice = resolveSellUnitPrice(item) * Math.max(1, Number(item.count || 1));
+
+    // Build tooltip with action buttons
+    itemTooltip.innerHTML = text
+      + `<div class="tt-touch-actions">`
+      + `<button class="tt-touch-btn tt-touch-btn-use" data-action="use">${useLabel}</button>`
+      + `<button class="tt-touch-btn tt-touch-btn-sell" data-action="sell">Sell (${Math.floor(sellPrice)} gp)</button>`
+      + `</div>`;
+    itemTooltip.classList.add('touch-mode');
+    itemTooltip.style.display = 'block';
+    void itemTooltip.offsetWidth;
+
+    // Position
+    const rect = el.getBoundingClientRect();
+    const tipW = itemTooltip.offsetWidth || 210;
+    const tipH = itemTooltip.offsetHeight || 80;
+    let x = rect.left - tipW - 4;
+    if (x < 4) x = rect.right + 4;
+    if (x + tipW > window.innerWidth - 4) x = Math.max(4, (window.innerWidth - tipW) / 2);
+    let y = rect.top + (rect.height / 2) - (tipH / 2);
+    if (y + tipH > window.innerHeight - 6) y = Math.max(4, window.innerHeight - tipH - 6);
+    if (y < 4) y = 4;
+    itemTooltip.style.left = `${Math.floor(x)}px`;
+    itemTooltip.style.top = `${Math.floor(y)}px`;
+
+    // Button handlers
+    const onBtn = (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const action = ev.target.dataset.action;
+      if (action === 'use') {
+        // Simulate left-click on this slot
+        el.dispatchEvent(new MouseEvent('mousedown', { button: 0, bubbles: true }));
+      } else if (action === 'sell') {
+        // Simulate right-click sell
+        el.dispatchEvent(new Event('contextmenu', { bubbles: true }));
+      }
+      hideItemTooltip();
+    };
+
+    const useBtn = itemTooltip.querySelector('[data-action="use"]');
+    const sellBtn = itemTooltip.querySelector('[data-action="sell"]');
+    if (useBtn) useBtn.addEventListener('click', onBtn);
+    if (sellBtn) sellBtn.addEventListener('click', onBtn);
+
+    // Dismiss on tap outside
+    const dismissHandler = (ev) => {
+      if (itemTooltip.contains(ev.target)) return;
+      if (el.contains(ev.target)) return;
+      hideItemTooltip();
+      document.removeEventListener('touchstart', dismissHandler, true);
+    };
+    setTimeout(() => {
+      document.addEventListener('touchstart', dismissHandler, true);
+    }, 50);
+
+    _activeTouchSlotCleanup = () => {
+      document.removeEventListener('touchstart', dismissHandler, true);
+    };
   }
 
   function setEquippedSlotVisual(slotKey, item, equipmentFootText = null, options = {}) {
@@ -1024,6 +1108,12 @@ function setupSelectorUI() {
         }
         bindTooltip(cell, lootItem);
         cell.style.cursor = 'pointer';
+        // Touch: show tooltip with action buttons instead of direct equip/sell
+        cell.addEventListener('touchstart', (ev) => {
+          ev.preventDefault();
+          cell._touchedForTooltip = true;
+          showTouchLootTooltip(cell, lootItem, i - 1);
+        }, { passive: false });
         cell.addEventListener('contextmenu', (ev) => {
           ev.preventDefault();
           ev.stopPropagation();
@@ -1605,6 +1695,45 @@ function setupSelectorUI() {
       addCoinsToInventory(amount);
       renderLootSlots(currentBagCapacity);
     },
+    findConsumable(type) {
+      for (let i = 0; i < bagLootItems.length; i++) {
+        const it = bagLootItems[i];
+        if (!it) continue;
+        if (type === 'food') {
+          if ((it.item_type || '').toLowerCase() === 'food') return { item: it, idx: i };
+        } else if (type === 'mana') {
+          if ((it.type_secondary || '').toLowerCase() === 'potions'
+              && (it.title || '').toLowerCase().includes('mana')) return { item: it, idx: i };
+        } else if (type === 'health') {
+          if ((it.type_secondary || '').toLowerCase() === 'potions'
+              && (it.title || '').toLowerCase().includes('health')) return { item: it, idx: i };
+        }
+      }
+      return null;
+    },
+    consumeItem(type) {
+      const found = this.findConsumable(type);
+      if (!found) return false;
+      const { item, idx } = found;
+      let consumed = false;
+      if (type === 'food') {
+        const foodSeconds = getFoodTimeSeconds(item);
+        if (foodSeconds <= 0) return false;
+        if (typeof onConsumeFood !== 'function') return false;
+        consumed = onConsumeFood(foodSeconds, item.title || 'Food');
+      } else {
+        if (typeof onUseLiquid !== 'function') return false;
+        consumed = onUseLiquid(item);
+      }
+      if (!consumed) return false;
+      if (item.count > 1) {
+        item.count -= 1;
+      } else {
+        bagLootItems.splice(idx, 1);
+      }
+      renderLootSlots(currentBagCapacity);
+      return true;
+    },
   };
 
   // Left click equipped slot to unequip into loot bag when there is space/capacity.
@@ -1799,7 +1928,7 @@ function startGame(configPlayer) {
   const tileSize = 40;
   const mapWidth = MAP_W * tileSize;
   const mapHeight = MAP_H * tileSize;
-  const LEFT_SIDEBAR_W = 216;
+  const LEFT_SIDEBAR_W = 0;
   const RIGHT_SIDEBAR_W = 268;
   // Reserve space for: statsBar (~30px) + spellBar (~58px) + gameUiBar (~72px)
   const TOP_PANELS_H = 88;
@@ -2059,6 +2188,11 @@ function startGame(configPlayer) {
         const cursors = this.input.keyboard.createCursorKeys();
         const keys = this.input.keyboard.addKeys('W,A,S,D');
         const ctrlKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.CTRL);
+        const consumableKeys = this.input.keyboard.addKeys({
+          F: Phaser.Input.Keyboard.KeyCodes.F,
+          G: Phaser.Input.Keyboard.KeyCodes.G,
+          H: Phaser.Input.Keyboard.KeyCodes.H,
+        });
         const spellHotkeys = this.input.keyboard.addKeys({
           one: Phaser.Input.Keyboard.KeyCodes.ONE,
           two: Phaser.Input.Keyboard.KeyCodes.TWO,
@@ -2105,6 +2239,9 @@ function startGame(configPlayer) {
               Phaser.Input.Keyboard.KeyCodes.A,
               Phaser.Input.Keyboard.KeyCodes.S,
               Phaser.Input.Keyboard.KeyCodes.D,
+              Phaser.Input.Keyboard.KeyCodes.F,
+              Phaser.Input.Keyboard.KeyCodes.G,
+              Phaser.Input.Keyboard.KeyCodes.H,
               Phaser.Input.Keyboard.KeyCodes.UP,
               Phaser.Input.Keyboard.KeyCodes.DOWN,
               Phaser.Input.Keyboard.KeyCodes.LEFT,
@@ -2116,6 +2253,9 @@ function startGame(configPlayer) {
               Phaser.Input.Keyboard.KeyCodes.A,
               Phaser.Input.Keyboard.KeyCodes.S,
               Phaser.Input.Keyboard.KeyCodes.D,
+              Phaser.Input.Keyboard.KeyCodes.F,
+              Phaser.Input.Keyboard.KeyCodes.G,
+              Phaser.Input.Keyboard.KeyCodes.H,
               Phaser.Input.Keyboard.KeyCodes.UP,
               Phaser.Input.Keyboard.KeyCodes.DOWN,
               Phaser.Input.Keyboard.KeyCodes.LEFT,
@@ -3600,6 +3740,7 @@ function startGame(configPlayer) {
             learnedFoot.textContent = 'Total: 0';
             syncLootPanelPosition(); syncLearnedPanelPosition(); syncItemsShopPanelPosition();
             renderSpellBar();
+            renderConsumableBar();
             return;
           }
 
@@ -3709,7 +3850,12 @@ function startGame(configPlayer) {
           learnedFoot.textContent = `Total: ${learned.length}`;
           syncLootPanelPosition(); syncLearnedPanelPosition(); syncItemsShopPanelPosition();
           renderSpellBar();
+          renderConsumableBar();
         };
+
+        // Shared state for click/touch-triggered spell casts
+        let _pendingSpellSlot = 0;
+        window._triggerSpellSlot = (slot) => { _pendingSpellSlot = slot; };
 
         let _lastSpellBarKey = '';
         const renderSpellBar = () => {
@@ -3777,6 +3923,12 @@ function startGame(configPlayer) {
             nameEl.textContent = spell ? spell.title : '';
             slot.appendChild(nameEl);
             if (spell) bindSpellBarTooltip(slot, spell, null);
+            // Click / touch to cast
+            const slotNum = i < 9 ? i + 1 : 10;
+            slot.addEventListener('pointerdown', (e) => {
+              e.preventDefault();
+              _pendingSpellSlot = slotNum;
+            });
             slotsEl.appendChild(slot);
           }
 
@@ -3796,6 +3948,78 @@ function startGame(configPlayer) {
             slot.appendChild(nameEl);
             bindSpellBarTooltip(slot, spell, null);
             slotsEl.appendChild(slot);
+          }
+        };
+
+        // ── Consumable hotkey slots (F=Food, G=Mana, H=Health) ─────
+        let _pendingConsumable = '';  // 'food' | 'mana' | 'health' | ''
+        window._triggerConsumable = (type) => { _pendingConsumable = type; };
+
+        const _inv = () => window.debugInventory;
+
+        const consumeConsumable = (type) => {
+          const inv = _inv();
+          if (!inv) return false;
+          const ok = inv.consumeItem(type);
+          if (ok) renderConsumableBar();
+          return ok;
+        };
+
+        let _lastConsumableKey = '';
+        const renderConsumableBar = () => {
+          const container = document.getElementById('consumableBarSlots');
+          if (!container) return;
+          const inv = _inv();
+          const types = [
+            { type: 'food',   key: 'F', cssClass: 'food-slot' },
+            { type: 'mana',   key: 'G', cssClass: 'mana-slot' },
+            { type: 'health', key: 'H', cssClass: 'health-slot' },
+          ];
+          const barKey = types.map(t => {
+            const f = inv ? inv.findConsumable(t.type) : null;
+            return f ? `${f.item.id}:${f.item.count}` : '-';
+          }).join('|');
+          if (barKey === _lastConsumableKey) return;
+          _lastConsumableKey = barKey;
+          container.innerHTML = '';
+          for (const t of types) {
+            const found = inv ? inv.findConsumable(t.type) : null;
+            const item = found ? found.item : null;
+            const slot = document.createElement('div');
+            slot.className = `spell-slot consumable-slot ${t.cssClass} ${item ? 'active' : 'empty'}`;
+            // Key badge
+            const keyBadge = document.createElement('span');
+            keyBadge.className = 'spell-slot-key';
+            keyBadge.textContent = t.key;
+            slot.appendChild(keyBadge);
+            // Image wrap
+            const imgWrap = document.createElement('div');
+            imgWrap.className = 'spell-slot-img-wrap';
+            if (item && item.image) {
+              const img = document.createElement('img');
+              img.className = 'spell-slot-img';
+              img.src = `./data/images/${item.image}`;
+              img.alt = item.title;
+              imgWrap.appendChild(img);
+            }
+            if (item && item.count > 1) {
+              const countEl = document.createElement('span');
+              countEl.className = 'spell-slot-count';
+              countEl.textContent = String(item.count);
+              imgWrap.appendChild(countEl);
+            }
+            slot.appendChild(imgWrap);
+            // Name
+            const nameEl = document.createElement('span');
+            nameEl.className = 'spell-slot-name';
+            nameEl.textContent = item ? item.title : t.type.charAt(0).toUpperCase() + t.type.slice(1);
+            slot.appendChild(nameEl);
+            // Click / touch
+            slot.addEventListener('pointerdown', (e) => {
+              e.preventDefault();
+              _pendingConsumable = t.type;
+            });
+            container.appendChild(slot);
           }
         };
 
@@ -4696,6 +4920,22 @@ function startGame(configPlayer) {
         });
         updateOpenMarketButton();
         updateSaveGameButton();
+
+        // ── Game Settings: zoom slider ───────────────────────────────
+        const zoomSlider = document.getElementById('gameZoomSlider');
+        const zoomValueEl = document.getElementById('gameZoomValue');
+        if (zoomSlider) {
+          const baseW = game.scale.width;
+          const baseH = game.scale.height;
+          zoomSlider.addEventListener('input', () => {
+            const pct = Number(zoomSlider.value) / 100;
+            if (zoomValueEl) zoomValueEl.textContent = zoomSlider.value + '%';
+            const newW = Math.round(baseW * pct);
+            const newH = Math.round(baseH * pct);
+            game.scale.resize(newW, newH);
+          });
+        }
+
         const renderTopStatsPanel = () => {
           const statsGridEl = document.getElementById('statsGrid');
           const statsFootEl = document.getElementById('statsFoot');
@@ -7521,19 +7761,24 @@ function startGame(configPlayer) {
             const equippedHand = getEquippedHandWeapon();
             return Boolean(equippedHand && isMagicRangedWeapon(equippedHand));
           };
-          const spellSlotToCast = (
-            Phaser.Input.Keyboard.JustDown(spellHotkeys.one)   || Phaser.Input.Keyboard.JustDown(spellHotkeys.num1) ? 1
-              : Phaser.Input.Keyboard.JustDown(spellHotkeys.two)   || Phaser.Input.Keyboard.JustDown(spellHotkeys.num2) ? 2
-                : Phaser.Input.Keyboard.JustDown(spellHotkeys.three) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num3) ? 3
-                  : Phaser.Input.Keyboard.JustDown(spellHotkeys.four)  || Phaser.Input.Keyboard.JustDown(spellHotkeys.num4) ? 4
-                    : Phaser.Input.Keyboard.JustDown(spellHotkeys.five)  || Phaser.Input.Keyboard.JustDown(spellHotkeys.num5) ? 5
-                      : Phaser.Input.Keyboard.JustDown(spellHotkeys.six)   || Phaser.Input.Keyboard.JustDown(spellHotkeys.num6) ? 6
-                        : Phaser.Input.Keyboard.JustDown(spellHotkeys.seven) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num7) ? 7
-                          : Phaser.Input.Keyboard.JustDown(spellHotkeys.eight) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num8) ? 8
-                            : Phaser.Input.Keyboard.JustDown(spellHotkeys.nine)  || Phaser.Input.Keyboard.JustDown(spellHotkeys.num9) ? 9
-                              : Phaser.Input.Keyboard.JustDown(spellHotkeys.zero)  || Phaser.Input.Keyboard.JustDown(spellHotkeys.num0) ? 10
-                                : 0
-          );
+          // Check click/touch-triggered spell slot first, then keyboard
+          let spellSlotToCast = _pendingSpellSlot;
+          _pendingSpellSlot = 0;
+          if (!spellSlotToCast) {
+            spellSlotToCast = (
+              Phaser.Input.Keyboard.JustDown(spellHotkeys.one)   || Phaser.Input.Keyboard.JustDown(spellHotkeys.num1) ? 1
+                : Phaser.Input.Keyboard.JustDown(spellHotkeys.two)   || Phaser.Input.Keyboard.JustDown(spellHotkeys.num2) ? 2
+                  : Phaser.Input.Keyboard.JustDown(spellHotkeys.three) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num3) ? 3
+                    : Phaser.Input.Keyboard.JustDown(spellHotkeys.four)  || Phaser.Input.Keyboard.JustDown(spellHotkeys.num4) ? 4
+                      : Phaser.Input.Keyboard.JustDown(spellHotkeys.five)  || Phaser.Input.Keyboard.JustDown(spellHotkeys.num5) ? 5
+                        : Phaser.Input.Keyboard.JustDown(spellHotkeys.six)   || Phaser.Input.Keyboard.JustDown(spellHotkeys.num6) ? 6
+                          : Phaser.Input.Keyboard.JustDown(spellHotkeys.seven) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num7) ? 7
+                            : Phaser.Input.Keyboard.JustDown(spellHotkeys.eight) || Phaser.Input.Keyboard.JustDown(spellHotkeys.num8) ? 8
+                              : Phaser.Input.Keyboard.JustDown(spellHotkeys.nine)  || Phaser.Input.Keyboard.JustDown(spellHotkeys.num9) ? 9
+                                : Phaser.Input.Keyboard.JustDown(spellHotkeys.zero)  || Phaser.Input.Keyboard.JustDown(spellHotkeys.num0) ? 10
+                                  : 0
+            );
+          }
           if (spellSlotToCast > 0) {
             const casted = castLearnedSpell(spellSlotToCast, now);
             if (casted) {
@@ -7543,23 +7788,39 @@ function startGame(configPlayer) {
               return;
             }
           }
+
+          // Consumable hotkeys: F=Food, G=Mana potion, H=Health potion
+          let consumableType = _pendingConsumable;
+          _pendingConsumable = '';
+          if (!consumableType) {
+            if (Phaser.Input.Keyboard.JustDown(consumableKeys.F)) consumableType = 'food';
+            else if (Phaser.Input.Keyboard.JustDown(consumableKeys.G)) consumableType = 'mana';
+            else if (Phaser.Input.Keyboard.JustDown(consumableKeys.H)) consumableType = 'health';
+          }
+          if (consumableType) {
+            consumeConsumable(consumableType);
+          }
+          // Keep consumable bar in sync (cheap — uses key cache)
+          renderConsumableBar();
+
           if (now < nextPlayerActionAt) return;
 
           let dx = 0;
           let dy = 0;
           let frame = null;
           const ctrlPressed = ctrlKey.isDown;
+          const vj = window.virtualJoystick || {};
 
-          if (cursors.left.isDown || keys.A.isDown) {
+          if (cursors.left.isDown || keys.A.isDown || vj.left) {
             dx = -1;
             frame = 3; // oeste
-          } else if (cursors.right.isDown || keys.D.isDown) {
+          } else if (cursors.right.isDown || keys.D.isDown || vj.right) {
             dx = 1;
             frame = 1; // este
-          } else if (cursors.up.isDown || keys.W.isDown) {
+          } else if (cursors.up.isDown || keys.W.isDown || vj.up) {
             dy = -1;
             frame = 2; // norte
-          } else if (cursors.down.isDown || keys.S.isDown) {
+          } else if (cursors.down.isDown || keys.S.isDown || vj.down) {
             dy = 1;
             frame = 0; // sur
           }

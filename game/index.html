@@ -119,20 +119,28 @@
         display: flex;
         align-items: center;
         gap: 4px;
-        padding: 4px 8px;
+        padding: 4px 6px;
         background: rgba(6, 11, 22, 0.97);
         border-bottom: 1px solid rgba(56, 189, 248, 0.18);
-        overflow-x: auto;
-        overflow-y: hidden;
-        scrollbar-width: thin;
-        scrollbar-color: #334155 transparent;
+        overflow: hidden;
         min-height: 0;
       }
-      #spellBarSlots { display: flex; gap: 4px; align-items: flex-end; }
+      #spellBarSlots { display: flex; gap: 2px; align-items: flex-end; flex: 10; min-width: 0; }
+      #consumableBarSlots { display: flex; gap: 2px; align-items: flex-end; flex: 3; min-width: 0; }
+      .spell-bar-divider { display: none; }
+      .consumable-slot .spell-slot-key { color: #e2e8f0; }
+      .consumable-slot.food-slot.active .spell-slot-img-wrap { border-color: rgba(74,222,128,0.5); background: rgba(74,222,128,0.08); }
+      .consumable-slot.mana-slot.active .spell-slot-img-wrap { border-color: rgba(96,165,250,0.5); background: rgba(96,165,250,0.08); }
+      .consumable-slot.health-slot.active .spell-slot-img-wrap { border-color: rgba(248,113,113,0.5); background: rgba(248,113,113,0.08); }
+      .consumable-slot .spell-slot-count { position: absolute; bottom: 1px; right: 2px; font-size: 7px; font-weight: 800; color: #fbbf24; text-shadow: 0 1px 2px rgba(0,0,0,0.9); z-index: 2; pointer-events: none; }
       .spell-slot {
-        flex-shrink: 0; width: 46px;
+        flex: 1 1 0; min-width: 0;
         display: flex; flex-direction: column; align-items: center; gap: 2px;
-        position: relative; cursor: default;
+        position: relative; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent;
+      }
+      .spell-slot.active:active .spell-slot-img-wrap {
+        border-color: rgba(56,189,248,0.85);
+        box-shadow: 0 0 8px rgba(56,189,248,0.4);
       }
       .spell-slot-key {
         position: absolute; top: 1px; left: 1px;
@@ -141,16 +149,17 @@
         padding: 1px 2px; border-radius: 3px; line-height: 1; z-index: 1;
       }
       .spell-slot-img-wrap {
-        width: 34px; height: 34px;
+        width: 100%; aspect-ratio: 1;
         border: 1px solid rgba(71,85,105,0.5); border-radius: 6px;
         background: rgba(12,21,38,0.85);
         display: flex; align-items: center; justify-content: center;
         overflow: hidden; position: relative;
+        box-sizing: border-box;
       }
       .spell-slot.active .spell-slot-img-wrap { border-color: rgba(56,189,248,0.55); background: rgba(56,189,248,0.08); }
       .spell-slot.empty .spell-slot-img-wrap { opacity: 0.25; }
-      .spell-slot-img { width: 30px; height: 30px; object-fit: contain; image-rendering: pixelated; }
-      .spell-slot-name { font-size: 7px; color: #64748b; text-align: center; max-width: 46px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.2; }
+      .spell-slot-img { width: 80%; height: 80%; object-fit: contain; image-rendering: pixelated; }
+      .spell-slot-name { font-size: 7px; color: #64748b; text-align: center; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.2; }
       .spell-slot.active .spell-slot-name { color: #94a3b8; }
       .spell-slot.no-key .spell-slot-img-wrap { border-color: rgba(100,116,139,0.35); }
       /* Cast flash animation */
@@ -241,20 +250,7 @@
         text-shadow: 0 1px 2px rgba(0,0,0,0.8);
         min-height: 16px;
       }
-      .left-sidebar {
-        width: 216px;
-        flex-shrink: 0;
-        height: 100vh;
-        overflow-y: auto;
-        overflow-x: hidden;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        padding: 8px 6px;
-        box-sizing: border-box;
-        scrollbar-width: thin;
-        scrollbar-color: #334155 transparent;
-      }
+      /* ── Right sidebar: single column on mobile/tablet, two columns on desktop ── */
       .right-sidebar {
         width: 268px;
         flex-shrink: 0;
@@ -268,6 +264,47 @@
         box-sizing: border-box;
         scrollbar-width: thin;
         scrollbar-color: #334155 transparent;
+      }
+      .sidebar-col {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      /* Tablet: sidebar más pequeño */
+      @media (max-width: 1199px) and (min-width: 768px) {
+        .right-sidebar {
+          width: 220px;
+          zoom: 0.82;
+          gap: 4px;
+          padding: 6px 4px;
+        }
+      }
+      /* Mobile: sidebar aún más pequeño */
+      @media (max-width: 767px) {
+        .right-sidebar {
+          width: 170px;
+          zoom: 0.65;
+          gap: 3px;
+          padding: 4px 3px;
+        }
+      }
+      @media (min-width: 1200px) {
+        .right-sidebar {
+          width: auto;
+          flex-direction: row;
+          gap: 6px;
+          overflow-y: hidden;
+        }
+        .sidebar-col {
+          height: 100vh;
+          overflow-y: auto;
+          overflow-x: hidden;
+          scrollbar-width: thin;
+          scrollbar-color: #334155 transparent;
+          padding: 0;
+        }
+        .sidebar-col-main { width: 268px; flex-shrink: 0; }
+        .sidebar-col-extra { width: 216px; flex-shrink: 0; }
       }
       .minimap-panel {
         flex-shrink: 0;
@@ -1089,6 +1126,138 @@
         cursor: not-allowed;
         color: #64748b;
       }
+      /* ── Virtual Joystick (mobile/tablet only) ───────────────────── */
+      .joystick-zone {
+        display: none;
+      }
+      @media (max-width: 1199px) {
+        .joystick-zone {
+          display: block;
+          position: fixed;
+          bottom: 24px;
+          left: 24px;
+          z-index: 100;
+          touch-action: none;
+          pointer-events: auto;
+        }
+      }
+      .joystick-base {
+        position: relative;
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(15,23,42,0.35) 0%, rgba(8,14,26,0.45) 100%);
+        border: 1px solid rgba(56, 189, 248, 0.15);
+        box-shadow: 0 0 12px rgba(56, 189, 248, 0.06), inset 0 0 8px rgba(0,0,0,0.2);
+      }
+      .joystick-thumb {
+        position: absolute;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 35%, rgba(56,189,248,0.5) 0%, rgba(12,74,110,0.4) 100%);
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        box-shadow: 0 0 6px rgba(56, 189, 248, 0.15);
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        transition: box-shadow 0.1s;
+      }
+      .joystick-thumb.active {
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+      }
+      .joystick-arrow {
+        position: absolute;
+        font-size: 9px;
+        color: rgba(56, 189, 248, 0.12);
+        pointer-events: none;
+        transition: color 0.1s;
+      }
+      .joystick-arrow.highlight {
+        color: rgba(56, 189, 248, 0.45);
+      }
+      .joystick-arrow-up    { top: 4px;   left: 50%; transform: translateX(-50%); }
+      .joystick-arrow-down  { bottom: 4px; left: 50%; transform: translateX(-50%); }
+      .joystick-arrow-left  { left: 5px;  top: 50%;  transform: translateY(-50%); }
+      .joystick-arrow-right { right: 5px; top: 50%;  transform: translateY(-50%); }
+      /* ── Game Settings (inside Options) ─────────────────────────── */
+      .game-settings-accordion {
+        margin-top: 6px;
+        border: none;
+      }
+      .game-settings-title {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #94a3b8;
+        cursor: pointer;
+        list-style: none;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 0;
+      }
+      .game-settings-title::-webkit-details-marker { display: none; }
+      .game-settings-title::before {
+        content: '▸';
+        font-size: 9px;
+        transition: transform 0.15s;
+      }
+      .game-settings-accordion[open] > .game-settings-title::before {
+        transform: rotate(90deg);
+      }
+      .game-settings-content {
+        padding: 6px 0 2px;
+      }
+      .game-settings-label {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 10px;
+        font-weight: 600;
+        color: #cbd5e1;
+        margin-bottom: 4px;
+      }
+      .game-settings-value {
+        color: #38bdf8;
+        font-variant-numeric: tabular-nums;
+      }
+      .game-settings-slider {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        background: linear-gradient(90deg, #1e293b, #334155);
+        outline: none;
+        cursor: pointer;
+      }
+      .game-settings-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #38bdf8;
+        border: 2px solid #0c4a6e;
+        box-shadow: 0 0 6px rgba(56, 189, 248, 0.4);
+        cursor: pointer;
+        transition: transform 0.1s, box-shadow 0.1s;
+      }
+      .game-settings-slider::-webkit-slider-thumb:hover {
+        transform: scale(1.2);
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+      }
+      .game-settings-slider::-moz-range-thumb {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #38bdf8;
+        border: 2px solid #0c4a6e;
+        box-shadow: 0 0 6px rgba(56, 189, 248, 0.4);
+        cursor: pointer;
+      }
       /* ── Full Market Overlay ─────────────────────────────────────── */
       .market-overlay {
         position: fixed;
@@ -1598,6 +1767,47 @@
       }
       .tt-act-icon { color: #38bdf8; font-style: normal; }
       .tt-act-sep  { color: #334155; }
+      /* ── Touch tooltip action buttons ─────────────────────────── */
+      .tt-touch-actions {
+        display: flex;
+        gap: 4px;
+        padding: 6px 10px 8px;
+        border-top: 1px solid rgba(56,189,248,0.12);
+        background: rgba(0,0,0,0.18);
+      }
+      .tt-touch-btn {
+        flex: 1;
+        padding: 7px 6px;
+        border-radius: 6px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        cursor: pointer;
+        border: 1px solid;
+        text-align: center;
+      }
+      .tt-touch-btn-use {
+        background: linear-gradient(180deg, #064e3b 0%, #052e22 100%);
+        border-color: rgba(52,211,153,0.5);
+        color: #6ee7b7;
+      }
+      .tt-touch-btn-use:active {
+        background: linear-gradient(180deg, #059669 0%, #047857 100%);
+        color: #fff;
+      }
+      .tt-touch-btn-sell {
+        background: linear-gradient(180deg, #78350f 0%, #451a03 100%);
+        border-color: rgba(251,191,36,0.5);
+        color: #fbbf24;
+      }
+      .tt-touch-btn-sell:active {
+        background: linear-gradient(180deg, #b45309 0%, #78350f 100%);
+        color: #fff;
+      }
+      .item-tooltip.touch-mode {
+        pointer-events: auto;
+      }
       .loot-context-menu {
         position: fixed;
         z-index: 40;
@@ -1934,53 +2144,6 @@
     <script src="https://unpkg.com/phaser@3/dist/phaser.min.js"></script>
   </head>
   <body>
-    <!-- Left sidebar: Spells, Learned, Items Shop, Top Stats -->
-    <div class="left-sidebar">
-    <aside class="spells-panel" aria-label="Spells panel">
-      <details class="spells-accordion" id="spellsAccordion">
-        <summary class="spells-title">Spells Shop</summary>
-        <div class="spells-content">
-          <div class="spells-grid" id="spellsGrid"></div>
-          <div class="spells-foot" id="spellsFoot">Gold: 0</div>
-        </div>
-      </details>
-    </aside>
-    <aside class="learned-spells-panel" id="learnedSpellsPanel" aria-label="Learned spells panel">
-      <details class="learned-spells-accordion" id="learnedSpellsAccordion">
-        <summary class="learned-spells-title">Learned Spells</summary>
-        <div class="learned-spells-content">
-          <div class="learned-spells-grid" id="learnedSpellsGrid"></div>
-          <div class="learned-spells-foot" id="learnedSpellsFoot">Total: 0</div>
-        </div>
-      </details>
-    </aside>
-    <aside class="items-shop-panel" id="itemsShopPanel" aria-label="Items shop panel">
-      <details class="items-shop-accordion" id="itemsShopAccordion">
-        <summary class="items-shop-title">Items Shop</summary>
-        <div class="items-shop-content">
-          <button id="openMarketBtn" class="btn-open-market" type="button" disabled>Open Market</button>
-        </div>
-      </details>
-    </aside>
-    <aside class="stats-panel" id="statsPanel" aria-label="Stats panel">
-      <details class="stats-accordion" id="statsAccordion">
-        <summary class="stats-title">Top Stats</summary>
-        <div class="stats-content">
-          <div class="stats-grid" id="statsGrid"></div>
-          <div class="stats-foot" id="statsFoot">Showing top 5 by level</div>
-        </div>
-      </details>
-    </aside>
-    <aside class="stats-panel" id="optionsPanel" aria-label="Options panel">
-      <details class="stats-accordion" id="optionsAccordion">
-        <summary class="stats-title">Options</summary>
-        <div class="stats-content">
-          <button id="saveGameBtn" class="btn-open-market" type="button" disabled>Save and Exit</button>
-        </div>
-      </details>
-    </aside>
-    </div>
-
     <div class="center-col">
       <!-- Panel 1: Player stats -->
       <div id="statsBar">
@@ -2024,6 +2187,8 @@
       <!-- Panel 2: Spell hotkey bar -->
       <div id="spellBar">
         <div id="spellBarSlots"></div>
+        <div class="spell-bar-divider"></div>
+        <div id="consumableBarSlots"></div>
       </div>
       <div id="phaser"></div>
       <div id="gameUiBar">
@@ -2039,106 +2204,177 @@
       </div>
     </div>
 
-    <!-- Right sidebar: Minimap + Equipment + Loot -->
+    <!-- Right sidebar area -->
     <div class="right-sidebar">
-    <div class="minimap-panel" aria-label="Minimap">
-      <canvas id="minimapCanvas"></canvas>
-    </div>
-    <aside class="equipment-panel" aria-label="Equipment panel">
-      <details class="equipment-accordion" id="equipmentAccordion" open>
-        <summary class="equipment-title">Equipment</summary>
-        <div class="equipment-content">
-          <div class="equipment-grid">
-            <div class="equipment-slot" id="slotAmulet">
-              <img class="icon-img" id="slotAmuletImg" alt="Amulet item icon" />
-              <div class="icon" id="slotAmuletIcon">NECK</div>
-              <div class="label" id="slotAmuletLabel">Empty</div>
-            </div>
-            <div class="equipment-slot" id="slotHelmet">
-              <img class="icon-img" id="slotHelmetImg" alt="Helmet item icon" />
-              <div class="icon" id="slotHelmetIcon">HEAD</div>
-              <div class="label" id="slotHelmetLabel">Empty</div>
-            </div>
-            <div class="equipment-slot" id="slotBag">
-              <img class="icon-img" id="slotBagImg" alt="Bag item icon" />
-              <div class="icon" id="slotBagIcon">BAG</div>
-              <div class="label" id="slotBagLabel">Empty</div>
-            </div>
-            <div class="equipment-slot" id="slotHand">
-              <img class="icon-img" id="slotHandImg" alt="Weapon item icon" />
-              <div class="icon" id="slotHandIcon">HAND</div>
-              <div class="label" id="slotHandLabel">Empty</div>
-            </div>
-            <div class="equipment-slot" id="slotArmor">
-              <img class="icon-img" id="slotArmorImg" alt="Armor item icon" />
-              <div class="icon" id="slotArmorIcon">BODY</div>
-              <div class="label" id="slotArmorLabel">Empty</div>
-            </div>
-            <div class="equipment-slot" id="slotShield">
-              <img class="icon-img" id="slotShieldImg" alt="Shield item icon" />
-              <div class="icon" id="slotShieldIcon">SHLD</div>
-              <div class="label" id="slotShieldLabel">Empty</div>
-            </div>
-            <div class="equipment-slot" id="slotRing">
-              <img class="icon-img" id="slotRingImg" alt="Ring item icon" />
-              <div class="icon" id="slotRingIcon">RING</div>
-              <div class="label" id="slotRingLabel">Empty</div>
-            </div>
-            <div class="equipment-slot" id="slotLegs">
-              <img class="icon-img" id="slotLegsImg" alt="Legs item icon" />
-              <div class="icon" id="slotLegsIcon">LEGS</div>
-              <div class="label" id="slotLegsLabel">Empty</div>
-            </div>
-            <div class="equipment-slot" id="slotAmmo">
-              <img class="icon-img" id="slotAmmoImg" alt="Ammunition item icon" />
-              <div class="icon" id="slotAmmoIcon">AMMO</div>
-              <div class="label" id="slotAmmoLabel">Empty</div>
-            </div>
-            <div class="equipment-slot hungry-indicator" id="hungryIndicator">
-              <div class="icon" id="hungryIcon">🍖</div>
-              <div class="label" id="hungryLabel">Hungry</div>
-            </div>
-            <div class="equipment-slot" id="slotBoots">
-              <img class="icon-img" id="slotBootsImg" alt="Boots item icon" />
-              <div class="icon" id="slotBootsIcon">FEET</div>
-              <div class="label" id="slotBootsLabel">Empty</div>
-            </div>
-            <div class="equipment-slot" id="slotLight">
-              <img class="icon-img" id="slotLightImg" alt="Light source item icon" />
-              <div class="icon" id="slotLightIcon">LIT</div>
-              <div class="label" id="slotLightLabel">Empty</div>
-            </div>
-          </div>
-          <div class="equipment-foot" id="equipmentFoot">
-            <div class="status-bar" id="statusBar">
-              <div class="status-chip burn" id="statusBurn" title="Burning — taking fire damage over time" hidden>
-                <span class="status-chip-icon">🔥</span>
-                <span class="status-chip-label">Burn</span>
-              </div>
-              <div class="status-chip poison" id="statusPoison" title="Poisoned — cast Cure Poison to remove" hidden>
-                <span class="status-chip-icon">☠</span>
-                <span class="status-chip-label">Poison</span>
-              </div>
-              <div class="status-chip shock" id="statusShock" title="Electrified — taking energy damage over time" hidden>
-                <span class="status-chip-icon">⚡</span>
-                <span class="status-chip-label">Shock</span>
-              </div>
-            </div>
-            <span class="equipment-foot-text" id="equipmentFootText"></span>
-          </div>
+      <!-- Column 1: Minimap + Equipment + Loot -->
+      <div class="sidebar-col sidebar-col-main">
+        <div class="minimap-panel" aria-label="Minimap">
+          <canvas id="minimapCanvas"></canvas>
         </div>
-      </details>
-    </aside>
-    <aside class="loot-panel" aria-label="Loot panel">
-      <details class="loot-accordion" id="lootAccordion" open>
-        <summary class="loot-title">Loot Bag</summary>
-        <div class="loot-content">
-          <div class="loot-grid" id="lootGrid"></div>
-          <div class="loot-foot" id="lootFoot">Capacity: 0 slots</div>
-        </div>
-      </details>
-    </aside>
+        <aside class="equipment-panel" aria-label="Equipment panel">
+          <details class="equipment-accordion" id="equipmentAccordion" open>
+            <summary class="equipment-title">Equipment</summary>
+            <div class="equipment-content">
+              <div class="equipment-grid">
+                <div class="equipment-slot" id="slotAmulet">
+                  <img class="icon-img" id="slotAmuletImg" alt="Amulet item icon" />
+                  <div class="icon" id="slotAmuletIcon">NECK</div>
+                  <div class="label" id="slotAmuletLabel">Empty</div>
+                </div>
+                <div class="equipment-slot" id="slotHelmet">
+                  <img class="icon-img" id="slotHelmetImg" alt="Helmet item icon" />
+                  <div class="icon" id="slotHelmetIcon">HEAD</div>
+                  <div class="label" id="slotHelmetLabel">Empty</div>
+                </div>
+                <div class="equipment-slot" id="slotBag">
+                  <img class="icon-img" id="slotBagImg" alt="Bag item icon" />
+                  <div class="icon" id="slotBagIcon">BAG</div>
+                  <div class="label" id="slotBagLabel">Empty</div>
+                </div>
+                <div class="equipment-slot" id="slotHand">
+                  <img class="icon-img" id="slotHandImg" alt="Weapon item icon" />
+                  <div class="icon" id="slotHandIcon">HAND</div>
+                  <div class="label" id="slotHandLabel">Empty</div>
+                </div>
+                <div class="equipment-slot" id="slotArmor">
+                  <img class="icon-img" id="slotArmorImg" alt="Armor item icon" />
+                  <div class="icon" id="slotArmorIcon">BODY</div>
+                  <div class="label" id="slotArmorLabel">Empty</div>
+                </div>
+                <div class="equipment-slot" id="slotShield">
+                  <img class="icon-img" id="slotShieldImg" alt="Shield item icon" />
+                  <div class="icon" id="slotShieldIcon">SHLD</div>
+                  <div class="label" id="slotShieldLabel">Empty</div>
+                </div>
+                <div class="equipment-slot" id="slotRing">
+                  <img class="icon-img" id="slotRingImg" alt="Ring item icon" />
+                  <div class="icon" id="slotRingIcon">RING</div>
+                  <div class="label" id="slotRingLabel">Empty</div>
+                </div>
+                <div class="equipment-slot" id="slotLegs">
+                  <img class="icon-img" id="slotLegsImg" alt="Legs item icon" />
+                  <div class="icon" id="slotLegsIcon">LEGS</div>
+                  <div class="label" id="slotLegsLabel">Empty</div>
+                </div>
+                <div class="equipment-slot" id="slotAmmo">
+                  <img class="icon-img" id="slotAmmoImg" alt="Ammunition item icon" />
+                  <div class="icon" id="slotAmmoIcon">AMMO</div>
+                  <div class="label" id="slotAmmoLabel">Empty</div>
+                </div>
+                <div class="equipment-slot hungry-indicator" id="hungryIndicator">
+                  <div class="icon" id="hungryIcon">🍖</div>
+                  <div class="label" id="hungryLabel">Hungry</div>
+                </div>
+                <div class="equipment-slot" id="slotBoots">
+                  <img class="icon-img" id="slotBootsImg" alt="Boots item icon" />
+                  <div class="icon" id="slotBootsIcon">FEET</div>
+                  <div class="label" id="slotBootsLabel">Empty</div>
+                </div>
+                <div class="equipment-slot" id="slotLight">
+                  <img class="icon-img" id="slotLightImg" alt="Light source item icon" />
+                  <div class="icon" id="slotLightIcon">LIT</div>
+                  <div class="label" id="slotLightLabel">Empty</div>
+                </div>
+              </div>
+              <div class="equipment-foot" id="equipmentFoot">
+                <div class="status-bar" id="statusBar">
+                  <div class="status-chip burn" id="statusBurn" title="Burning — taking fire damage over time" hidden>
+                    <span class="status-chip-icon">🔥</span>
+                    <span class="status-chip-label">Burn</span>
+                  </div>
+                  <div class="status-chip poison" id="statusPoison" title="Poisoned — cast Cure Poison to remove" hidden>
+                    <span class="status-chip-icon">☠</span>
+                    <span class="status-chip-label">Poison</span>
+                  </div>
+                  <div class="status-chip shock" id="statusShock" title="Electrified — taking energy damage over time" hidden>
+                    <span class="status-chip-icon">⚡</span>
+                    <span class="status-chip-label">Shock</span>
+                  </div>
+                </div>
+                <span class="equipment-foot-text" id="equipmentFootText"></span>
+              </div>
+            </div>
+          </details>
+        </aside>
+        <aside class="loot-panel" aria-label="Loot panel">
+          <details class="loot-accordion" id="lootAccordion" open>
+            <summary class="loot-title">Loot Bag</summary>
+            <div class="loot-content">
+              <div class="loot-grid" id="lootGrid"></div>
+              <div class="loot-foot" id="lootFoot">Capacity: 0 slots</div>
+            </div>
+          </details>
+        </aside>
+      </div>
+      <!-- Column 2: Spells, Learned, Items Shop, Top Stats, Options -->
+      <div class="sidebar-col sidebar-col-extra">
+        <aside class="spells-panel" aria-label="Spells panel">
+          <details class="spells-accordion" id="spellsAccordion">
+            <summary class="spells-title">Spells Shop</summary>
+            <div class="spells-content">
+              <div class="spells-grid" id="spellsGrid"></div>
+              <div class="spells-foot" id="spellsFoot">Gold: 0</div>
+            </div>
+          </details>
+        </aside>
+        <aside class="learned-spells-panel" id="learnedSpellsPanel" aria-label="Learned spells panel">
+          <details class="learned-spells-accordion" id="learnedSpellsAccordion">
+            <summary class="learned-spells-title">Learned Spells</summary>
+            <div class="learned-spells-content">
+              <div class="learned-spells-grid" id="learnedSpellsGrid"></div>
+              <div class="learned-spells-foot" id="learnedSpellsFoot">Total: 0</div>
+            </div>
+          </details>
+        </aside>
+        <aside class="items-shop-panel" id="itemsShopPanel" aria-label="Items shop panel">
+          <details class="items-shop-accordion" id="itemsShopAccordion">
+            <summary class="items-shop-title">Items Shop</summary>
+            <div class="items-shop-content">
+              <button id="openMarketBtn" class="btn-open-market" type="button" disabled>Open Market</button>
+            </div>
+          </details>
+        </aside>
+        <aside class="stats-panel" id="statsPanel" aria-label="Stats panel">
+          <details class="stats-accordion" id="statsAccordion">
+            <summary class="stats-title">Top Stats</summary>
+            <div class="stats-content">
+              <div class="stats-grid" id="statsGrid"></div>
+              <div class="stats-foot" id="statsFoot">Showing top 5 by level</div>
+            </div>
+          </details>
+        </aside>
+        <aside class="stats-panel" id="optionsPanel" aria-label="Options panel">
+          <details class="stats-accordion" id="optionsAccordion">
+            <summary class="stats-title">Options</summary>
+            <div class="stats-content">
+              <button id="saveGameBtn" class="btn-open-market" type="button" disabled>Save and Exit</button>
+              <details class="game-settings-accordion" id="gameSettingsAccordion">
+                <summary class="game-settings-title">Game Settings</summary>
+                <div class="game-settings-content">
+                  <label class="game-settings-label">
+                    <span>Zoom</span>
+                    <span class="game-settings-value" id="gameZoomValue">100%</span>
+                  </label>
+                  <input type="range" id="gameZoomSlider" class="game-settings-slider" min="50" max="150" value="100" step="5" />
+                </div>
+              </details>
+            </div>
+          </details>
+        </aside>
+      </div>
     </div><!-- end right-sidebar -->
+
+    <!-- Virtual joystick (mobile/tablet only) -->
+    <div class="joystick-zone" id="joystickZone">
+      <div class="joystick-base" id="joystickBase">
+        <div class="joystick-arrow joystick-arrow-up">&#9650;</div>
+        <div class="joystick-arrow joystick-arrow-right">&#9654;</div>
+        <div class="joystick-arrow joystick-arrow-down">&#9660;</div>
+        <div class="joystick-arrow joystick-arrow-left">&#9664;</div>
+        <div class="joystick-thumb" id="joystickThumb"></div>
+      </div>
+    </div>
+
     <div id="itemTooltip" class="item-tooltip" aria-hidden="true"></div>
     <div id="lootContextMenu" class="loot-context-menu" aria-hidden="true">
       <button id="discardLootBtn" type="button">Discard</button>
@@ -2411,6 +2647,122 @@
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
       }
+    </script>
+    <script>
+    // ── Virtual Joystick ──────────────────────────────────────────
+    (function () {
+      const zone  = document.getElementById('joystickZone');
+      const base  = document.getElementById('joystickBase');
+      const thumb = document.getElementById('joystickThumb');
+      if (!zone || !base || !thumb) return;
+
+      const arrows = {
+        up:    base.querySelector('.joystick-arrow-up'),
+        down:  base.querySelector('.joystick-arrow-down'),
+        left:  base.querySelector('.joystick-arrow-left'),
+        right: base.querySelector('.joystick-arrow-right'),
+      };
+
+      const RADIUS    = 45;   // half of base width
+      const DEAD_ZONE = 8;    // px threshold before registering a direction
+      const MAX_PULL  = 26;   // max px the thumb can travel from center
+
+      // Shared state read by game engine
+      window.virtualJoystick = { left: false, right: false, up: false, down: false, active: false };
+
+      let tracking = false;
+      let originX  = 0;
+      let originY  = 0;
+
+      function getTouch(e) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          return e.changedTouches[i];
+        }
+        return null;
+      }
+
+      function resetThumb() {
+        thumb.style.transform = 'translate(-50%, -50%)';
+        thumb.classList.remove('active');
+        Object.values(arrows).forEach(a => a && a.classList.remove('highlight'));
+        const vj = window.virtualJoystick;
+        vj.left = vj.right = vj.up = vj.down = false;
+        vj.active = false;
+      }
+
+      function updateDirection(touchX, touchY) {
+        const rect = base.getBoundingClientRect();
+        const cx   = rect.left + RADIUS;
+        const cy   = rect.top  + RADIUS;
+        let dx     = touchX - cx;
+        let dy     = touchY - cy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // Clamp thumb travel
+        if (dist > MAX_PULL) {
+          dx = (dx / dist) * MAX_PULL;
+          dy = (dy / dist) * MAX_PULL;
+        }
+
+        // Move thumb visually
+        thumb.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+        thumb.classList.add('active');
+
+        const vj = window.virtualJoystick;
+        vj.left = vj.right = vj.up = vj.down = false;
+        Object.values(arrows).forEach(a => a && a.classList.remove('highlight'));
+
+        if (dist > DEAD_ZONE) {
+          vj.active = true;
+          // Snap to 4 cardinal directions
+          const angle = Math.atan2(dy, dx); // radians
+          if (angle > -Math.PI * 0.75 && angle <= -Math.PI * 0.25) {
+            vj.up = true;
+            if (arrows.up) arrows.up.classList.add('highlight');
+          } else if (angle > Math.PI * 0.25 && angle <= Math.PI * 0.75) {
+            vj.down = true;
+            if (arrows.down) arrows.down.classList.add('highlight');
+          } else if (angle > Math.PI * 0.75 || angle <= -Math.PI * 0.75) {
+            vj.left = true;
+            if (arrows.left) arrows.left.classList.add('highlight');
+          } else {
+            vj.right = true;
+            if (arrows.right) arrows.right.classList.add('highlight');
+          }
+        } else {
+          vj.active = false;
+        }
+      }
+
+      zone.addEventListener('touchstart', function (e) {
+        e.preventDefault();
+        const t = getTouch(e);
+        if (!t) return;
+        tracking = true;
+        const rect = base.getBoundingClientRect();
+        originX = rect.left + RADIUS;
+        originY = rect.top  + RADIUS;
+        updateDirection(t.clientX, t.clientY);
+      }, { passive: false });
+
+      zone.addEventListener('touchmove', function (e) {
+        e.preventDefault();
+        if (!tracking) return;
+        const t = getTouch(e);
+        if (t) updateDirection(t.clientX, t.clientY);
+      }, { passive: false });
+
+      zone.addEventListener('touchend', function (e) {
+        e.preventDefault();
+        tracking = false;
+        resetThumb();
+      }, { passive: false });
+
+      zone.addEventListener('touchcancel', function () {
+        tracking = false;
+        resetThumb();
+      });
+    })();
     </script>
   </body>
 </html>
