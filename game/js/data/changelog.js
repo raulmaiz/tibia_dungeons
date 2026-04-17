@@ -5,6 +5,13 @@
  */
 export const CHANGELOG = [
   {
+    version: '0.3.0',
+    date: '2026-04-17',
+    entries: [
+      'Fix: pantalla de selección de personaje adaptada a mobile (scrollable)',
+    ],
+  },
+  {
     version: '0.2.0',
     date: '2026-04-17',
     entries: [

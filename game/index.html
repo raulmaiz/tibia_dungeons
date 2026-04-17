@@ -1866,8 +1866,10 @@
       .overlay {
         position: fixed; inset: 0; z-index: 10;
         background: radial-gradient(ellipse at 50% 30%, rgba(14,22,44,0.97) 0%, rgba(4,8,18,0.99) 100%);
-        display: flex; align-items: center; justify-content: center;
+        display: flex; align-items: flex-start; justify-content: center;
         padding: 16px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
       }
       .panel {
         width: min(520px, 96vw);
@@ -1876,6 +1878,27 @@
         border-radius: 20px;
         padding: 36px 36px 28px;
         box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04) inset;
+        margin: auto 0;
+        flex-shrink: 0;
+      }
+      @media (max-width: 767px) {
+        .overlay { padding: 8px; }
+        .panel { padding: 16px 12px 12px; border-radius: 14px; }
+        .panel-title { font-size: 1.1rem !important; margin-bottom: 2px; }
+        .panel-subtitle { font-size: 0.6rem; margin-bottom: 10px; }
+        .field-group { margin-bottom: 10px; }
+        .field-label { font-size: 0.6rem; margin-bottom: 3px; }
+        .choices { gap: 6px; }
+        .choice { padding: 10px 6px; gap: 4px; border-radius: 8px; }
+        .choice-icon { font-size: 1.4rem; }
+        .choice-name { font-size: 0.75rem; }
+        .class-choices { gap: 5px; }
+        .class-choice { padding: 8px 8px; gap: 6px; border-radius: 8px; }
+        .class-icon { font-size: 1.1rem; }
+        .class-name { font-size: 0.72rem; }
+        .class-desc { font-size: 0.6rem; }
+        #startBtn, #authSubmit { padding: 10px; margin-top: 10px; font-size: 0.85rem; border-radius: 10px; }
+        input[type="text"], input[type="password"] { padding: 8px 10px; font-size: 0.85rem; }
       }
       .panel-title {
         text-align: center; margin: 0 0 4px;
