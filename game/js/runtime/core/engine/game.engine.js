@@ -5191,10 +5191,12 @@ function startGame(configPlayer) {
           const t = String(item.item_type || '').toLowerCase();
           return t === 'rods' || t === 'wands';
         };
-        const canStrafeCastMagicWeapon = (weapon) => (
-          (playerClassKey === 'druid' || playerClassKey === 'sorcerer')
-          && Boolean(weapon && isMagicRangedWeapon(weapon))
-        );
+        const canStrafeCastMagicWeapon = (weapon) => {
+          if (!weapon) return false;
+          if (isMagicRangedWeapon(weapon)) return playerClassKey === 'druid' || playerClassKey === 'sorcerer';
+          if (isClassicDistanceWeapon(weapon)) return true;
+          return false;
+        };
         const magicWeaponDamageTypeSuffix = (weapon) => {
           if (!weapon || !isMagicRangedWeapon(weapon)) return '';
           const attrs = Array.isArray(weapon.attributes) ? weapon.attributes : [];
@@ -7795,8 +7797,10 @@ function startGame(configPlayer) {
             if (isTypingInInput()) return;
             const now = this.time.now;
             const w = getEquippedHandWeapon();
-            if (!w || !isMagicRangedWeapon(w)) return;
+            if (!w) return;
             if (!canStrafeCastMagicWeapon(w)) return;
+            if (!isDistanceWeapon(w)) return;
+            if (requiresAmmoForWeapon(w) && !hasAmmoForWeapon(w)) return;
             if (now < nextMagicWeaponShotAt) return;
             const t = findNearestRangedTarget(effectiveWeaponRange(w));
             if (!t) return;
@@ -7928,13 +7932,7 @@ function startGame(configPlayer) {
             && (!requiresAmmoForWeapon(handWeapon) || hasAmmoForWeapon(handWeapon))
           );
           if (dx === 0 && dy === 0) {
-            // Wands/rods: auto-fire via dedicated timer (see wandRodAutoFireEvent) to avoid missed ticks.
-            if (handIsDistance && handWeapon && !isMagicRangedWeapon(handWeapon)) {
-              const autoTarget = findNearestRangedTarget(effectiveWeaponRange(handWeapon));
-              if (autoTarget) {
-                performPlayerAttack(autoTarget, handWeapon, true, now);
-              }
-            }
+            // All distance weapons auto-fire via the dedicated strafe timer.
             return;
           }
           if (ctrlPressed && (cursors.left.isDown || cursors.right.isDown || cursors.up.isDown || cursors.down.isDown)) {
