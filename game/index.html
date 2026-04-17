@@ -113,6 +113,16 @@
       .sb-bar-text { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:700; color:rgba(255,255,255,0.9); text-shadow:0 1px 2px rgba(0,0,0,0.9); pointer-events:none; }
       .sb-hp-fill { background: linear-gradient(90deg,#991b1b,#ef4444); box-shadow:0 0 4px rgba(239,68,68,0.4); }
       .sb-mp-fill { background: linear-gradient(90deg,#1d4ed8,#60a5fa); box-shadow:0 0 4px rgba(96,165,250,0.4); }
+      /* Tablet + mobile: hide weapon skill label and compact stats bar */
+      @media (max-width: 1199px) {
+        .sb-skill-hide { display: none !important; }
+        #statsBar { font-size: 9px; gap: 4px; padding: 4px 6px; }
+        .sb-bar-track { width: 60px; }
+      }
+      @media (max-width: 767px) {
+        #statsBar { font-size: 8px; gap: 3px; padding: 3px 4px; }
+        .sb-bar-track { width: 50px; }
+      }
       /* ── Spell bar (panel 2) ─────────────────────── */
       #spellBar {
         flex-shrink: 0;
@@ -529,6 +539,20 @@
       .equipment-foot .status-chip .status-chip-icon {
         font-size: 13px;
         line-height: 1;
+      }
+      .equipment-foot .status-chip.combat {
+        color: #fca5a5;
+        background: rgba(153, 27, 27, 0.35);
+        border-color: rgba(248, 113, 113, 0.6);
+        text-shadow: 0 0 6px rgba(248, 113, 113, 0.5);
+      }
+      .equipment-foot .status-chip.combat .status-chip-icon {
+        filter: drop-shadow(0 0 6px rgba(248, 113, 113, 0.8));
+        animation: chip-combat-pulse 1.2s ease-in-out infinite;
+      }
+      @keyframes chip-combat-pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50%      { transform: scale(1.1); opacity: 0.7; }
       }
       .equipment-foot .status-chip.burn {
         color: #fed7aa;
@@ -1304,8 +1328,15 @@
         color: #38bdf8;
         text-shadow: 0 0 18px rgba(56, 189, 248, 0.35);
       }
-      .market-gold {
+      .market-cap {
         margin-left: auto;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        color: #e2e8f0;
+      }
+      .market-gold {
+        margin-left: 0;
         font-size: 12px;
         color: #facc15;
         letter-spacing: 0.06em;
@@ -2174,12 +2205,12 @@
         <div class="sb-divider"></div>
         <div class="sb-section">
           <span class="sb-tag">ML</span><span id="sbML" class="sb-val">0</span>
-          <div class="sb-divider"></div>
-          <span id="sbSkill" class="sb-val">-</span>
+          <div class="sb-divider sb-skill-hide"></div>
+          <span id="sbSkill" class="sb-val sb-skill-hide">-</span>
           <div class="sb-divider"></div>
           <span class="sb-tag" id="sbFistLabel">Fist</span><span id="sbFist" class="sb-val">10</span>
           <div class="sb-divider"></div>
-          <span class="sb-tag">Shielding</span><span id="sbShield" class="sb-val">10</span>
+          <span class="sb-tag">Shield</span><span id="sbShield" class="sb-val">10</span>
           <div class="sb-divider"></div>
           <span id="sbCap" class="sb-val">-</span>
         </div>
@@ -2278,6 +2309,10 @@
               </div>
               <div class="equipment-foot" id="equipmentFoot">
                 <div class="status-bar" id="statusBar">
+                  <div class="status-chip combat" id="statusCombat" title="In combat — creatures are aggressive" hidden>
+                    <span class="status-chip-icon">⚔</span>
+                    <span class="status-chip-label">Combat</span>
+                  </div>
                   <div class="status-chip burn" id="statusBurn" title="Burning — taking fire damage over time" hidden>
                     <span class="status-chip-icon">🔥</span>
                     <span class="status-chip-label">Burn</span>
@@ -2384,6 +2419,7 @@
       <div class="market-frame">
         <div class="market-header">
           <span class="market-title">Market</span>
+          <span class="market-cap" id="marketCap">CAP 0/0</span>
           <span class="market-gold" id="marketGold"><span class="gold-icon"></span>0 gp</span>
           <button id="marketCloseBtn" class="market-close" type="button">✕ Close</button>
         </div>

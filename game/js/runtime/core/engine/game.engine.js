@@ -3454,6 +3454,7 @@ function startGame(configPlayer) {
           );
         };
         const descendLevel = (toNext = true) => {
+          setCombatIndicator(false);
           for (const entry of groundLootByTile.values()) {
             if (entry.marker) entry.marker.destroy();
             if (entry.markerCount) entry.markerCount.destroy();
@@ -4394,6 +4395,7 @@ function startGame(configPlayer) {
           sort: document.getElementById('marketSort'),
           breadcrumb: document.getElementById('marketBreadcrumb'),
           gold: document.getElementById('marketGold'),
+          cap: document.getElementById('marketCap'),
           banner: document.getElementById('marketBanner'),
           openBtn: document.getElementById('openMarketBtn'),
           closeBtn: document.getElementById('marketCloseBtn'),
@@ -4637,11 +4639,19 @@ function startGame(configPlayer) {
             desc.textContent = item.description;
             detailEl.appendChild(desc);
           }
-          if (Array.isArray(item.attributes) && item.attributes.length > 0) {
+          const hiddenDetailAttrs = new Set(['is_walkable', 'upgrade_classification', 'upgrade_clasification']);
+          const visibleAttrs = Array.isArray(item.attributes)
+            ? item.attributes.filter(a => a && a.name && !hiddenDetailAttrs.has(String(a.name).trim().toLowerCase()))
+            : [];
+          // Show item weight
+          const itemWeight = Number((item.raw && item.raw.weight) || 0);
+          if (itemWeight > 0) {
+            visibleAttrs.unshift({ name: 'Weight', value: `${itemWeight} oz` });
+          }
+          if (visibleAttrs.length > 0) {
             const attrs = document.createElement('div');
             attrs.className = 'detail-attrs';
-            for (const a of item.attributes) {
-              if (!a || !a.name) continue;
+            for (const a of visibleAttrs) {
               const row = document.createElement('div');
               row.className = 'attr';
               const k = document.createElement('span');
@@ -4731,44 +4741,67 @@ function startGame(configPlayer) {
             return;
           }
           const price = Math.max(0, Number(item.price || 0));
-          const totalPrice = price * qty;
           const isStackable = Number((item.raw && item.raw.is_stackable) || 0) === 1;
-          const spent = window.debugInventory && typeof window.debugInventory.spendGold === 'function'
-            ? window.debugInventory.spendGold(totalPrice) : false;
+          const inv = window.debugInventory;
+          if (!inv) return;
+          const makeLootObj = (count) => ({
+            id: item.id,
+            title: item.title,
+            image: item.image,
+            item_type: item.item_type,
+            item_class: item.item_class,
+            type_secondary: item.type_secondary,
+            armor_value: item.armor_value,
+            shielding_value: item.shielding_value,
+            attack_value: item.attack_value,
+            range_value: item.range_value,
+            throwable: item.throwable,
+            attributes: item.attributes,
+            raw: item.raw,
+            isStackable,
+            count,
+          });
+          // Try bulk purchase first; if capacity fails, buy one-by-one
+          const totalPrice = price * qty;
+          const spent = inv.spendGold(totalPrice);
           if (!spent) {
-            addCombatLog(`Not enough gold to buy ${item.title} x${qty}.`);
+            flashMarketBanner(`Not enough gold to buy ${item.title} x${qty} (need ${totalPrice} gp).`);
             renderMarketDetail();
             return;
           }
-          const stored = window.debugInventory && typeof window.debugInventory.addLoot === 'function'
-            ? window.debugInventory.addLoot({
-              id: item.id,
-              title: item.title,
-              image: item.image,
-              item_type: item.item_type,
-              item_class: item.item_class,
-              type_secondary: item.type_secondary,
-              armor_value: item.armor_value,
-              shielding_value: item.shielding_value,
-              attack_value: item.attack_value,
-              range_value: item.range_value,
-              throwable: item.throwable,
-              attributes: item.attributes,
-              raw: item.raw,
-              isStackable,
-              count: qty,
-            })
-            : false;
-          if (!stored) {
-            if (window.debugInventory && typeof window.debugInventory.addGold === 'function') {
-              window.debugInventory.addGold(totalPrice);
+          let stored = inv.addLoot(makeLootObj(qty));
+          if (stored) {
+            addCombatLog(`Bought item: ${item.title} x${qty} for ${totalPrice} gp.`);
+            spawnMarketBuySplash(item, qty, totalPrice);
+          } else {
+            // Bulk failed — refund and try buying one at a time
+            const bulkReason = lastLootRejectReason;
+            inv.addGold(totalPrice);
+            let bought = 0;
+            for (let i = 0; i < qty; i++) {
+              if (!inv.spendGold(price)) break;
+              if (!inv.addLoot(makeLootObj(1))) {
+                inv.addGold(price);
+                break;
+              }
+              bought++;
             }
-            addCombatLog(`Cannot carry ${item.title}.`);
-            renderMarketDetail();
-            return;
+            if (bought > 0) {
+              const skipMsg = bought < qty
+                ? (lastLootRejectReason === 'capacity' ? ` — not enough carrying capacity` : ` — loot bag is full`)
+                : '';
+              addCombatLog(`Bought item: ${item.title} x${bought} for ${price * bought} gp.${skipMsg}`);
+              spawnMarketBuySplash(item, bought, price * bought);
+              if (bought < qty) flashMarketBanner(`Bought ${bought}/${qty} — ${lastLootRejectReason === 'capacity' ? 'not enough carrying capacity' : 'loot bag is full'}.`);
+            } else {
+              const reason = (bulkReason || lastLootRejectReason) === 'capacity'
+                ? 'Not enough carrying capacity'
+                : 'Loot bag is full';
+              flashMarketBanner(`${reason} — cannot buy ${item.title}.`);
+              renderMarketDetail();
+              return;
+            }
           }
-          addCombatLog(`Bought item: ${item.title} x${qty} for ${totalPrice} gp.`);
-          spawnMarketBuySplash(item, qty, totalPrice);
           flashMarketGold();
           updateHud();
           updateMarketGold();
@@ -4779,9 +4812,34 @@ function startGame(configPlayer) {
           if (marketEls.gold) {
             marketEls.gold.innerHTML = `<span class="gold-icon"></span>${getMarketGoldNow()} gp`;
           }
+          if (marketEls.cap) {
+            const inv = window.debugInventory && typeof window.debugInventory.state === 'function'
+              ? window.debugInventory.state() : null;
+            const capTotal = inv ? Number(inv.capacity || 0) : 0;
+            const capCurrent = inv ? Number(inv.carriedWeight || 0) : 0;
+            marketEls.cap.textContent = `CAP ${capCurrent.toFixed(1)}/${capTotal.toFixed(0)}`;
+            const ratio = capTotal > 0 ? Math.min(capCurrent / capTotal, 1) : 0;
+            const r = Math.round(226 + (248 - 226) * ratio);
+            const g = Math.round(232 - (232 - 113) * ratio);
+            const b = Math.round(240 - (240 - 113) * ratio);
+            marketEls.cap.style.color = `rgb(${r},${g},${b})`;
+          }
+        };
+        let _bannerTimeout = null;
+        const flashMarketBanner = (msg) => {
+          if (!marketEls.banner) return;
+          if (_bannerTimeout) clearTimeout(_bannerTimeout);
+          marketEls.banner.textContent = msg;
+          marketEls.banner.dataset.show = 'true';
+          _bannerTimeout = setTimeout(() => {
+            marketEls.banner.textContent = 'Combat started — market closed';
+            updateMarketBanner();
+            _bannerTimeout = null;
+          }, 2500);
         };
         const updateMarketBanner = () => {
           if (!marketEls.banner) return;
+          if (_bannerTimeout) return; // don't override a flash message
           const show = marketOpen && aliveCreatures().length > 0;
           marketEls.banner.dataset.show = show ? 'true' : 'false';
         };
@@ -5008,7 +5066,14 @@ function startGame(configPlayer) {
           if (sbFistLabel) sbFistLabel.textContent = fistShortLabel;
           if (sbFist) sbFist.textContent = String(fistDisplayLevel);
           if (sbShield) sbShield.textContent = String(playerShieldingLevel);
-          if (sbCap) sbCap.textContent = `CAP ${capCurrentText}/${capTotalText}`;
+          if (sbCap) {
+            sbCap.textContent = `CAP ${capCurrentText}/${capTotalText}`;
+            const capRatio = capTotal > 0 ? Phaser.Math.Clamp(capCurrent / capTotal, 0, 1) : 0;
+            const r = Math.round(226 + (248 - 226) * capRatio);
+            const g = Math.round(232 - (232 - 113) * capRatio);
+            const b = Math.round(240 - (240 - 113) * capRatio);
+            sbCap.style.color = `rgb(${r},${g},${b})`;
+          }
           const xpNeeded = xpToNextLevel(playerLevel);
           const safeXp = Number.isFinite(playerXp) ? playerXp : 0;
           const progress = xpNeeded > 0 && Number.isFinite(safeXp) ? safeXp / xpNeeded : 0;
@@ -6330,9 +6395,17 @@ function startGame(configPlayer) {
         const POISON_TICK_DAMAGES = [6, 5, 4, 3, 2, 1];
         const ELECTRIFIED_TICK_INTERVAL_MS = 10 * 1000;
         const ELECTRIFIED_TICK_DAMAGES = [8, 6, 5, 4, 3, 2];
+        const combatChipEl = document.getElementById('statusCombat');
         const burnChipEl = document.getElementById('statusBurn');
         const poisonChipEl = document.getElementById('statusPoison');
         const electrifiedChipEl = document.getElementById('statusShock');
+        let _lastCombatState = false;
+        const setCombatIndicator = (active) => {
+          if (!combatChipEl) return;
+          if (active === _lastCombatState) return;
+          _lastCombatState = active;
+          combatChipEl.hidden = !active;
+        };
         const setBurnIndicator = (active) => {
           if (!burnChipEl) return;
           burnChipEl.hidden = !active;
@@ -7728,6 +7801,8 @@ function startGame(configPlayer) {
             updateOpenMarketButton();
             updateSaveGameButton();
             updateMarketBanner();
+            // Combat indicator: show when any creature has aggro on the player
+            setCombatIndicator(aliveCreatures().some(c => hasAggro(c)));
             // Fire / poison field expiry + ongoing burn / poison / shock DoT.
             const nowMs = this.time.now;
             cleanupExpiredFireFields(nowMs);
