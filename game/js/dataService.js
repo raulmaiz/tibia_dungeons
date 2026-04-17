@@ -561,6 +561,8 @@ export async function getCreatureTypeProgressionGroups() {
       creature_class: String(c.creature_class || '').trim(),
       ranged: c.ranged === true,
       range: Math.max(1, Number(c.range || 1)),
+      convince_cost: Math.max(0, Number(c.convince_cost || 0)),
+      summon_cost: Math.max(0, Number(c.summon_cost || 0)),
     };
 
     if (!byType.has(typePrimary)) byType.set(typePrimary, []);

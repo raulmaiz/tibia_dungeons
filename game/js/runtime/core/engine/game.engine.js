@@ -2527,8 +2527,14 @@ function startGame(configPlayer) {
         const isCreatureMeleeAdjacent = (ax, ay, bx, by) => (
           Math.max(Math.abs(ax - bx), Math.abs(ay - by)) === 1
         );
-        const aliveCreatures = () => creatures.filter((c) => c.alive);
-        const creatureAt = (gx, gy) => aliveCreatures().find((c) => c.gx === gx && c.gy === gy) || null;
+        const aliveCreatures = () => creatures.filter((c) => c.alive && !c.isConvinced);
+        const aliveAllies = () => creatures.filter((c) => c.alive && c.isConvinced);
+        const allAliveCreatures = () => creatures.filter((c) => c.alive);
+        const creatureAt = (gx, gy) => allAliveCreatures().find((c) => c.gx === gx && c.gy === gy) || null;
+        const enemyCreatureAt = (gx, gy) => aliveCreatures().find((c) => c.gx === gx && c.gy === gy) || null;
+        const MAX_CONVINCED = 2;
+        // Saved ally templates for floor transitions
+        let savedAllyTemplates = [];
         // Look up a creature template by title across every tier — used by
         // summon abilities to resolve "name" → spawnable creature. Returns
         // null if the title isn't in any tier (e.g. flavour-only summons).
@@ -3172,7 +3178,18 @@ function startGame(configPlayer) {
           );
         };
         const spawnCreaturesForLevel = (level) => {
+          // Save convinced allies before clearing
+          savedAllyTemplates = [];
           for (const c of creatures) {
+            if (c.alive && c.isConvinced) {
+              savedAllyTemplates.push({
+                id: c.id, title: c.title, hp: c.hp, maxHp: c.maxHp,
+                maxDamage: c.maxDamage, runsAt: c.runsAt, experience: c.experience,
+                speed: c.speed, ranged: c.ranged, range: c.range,
+                convinceCost: c.convinceCost,
+                abilities: c.abilities, elementMods: c.elementMods,
+              });
+            }
             c.sprite.destroy();
             if (c.hpBar) {
               c.hpBar.bg.destroy();
@@ -3188,9 +3205,14 @@ function startGame(configPlayer) {
           const lookupRangedFields = (id) => {
             for (const g of typeProgressionGroups) {
               const c = (g.creatures || []).find((x) => Number(x.id) === id);
-              if (c) return { ranged: c.ranged === true, range: Math.max(1, Number(c.range || 1)) };
+              if (c) return {
+                ranged: c.ranged === true,
+                range: Math.max(1, Number(c.range || 1)),
+                convince_cost: Math.max(0, Number(c.convince_cost || 0)),
+                summon_cost: Math.max(0, Number(c.summon_cost || 0)),
+              };
             }
-            return { ranged: false, range: 1 };
+            return { ranged: false, range: 1, convince_cost: 0, summon_cost: 0 };
           };
           const findTemplateById = (id) => {
             for (const arr of Object.values(FORCED_CREATURE_TEMPLATES_BY_LEVEL)) {
@@ -3222,7 +3244,7 @@ function startGame(configPlayer) {
           const group = currentLevelGroup;
           const basePool = (group && group.creatures && group.creatures.length > 0)
             ? group.creatures.filter((c) => c.type_primary === group.type_primary)
-            : [{ id: 1116, title: 'Rat', type_primary: 'Glires', experience: 5, hitpoints: 20, maxDamage: 8, image: 'creature/Rat.gif' }];
+            : [{ id: 1116, title: 'Rat', type_primary: 'Glires', experience: 5, hitpoints: 20, maxDamage: 8, image: 'creature/Rat.gif', convince_cost: 200, summon_cost: 200 }];
           const earlyLevels = EARLY_LEVELS;
           const forcedCreatureIdByLevel = FORCED_CREATURE_ID_BY_LEVEL;
           const forcedCreatureIdsByLevel = FORCED_CREATURE_IDS_BY_LEVEL;
@@ -3441,6 +3463,8 @@ function startGame(configPlayer) {
               elementMods: mergeCreatureElementModsForId(creatureId),
               hpBar: makeHealthBar(0xef4444),
               nameTag: makeNameLabel(template.title, '#f3f4f6'),
+              convinceCost: Math.max(0, Number(template.convince_cost || 0)),
+              isConvinced: false,
             });
             const spawned = creatures[creatures.length - 1];
             spawned.hpBar.bg.setDepth(16);
@@ -3452,6 +3476,49 @@ function startGame(configPlayer) {
           addCombatLog(
             `Floor ${level}: ${first.type_primary} (base dmg ${first.maxDamage}).`
           );
+          // Respawn saved convinced allies near the player start tile
+          for (let i = 0; i < savedAllyTemplates.length; i++) {
+            const tpl = savedAllyTemplates[i];
+            const textureKey = `creature_${tpl.id}`;
+            if (!this.textures.exists(textureKey)) continue;
+            // Find a walkable tile near the player spawn
+            const offsets = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]];
+            let spawnGX = START_TILE.gx + (offsets[i] ? offsets[i][0] : 1);
+            let spawnGY = START_TILE.gy + (offsets[i] ? offsets[i][1] : 0);
+            if (!isWalkable(spawnGX, spawnGY) || creatureAt(spawnGX, spawnGY)) {
+              const found = offsets.find(([ox, oy]) => {
+                const tx = START_TILE.gx + ox;
+                const ty = START_TILE.gy + oy;
+                return isWalkable(tx, ty) && !creatureAt(tx, ty);
+              });
+              if (!found) continue;
+              spawnGX = START_TILE.gx + found[0];
+              spawnGY = START_TILE.gy + found[1];
+            }
+            const sprite = this.add.sprite(centerX(spawnGX), centerY(spawnGY), textureKey);
+            sprite.setOrigin(0.5, 0.5);
+            applyCreatureNormalizedDisplaySize(sprite, this, tileSize);
+            sprite.setDepth(15);
+            const ally = {
+              id: tpl.id, sprite, gx: spawnGX, gy: spawnGY,
+              hp: tpl.hp, maxHp: tpl.maxHp, maxDamage: tpl.maxDamage,
+              runsAt: 0, title: tpl.title, experience: 0,
+              speed: tpl.speed, ranged: tpl.ranged, range: tpl.range,
+              alive: true, nextWanderAt: 0, nextActionAt: 0, nextAbilityAt: 0,
+              aggroLocked: false,
+              abilities: tpl.abilities || [], elementMods: tpl.elementMods || {},
+              hpBar: makeHealthBar(0x22c55e),
+              nameTag: makeNameLabel(tpl.title, '#4ade80'),
+              convinceCost: tpl.convinceCost, isConvinced: true,
+            };
+            ally.hpBar.bg.setDepth(16);
+            ally.hpBar.fill.setDepth(17);
+            ally.nameTag.setDepth(18);
+            ally.sprite.setTint(0x88ffaa);
+            creatures.push(ally);
+            updateCreatureBar(ally);
+          }
+          savedAllyTemplates = [];
         };
         const descendLevel = (toNext = true) => {
           setCombatIndicator(false);
@@ -5412,7 +5479,7 @@ function startGame(configPlayer) {
             const ty = gridY + dy * step;
             if (!isWalkableTile(tx, ty)) break;
             if (isWallTile(tx, ty)) break;
-            const c = creatureAt(tx, ty);
+            const c = enemyCreatureAt(tx, ty);
             if (c) return c;
           }
           return null;
@@ -5783,7 +5850,7 @@ function startGame(configPlayer) {
           const spellElem = inferSpellDamageElementKey(spell);
           const isAreaPattern = !isSingleTargetAttackPattern(pattern);
           for (const t of tiles) {
-            const target = creatureAt(t.gx, t.gy);
+            const target = enemyCreatureAt(t.gx, t.gy);
             if (!target) continue;
             const crit = didAttackCrit();
             const base = inferClassAdjustedSpellDamage(spell, { area: isAreaPattern });
@@ -5888,6 +5955,59 @@ function startGame(configPlayer) {
             updateHud();
             return true;
           }
+          // ── Convince Creature ──────────────────────────────────
+          if (title === 'convince creature') {
+            const front = frontSingleTile();
+            const target = isWalkableTile(front.gx, front.gy) ? enemyCreatureAt(front.gx, front.gy) : null;
+            if (!target) {
+              addCombatLog('No creature in front of you to convince.', LOG_COLORS.SPELL);
+              playerMana = Math.min(playerMaxMana, playerMana + manaCost);
+              updatePlayerBar();
+              return true;
+            }
+            const convinceCost = Math.max(0, Number(target.convinceCost || 0));
+            if (convinceCost <= 0) {
+              addCombatLog(`${target.title} cannot be convinced.`);
+              playerMana = Math.min(playerMaxMana, playerMana + manaCost);
+              updatePlayerBar();
+              return true;
+            }
+            if (playerMana < convinceCost) {
+              addCombatLog(`Not enough mana to convince ${target.title} (need ${convinceCost} MP).`);
+              playerMana = Math.min(playerMaxMana, playerMana + manaCost);
+              updatePlayerBar();
+              return true;
+            }
+            // Deduct the convince cost
+            playerMana = Math.max(0, playerMana - convinceCost);
+            // If at max allies, release the oldest one
+            const currentAllies = aliveAllies();
+            if (currentAllies.length >= MAX_CONVINCED) {
+              const oldest = currentAllies[0];
+              oldest.alive = false;
+              playCreatureDeathEffect(oldest);
+              updateCreatureBar(oldest);
+              addCombatLog(`${oldest.title} (ally) was released.`);
+            }
+            // Convert enemy to ally
+            target.isConvinced = true;
+            target.aggroLocked = false;
+            // Visual: green tint, green name tag, green HP bar
+            target.sprite.setTint(0x88ffaa);
+            if (target.nameTag) target.nameTag.destroy();
+            target.nameTag = makeNameLabel(target.title, '#4ade80');
+            if (target.hpBar) { target.hpBar.bg.destroy(); target.hpBar.fill.destroy(); }
+            target.hpBar = makeHealthBar(0x22c55e);
+            target.hpBar.bg.setDepth(16);
+            target.hpBar.fill.setDepth(17);
+            target.nameTag.setDepth(18);
+            updateCreatureBar(target);
+            showSpellAuraEffect(target.sprite.x, target.sprite.y, spell, 1.2);
+            addCombatLog(`You convinced ${target.title}! It fights by your side now (${convinceCost} MP).`, LOG_COLORS.SPELL);
+            updatePlayerBar();
+            updateHud();
+            return true;
+          }
           if (title === 'cure poison') {
             // Cure Poison is group="Healing" in the data but its only effect
             // is removing the poison DoT — NOT restoring HP. Handle it here
@@ -5918,7 +6038,7 @@ function startGame(configPlayer) {
             const target = findNearestRangedTarget(inferSpellRange(spell));
             if (!target) {
               const front = frontSingleTile();
-              const frontTarget = isWalkableTile(front.gx, front.gy) ? creatureAt(front.gx, front.gy) : null;
+              const frontTarget = isWalkableTile(front.gx, front.gy) ? enemyCreatureAt(front.gx, front.gy) : null;
               if (!frontTarget) {
                 showSpellAuraEffect(player.x, player.y, spell, 0.8);
                 addCombatLog(`Cast [${slotNumber}] ${spell.title}, but no target in range.`, LOG_COLORS.SPELL);
@@ -6318,6 +6438,7 @@ function startGame(configPlayer) {
             ease: 'Sine.easeOut',
             onComplete: () => {
               creature.sprite.clearTint();
+              if (creature.isConvinced) creature.sprite.setTint(0x88ffaa);
               applyCreatureNormalizedDisplaySize(creature.sprite, this, tileSize);
               creature.sprite.x = centerX(creature.gx);
               creature.sprite.y = centerY(creature.gy);
@@ -6385,6 +6506,8 @@ function startGame(configPlayer) {
             nameTag: makeNameLabel(template.title, '#f3f4f6'),
             isSummon: true,
             summonedBy: parent || null,
+            convinceCost: Math.max(0, Number(template.convince_cost || 0)),
+            isConvinced: false,
           };
           fresh.hpBar.bg.setDepth(16);
           fresh.hpBar.fill.setDepth(17);
@@ -7397,6 +7520,119 @@ function startGame(configPlayer) {
           return true;
         };
         const tileKey = (x, y) => `${x},${y}`;
+        // ── Ally AI: find nearest enemy and path toward it ────────
+        const findNearestEnemy = (fromX, fromY) => {
+          let best = null;
+          let bestDist = Infinity;
+          for (const c of aliveCreatures()) {
+            const d = Math.abs(c.gx - fromX) + Math.abs(c.gy - fromY);
+            if (d < bestDist) { bestDist = d; best = c; }
+          }
+          return best;
+        };
+        const findNextStepToTarget = (fromX, fromY, targetGX, targetGY) => {
+          const startKey = tileKey(fromX, fromY);
+          if (isCreatureMeleeAdjacent(fromX, fromY, targetGX, targetGY)) return null;
+          const goalKeys = new Set();
+          const neigh = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+          for (const [dx, dy] of neigh) {
+            const px = targetGX + dx;
+            const py = targetGY + dy;
+            if (!isWalkable(px, py)) continue;
+            const blocker = creatureAt(px, py);
+            if (blocker && (px !== fromX || py !== fromY)) continue;
+            goalKeys.add(tileKey(px, py));
+          }
+          if (goalKeys.size === 0) return null;
+          const queue = [{ x: fromX, y: fromY }];
+          const visited = new Set([startKey]);
+          const prev = new Map();
+          const dirs = [{ x:1,y:0 },{ x:-1,y:0 },{ x:0,y:1 },{ x:0,y:-1 }];
+          while (queue.length > 0) {
+            const cur = queue.shift();
+            const curKey = tileKey(cur.x, cur.y);
+            if (goalKeys.has(curKey)) {
+              if (curKey === startKey) return null;
+              let step = { x: cur.x, y: cur.y };
+              let stepPrev = prev.get(curKey);
+              while (stepPrev && tileKey(stepPrev.x, stepPrev.y) !== startKey) {
+                step = stepPrev;
+                stepPrev = prev.get(tileKey(stepPrev.x, stepPrev.y));
+              }
+              return step;
+            }
+            for (const d of dirs) {
+              const nx = cur.x + d.x;
+              const ny = cur.y + d.y;
+              const key = tileKey(nx, ny);
+              if (visited.has(key)) continue;
+              if (!isWalkable(nx, ny)) continue;
+              if (key !== startKey && isOccupiedByActor(nx, ny)) continue;
+              visited.add(key);
+              prev.set(key, cur);
+              queue.push({ x: nx, y: ny });
+            }
+          }
+          return null;
+        };
+        const allyTurn = (ally, now) => {
+          if (now < ally.nextActionAt) return;
+          const enemies = aliveCreatures();
+          if (enemies.length === 0) {
+            // No enemies — follow player
+            const stepToPlayer = findNextStepToTarget(ally.gx, ally.gy, gridX, gridY);
+            if (stepToPlayer && !(stepToPlayer.x === gridX && stepToPlayer.y === gridY)) {
+              orientCreatureSprite(ally, stepToPlayer.x - ally.gx, stepToPlayer.y - ally.gy);
+              ally.gx = stepToPlayer.x;
+              ally.gy = stepToPlayer.y;
+              ally.sprite.x = centerX(ally.gx);
+              ally.sprite.y = centerY(ally.gy);
+              updateCreatureBar(ally);
+            }
+            ally.nextActionAt = now + actionDelayFromSpeed(ally.speed);
+            return;
+          }
+          // Find nearest enemy
+          const target = findNearestEnemy(ally.gx, ally.gy);
+          if (!target) { ally.nextActionAt = now + 200; return; }
+          // If adjacent — attack
+          if (isCreatureMeleeAdjacent(ally.gx, ally.gy, target.gx, target.gy)) {
+            orientCreatureSprite(ally, target.gx - ally.gx, target.gy - ally.gy);
+            if (Math.random() < 0.15) {
+              // Miss
+              showMissSmoke(target.sprite.x, target.sprite.y);
+            } else {
+              const dmg = Math.max(1, Phaser.Math.Between(1, ally.maxDamage));
+              target.hp = Math.max(0, target.hp - dmg);
+              showCreatureHitEffect(target, dmg);
+              addCombatLog(`${ally.title} (ally) hits ${target.title} for ${dmg}.`);
+              if (target.hp <= 0) {
+                target.alive = false;
+                playCreatureDeathEffect(target);
+                updateCreatureBar(target);
+                grantPlayerXp(effectiveXpFromCreature(target));
+                runKills += 1;
+                addCombatLog(`${target.title} dies from ${ally.title}'s attack.`);
+                killSummonsOf(target);
+              } else {
+                updateCreatureBar(target);
+              }
+            }
+            ally.nextActionAt = now + actionDelayFromSpeed(ally.speed);
+            return;
+          }
+          // Move toward enemy
+          const step = findNextStepToTarget(ally.gx, ally.gy, target.gx, target.gy);
+          if (step && !(step.x === target.gx && step.y === target.gy)) {
+            orientCreatureSprite(ally, step.x - ally.gx, step.y - ally.gy);
+            ally.gx = step.x;
+            ally.gy = step.y;
+            ally.sprite.x = centerX(ally.gx);
+            ally.sprite.y = centerY(ally.gy);
+            updateCreatureBar(ally);
+          }
+          ally.nextActionAt = now + actionDelayFromSpeed(ally.speed);
+        };
         const findNextStepToPlayer = (fromX, fromY) => {
           const startKey = tileKey(fromX, fromY);
           if (isCreatureMeleeAdjacent(fromX, fromY, gridX, gridY)) return null;
@@ -7688,7 +7924,38 @@ function startGame(configPlayer) {
                 break;
               }
             }
+            // --- Melee attack on adjacent ally (if didn't attack player) ---
+            if (!acted) {
+              const adjacentAlly = aliveAllies().find(a =>
+                isCreatureMeleeAdjacent(creature.gx, creature.gy, a.gx, a.gy)
+              );
+              if (adjacentAlly) {
+                orientCreatureSprite(creature, adjacentAlly.gx - creature.gx, adjacentAlly.gy - creature.gy);
+                if (didAttackMiss()) {
+                  showMissSmoke(adjacentAlly.sprite.x, adjacentAlly.sprite.y);
+                  addCombatLog(`${creature.title} misses ${adjacentAlly.title}.`);
+                } else {
+                  const dmg = Math.max(1, Phaser.Math.Between(1, creature.maxDamage));
+                  adjacentAlly.hp = Math.max(0, adjacentAlly.hp - dmg);
+                  showCreatureHitEffect(adjacentAlly, dmg);
+                  addCombatLog(`${creature.title} hits ${adjacentAlly.title} (ally) for ${dmg}.`);
+                  if (adjacentAlly.hp <= 0) {
+                    adjacentAlly.alive = false;
+                    playCreatureDeathEffect(adjacentAlly);
+                    updateCreatureBar(adjacentAlly);
+                    addCombatLog(`${adjacentAlly.title} (ally) has been killed by ${creature.title}.`);
+                  } else {
+                    updateCreatureBar(adjacentAlly);
+                  }
+                }
+                acted = true;
+              }
+            }
             creature.nextActionAt = now + (acted ? actionDelayFromSpeed(creature.speed) : 120);
+          }
+          // Ally turns (convinced creatures)
+          for (const ally of aliveAllies()) {
+            allyTurn(ally, now);
           }
           updatePlayerBar();
           updateHud();
@@ -7945,7 +8212,7 @@ function startGame(configPlayer) {
             return;
           }
 
-          let targetCreature = creatureAt(targetGX, targetGY);
+          let targetCreature = enemyCreatureAt(targetGX, targetGY);
           if (!targetCreature && handIsDistance) {
             targetCreature = findRangedTargetInDirection(dx, dy, effectiveWeaponRange(handWeapon));
           }
