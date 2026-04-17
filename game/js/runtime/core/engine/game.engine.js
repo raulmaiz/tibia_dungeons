@@ -3364,9 +3364,13 @@ function startGame(configPlayer) {
             Phaser.Utils.Array.Shuffle(levelPool);
           }
           if (!exactTemplates) {
-            creaturesTargetCount = Number(level) === 1
-              ? 10
-              : Phaser.Math.Between(MIN_CREATURES_PER_LEVEL, MAX_CREATURES_PER_LEVEL);
+            if (Number(level) === 1) {
+              creaturesTargetCount = 10;
+            } else if (Number(level) > 20) {
+              creaturesTargetCount = Phaser.Math.Between(1, 100);
+            } else {
+              creaturesTargetCount = Phaser.Math.Between(MIN_CREATURES_PER_LEVEL, MAX_CREATURES_PER_LEVEL);
+            }
           }
           const templates = exactTemplates || pickRandomCreatures(levelPool, creaturesTargetCount);
           if (!templates || templates.length === 0) {
