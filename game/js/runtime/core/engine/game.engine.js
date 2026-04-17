@@ -62,6 +62,21 @@ let itemsShopCatalog = [];
 let creatureAbilitiesById = new Map();
 let creatureDamageModifiersById = new Map();
 let inventorySetEquippedSlotVisual = null;
+
+// Spell ID → { itemId, title, count } for arrow/bolt conjure spells
+const CONJURE_AMMO_MAP = new Map([
+  [68921, { itemId: 68886, title: 'Simple Arrow',  count: 30 }],
+  [1805,  { itemId: 1657,  title: 'Arrow',         count: 10 }],
+  [1905,  { itemId: 2009,  title: 'Poison Arrow',  count: 7 }],
+  [1912,  { itemId: 1673,  title: 'Bolt',          count: 5 }],
+  [1940,  { itemId: 2015,  title: 'Burst Arrow',   count: 8 }],
+  [1964,  { itemId: 2726,  title: 'Power Bolt',    count: 10 }],
+  [16502, { itemId: 16501, title: 'Sniper Arrow',  count: 5 }],
+  [16503, { itemId: 16498, title: 'Piercing Bolt', count: 5 }],
+  [80912, { itemId: 80872, title: 'Diamond Arrow', count: 100 }],
+  [80914, { itemId: 80873, title: 'Spectral Bolt', count: 100 }],
+]);
+const _conjureAmmoCache = new Map();
 let inventoryClearEquippedSlotVisual = null;
 // Equipment-light bridge: the UI layer updates this whenever a Light Sources
 // item is equipped/unequipped. The scene wires it to
@@ -1839,6 +1854,20 @@ function setupSelectorUI() {
       loadKnownItemImages(),
     ]);
 
+    // Pre-cache ammo items not in shop catalog (value_buy=0)
+    for (const [, mapping] of CONJURE_AMMO_MAP) {
+      const inShop = (itemsShopCatalog || []).some(it => Number(it.id) === mapping.itemId);
+      if (!inShop) {
+        try {
+          const full = await getItemByArticleId(mapping.itemId);
+          if (full) {
+            full.isStackable = true;
+            _conjureAmmoCache.set(mapping.itemId, full);
+          }
+        } catch { /* best effort */ }
+      }
+    }
+
     setLoadingProgress(45, 'Starting game engine...');
     addCoinsToInventory(0);
     if (snap) {
@@ -2081,7 +2110,9 @@ function startGame(configPlayer) {
         const sbFistLabel = document.getElementById('sbFistLabel');
         const sbFist = document.getElementById('sbFist');
         const sbShield = document.getElementById('sbShield');
+        const sbShieldLabel = document.getElementById('sbShieldLabel');
         const sbCap = document.getElementById('sbCap');
+        const _isMobileView = () => window.innerWidth < 1200;
         const capitalise = (s) => String(s || '').charAt(0).toUpperCase() + String(s || '').slice(1);
 
         const LOG_COLORS = {
@@ -5050,18 +5081,23 @@ function startGame(configPlayer) {
         updateOpenMarketButton();
         updateSaveGameButton();
 
-        // ── Game Settings: zoom slider ───────────────────────────────
+        // ── Game Settings: zoom slider (persisted in localStorage) ──
         const zoomSlider = document.getElementById('gameZoomSlider');
         const zoomValueEl = document.getElementById('gameZoomValue');
         if (zoomSlider) {
           const baseW = game.scale.width;
           const baseH = game.scale.height;
+          const applyZoom = (val) => {
+            const pct = Number(val) / 100;
+            if (zoomValueEl) zoomValueEl.textContent = val + '%';
+            zoomSlider.value = val;
+            game.scale.resize(Math.round(baseW * pct), Math.round(baseH * pct));
+          };
+          const saved = localStorage.getItem('td.gameZoom');
+          if (saved && Number(saved) >= 50 && Number(saved) <= 150) applyZoom(Number(saved));
           zoomSlider.addEventListener('input', () => {
-            const pct = Number(zoomSlider.value) / 100;
-            if (zoomValueEl) zoomValueEl.textContent = zoomSlider.value + '%';
-            const newW = Math.round(baseW * pct);
-            const newH = Math.round(baseH * pct);
-            game.scale.resize(newW, newH);
+            applyZoom(zoomSlider.value);
+            try { localStorage.setItem('td.gameZoom', zoomSlider.value); } catch {}
           });
         }
 
@@ -5132,11 +5168,26 @@ function startGame(configPlayer) {
           if (sbMpText) sbMpText.textContent = `${playerMana}/${playerMaxMana}`;
           if (sbML) sbML.textContent = String(playerMagicLevel);
           if (sbSkill) sbSkill.textContent = `${skillLabel} ${skillLevel} (${skillPct}%)`;
-          const fistShortLabel = skillType ? skillLabel.split(' ')[0] : 'Fist';
+          const fistFullLabel = skillType ? skillLabel.split(' ')[0] : 'Fist';
           const fistDisplayLevel = skillType ? skillLevel : playerFistLevel;
-          if (sbFistLabel) sbFistLabel.textContent = fistShortLabel;
+          const mobile = _isMobileView();
+          if (sbFistLabel) sbFistLabel.textContent = mobile ? fistFullLabel.slice(0, 3) : fistFullLabel;
           if (sbFist) sbFist.textContent = String(fistDisplayLevel);
-          if (sbShield) sbShield.textContent = String(playerShieldingLevel);
+          // Show Ammo count instead of Shielding when using a two-handed distance weapon
+          const handWeaponHud = getEquippedHandWeapon();
+          const handAttrsHud = Array.isArray(handWeaponHud && handWeaponHud.attributes) ? handWeaponHud.attributes : [];
+          const isTwoHandedDist = handWeaponHud
+            && String(handWeaponHud.item_type || '').toLowerCase() === 'distance weapons'
+            && handAttrsHud.some(a => a && String(a.name || '').toLowerCase() === 'hands' && String(a.value || '').toLowerCase() === 'two');
+          if (isTwoHandedDist) {
+            const ammoItem = getEquippedAmmo();
+            const ammoCount = ammoItem ? Math.max(1, Number(ammoItem.count || 1)) : 0;
+            if (sbShieldLabel) sbShieldLabel.textContent = mobile ? 'Amm' : 'Ammo';
+            if (sbShield) sbShield.textContent = String(ammoCount);
+          } else {
+            if (sbShieldLabel) sbShieldLabel.textContent = mobile ? 'Shi' : 'Shield';
+            if (sbShield) sbShield.textContent = String(playerShieldingLevel);
+          }
           if (sbCap) {
             sbCap.textContent = `CAP ${capCurrentText}/${capTotalText}`;
             const capRatio = capTotal > 0 ? Phaser.Math.Clamp(capCurrent / capTotal, 0, 1) : 0;
@@ -5566,39 +5617,34 @@ function startGame(configPlayer) {
           return Math.max(1, currentWeaponDamage * 2);
         };
         const conjureArrowPayloadFromSpell = (spell) => {
+          const id = Number(spell && spell.article_id);
+          const mapping = CONJURE_AMMO_MAP.get(id);
+          if (mapping) return { itemId: mapping.itemId, count: mapping.count };
+          // Fallback: parse effect text
           const effectRaw = String((spell && spell.raw && spell.raw.effect) || '').trim();
           if (!effectRaw) return null;
-          // Ignore legacy descriptions like "used to create ...".
-          if (/used\s+to\s+create/i.test(effectRaw)) return null;
-          const m = effectRaw.match(/creates?\s+(\d+)\s+(.+?)\.\s*$/i);
+          const m = effectRaw.match(/(?:creates?|create)\s+(\d+)\s+(.+?)\.?\s*$/i);
           if (!m) return null;
           const count = Math.max(1, Number(m[1] || 1));
-          const createdNameRaw = String(m[2] || '').trim();
-          if (!/arrow/i.test(createdNameRaw)) return null;
-          const normalized = createdNameRaw
-            .replace(/\barrows\b/ig, 'Arrow')
-            .replace(/\s+/g, ' ')
-            .trim();
-          return {
-            count,
-            title: normalized,
-          };
+          const name = String(m[2] || '').trim();
+          if (!/arrow|bolt/i.test(name)) return null;
+          return { count, title: name.replace(/\barrows\b/ig, 'Arrow').replace(/\bbolts\b/ig, 'Bolt').replace(/\s+/g, ' ').trim() };
         };
-        const resolveConjuredArrowItem = (arrowTitle) => {
-          const wanted = String(arrowTitle || '').trim().toLowerCase();
+        const resolveConjuredArrowItem = (payload) => {
+          if (payload.itemId) {
+            const byId = (itemsShopCatalog || []).find(it => Number(it.id) === payload.itemId);
+            if (byId) return byId;
+            if (_conjureAmmoCache.has(payload.itemId)) return _conjureAmmoCache.get(payload.itemId);
+          }
+          const wanted = String(payload.title || '').trim().toLowerCase();
           if (!wanted) return null;
-          const ammoItems = (itemsShopCatalog || []).filter((it) => (
-            it
-            && String(it.item_type || '').toLowerCase() === 'ammunition'
-          ));
-          // Exact title match first.
-          const exact = ammoItems.find((it) => String(it.title || '').trim().toLowerCase() === wanted);
+          const ammoItems = (itemsShopCatalog || []).filter(it =>
+            it && String(it.item_type || '').toLowerCase() === 'ammunition'
+          );
+          const exact = ammoItems.find(it => String(it.title || '').trim().toLowerCase() === wanted);
           if (exact) return exact;
-          // Singular/plural fallback.
-          const singularWanted = wanted.replace(/\barrows\b/g, 'arrow').trim();
-          const singular = ammoItems.find((it) => String(it.title || '').trim().toLowerCase() === singularWanted);
-          if (singular) return singular;
-          return null;
+          const singular = wanted.replace(/\barrows\b/g, 'arrow').replace(/\bbolts\b/g, 'bolt').trim();
+          return ammoItems.find(it => String(it.title || '').trim().toLowerCase() === singular) || null;
         };
         const placeConjuredArrow = (ammoItem, amount) => {
           if (!ammoItem) return null;
@@ -5943,7 +5989,7 @@ function startGame(configPlayer) {
           }
           const conjuredArrow = conjureArrowPayloadFromSpell(spell);
           if (conjuredArrow) {
-            const ammoItem = resolveConjuredArrowItem(conjuredArrow.title);
+            const ammoItem = resolveConjuredArrowItem(conjuredArrow);
             if (!ammoItem) {
               addCombatLog(`Cast [${slotNumber}] ${spell.title}, but no matching arrow item was found.`, LOG_COLORS.SPELL);
             } else {
@@ -6424,6 +6470,48 @@ function startGame(configPlayer) {
             if (isCrit) {
               showCritText(targetCreature.sprite.x, targetCreature.sprite.y);
             }
+            // Burst Arrow: AoE fire splash + temporary light
+            const _firedAmmo = getEquippedAmmo();
+            const _firedAmmoTitle = String((_firedAmmo && _firedAmmo.title) || '').toLowerCase();
+            if (_firedAmmoTitle === 'burst arrow') {
+              const tx = targetCreature.sprite.x;
+              const ty = targetCreature.sprite.y;
+              const splashDmg = Math.max(1, Math.floor(dealt * 0.4));
+              // Damage adjacent enemies
+              const splashTargets = aliveCreatures().filter(c =>
+                c !== targetCreature
+                && Math.abs(c.gx - targetCreature.gx) <= 1
+                && Math.abs(c.gy - targetCreature.gy) <= 1
+              );
+              for (const st of splashTargets) {
+                const fireDmg = applyIncomingElementalDamage(splashDmg, st, 'fire');
+                st.hp = Math.max(0, st.hp - fireDmg);
+                showCreatureHitEffect(st, fireDmg);
+                addCombatLog(`Burst Arrow explosion hits ${st.title} for ${fireDmg} (fire).`, LOG_COLORS.HIT);
+                if (st.hp <= 0) {
+                  st.alive = false;
+                  playCreatureDeathEffect(st);
+                  updateCreatureBar(st);
+                  grantPlayerXp(effectiveXpFromCreature(st));
+                  runKills += 1;
+                  addCombatLog(`${st.title} dies from the explosion.`);
+                  killSummonsOf(st);
+                }
+              }
+              // Fire explosion VFX: large ring + sparks + ground glow
+              showAmmoImpactEffect(tx, ty, 'explosion');
+              const fireGlow = this.add.circle(tx, ty, tileSize * 0.8, 0xf97316, 0.35);
+              fireGlow.setDepth(4);
+              this.tweens.add({
+                targets: fireGlow,
+                scaleX: 2.2, scaleY: 2.2, alpha: 0,
+                duration: 600, ease: 'Quad.easeOut',
+                onComplete: () => fireGlow.destroy(),
+              });
+              // Temporary light at impact point (3 seconds)
+              const lightId = `burst_${Date.now()}_${Math.random()}`;
+              floorAtmosphere.addAreaLight(lightId, tx, ty, 2.5, 3000);
+            }
             const dtHit = magicWeaponDamageTypeSuffix(activeWeapon);
             addCombatLog(
               isCrit
@@ -6549,6 +6637,32 @@ function startGame(configPlayer) {
         };
         const didAttackCrit = () => Math.random() < 0.1;
         const applyCriticalDamage = (baseDamage) => Math.max(1, Math.round(baseDamage * 2.5)); // +150%
+        // Ammo-aware projectile visuals
+        const AMMO_VISUALS = {
+          'simple arrow':      { glyph: '➵', color: '#a8a29e', size: 14, impact: null },
+          'arrow':             { glyph: '➵', color: '#f59e0b', size: 14, impact: null },
+          'poison arrow':      { glyph: '➵', color: '#4ade80', size: 14, impact: 'poison' },
+          'burst arrow':       { glyph: '➵', color: '#f97316', size: 16, impact: 'explosion' },
+          'sniper arrow':      { glyph: '➵', color: '#38bdf8', size: 15, impact: 'ice' },
+          'diamond arrow':     { glyph: '◇', color: '#e0f2fe', size: 16, impact: 'diamond' },
+          'crystalline arrow': { glyph: '◇', color: '#a78bfa', size: 15, impact: 'crystal' },
+          'onyx arrow':        { glyph: '➵', color: '#1e1b4b', size: 15, impact: 'dark' },
+          'earth arrow':       { glyph: '➵', color: '#84cc16', size: 14, impact: 'earth' },
+          'flaming arrow':     { glyph: '➵', color: '#ef4444', size: 15, impact: 'fire' },
+          'shiver arrow':      { glyph: '➵', color: '#7dd3fc', size: 15, impact: 'ice' },
+          'flash arrow':       { glyph: '➵', color: '#facc15', size: 15, impact: 'energy' },
+          'envenomed arrow':   { glyph: '➵', color: '#22c55e', size: 14, impact: 'poison' },
+          'tarsal arrow':      { glyph: '➵', color: '#d97706', size: 14, impact: 'earth' },
+          'power arrow':       { glyph: '➵', color: '#dc2626', size: 15, impact: 'fire' },
+          'bolt':              { glyph: '✦', color: '#d4d4d8', size: 14, impact: null },
+          'power bolt':        { glyph: '✦', color: '#ef4444', size: 15, impact: 'fire' },
+          'piercing bolt':     { glyph: '✦', color: '#60a5fa', size: 15, impact: 'ice' },
+          'infernal bolt':     { glyph: '✦', color: '#dc2626', size: 16, impact: 'explosion' },
+          'spectral bolt':     { glyph: '✦', color: '#c084fc', size: 16, impact: 'energy' },
+          'vortex bolt':       { glyph: '✦', color: '#818cf8', size: 15, impact: 'energy' },
+          'prismatic bolt':    { glyph: '✦', color: '#f0abfc', size: 15, impact: 'crystal' },
+          'drill bolt':        { glyph: '✦', color: '#a3a3a3', size: 14, impact: 'earth' },
+        };
         const projectileVisualForWeapon = (weapon) => {
           const title = String((weapon && weapon.title) || '').toLowerCase();
           const itemType = String((weapon && weapon.item_type) || '').toLowerCase();
@@ -6561,10 +6675,68 @@ function startGame(configPlayer) {
           if (title.includes('spear')) return { glyph: '➤', color: '#f8fafc', size: 16 };
           if (title.includes('snowball')) return { glyph: '●', color: '#f8fafc', size: 14 };
           if (title.includes('stone')) return { glyph: '●', color: '#cbd5e1', size: 14 };
+          // Check equipped ammo for bow/crossbow
+          const ammo = getEquippedAmmo();
+          if (ammo) {
+            const ammoVisual = AMMO_VISUALS[String(ammo.title || '').toLowerCase()];
+            if (ammoVisual) return ammoVisual;
+          }
           if (secondary.includes('crossbow')) return { glyph: '✦', color: '#f59e0b', size: 14 };
           if (secondary.includes('bow')) return { glyph: '➵', color: '#f59e0b', size: 14 };
           if (secondary.includes('throwing')) return { glyph: '◆', color: '#e2e8f0', size: 14 };
           return { glyph: '•', color: '#f8fafc', size: 14 };
+        };
+        const showAmmoImpactEffect = (tx, ty, impactType) => {
+          if (!impactType) return;
+          const scene = this;
+          if (impactType === 'explosion') {
+            // Orange/red expanding ring + sparks
+            const ring = scene.add.circle(tx, ty, 4, 0xf97316, 0.8);
+            ring.setDepth(20);
+            scene.tweens.add({ targets: ring, scaleX: 3, scaleY: 3, alpha: 0, duration: 350, ease: 'Quad.easeOut', onComplete: () => ring.destroy() });
+            radialSparkBurst(scene, tx, ty, 0xef4444, 14);
+            radialSparkBurst(scene, tx, ty, 0xfbbf24, 8);
+          } else if (impactType === 'fire') {
+            radialSparkBurst(scene, tx, ty, 0xef4444, 10);
+            const flame = scene.add.circle(tx, ty - 4, 3, 0xf97316, 0.7);
+            flame.setDepth(20);
+            scene.tweens.add({ targets: flame, y: ty - 18, alpha: 0, scaleX: 2, scaleY: 2, duration: 400, ease: 'Sine.easeOut', onComplete: () => flame.destroy() });
+          } else if (impactType === 'poison') {
+            radialSparkBurst(scene, tx, ty, 0x4ade80, 10);
+            for (let i = 0; i < 3; i++) {
+              const drop = scene.add.circle(tx + (Math.random() - 0.5) * 16, ty + (Math.random() - 0.5) * 8, 2, 0x22c55e, 0.8);
+              drop.setDepth(20);
+              scene.tweens.add({ targets: drop, y: drop.y + 10, alpha: 0, duration: 500 + i * 100, onComplete: () => drop.destroy() });
+            }
+          } else if (impactType === 'ice') {
+            radialSparkBurst(scene, tx, ty, 0x7dd3fc, 10);
+            const frost = scene.add.circle(tx, ty, 5, 0xbae6fd, 0.6);
+            frost.setDepth(20);
+            scene.tweens.add({ targets: frost, scaleX: 2.5, scaleY: 2.5, alpha: 0, duration: 400, ease: 'Quad.easeOut', onComplete: () => frost.destroy() });
+          } else if (impactType === 'energy') {
+            radialSparkBurst(scene, tx, ty, 0xfacc15, 12);
+            const bolt = scene.add.circle(tx, ty, 3, 0xfde68a, 0.9);
+            bolt.setDepth(20);
+            scene.tweens.add({ targets: bolt, scaleX: 3, scaleY: 0.5, alpha: 0, duration: 250, ease: 'Sine.easeOut', onComplete: () => bolt.destroy() });
+          } else if (impactType === 'earth') {
+            radialSparkBurst(scene, tx, ty, 0x84cc16, 8);
+            for (let i = 0; i < 4; i++) {
+              const rock = scene.add.circle(tx + (Math.random() - 0.5) * 14, ty + (Math.random() - 0.5) * 14, 2 + Math.random(), 0x65a30d, 0.7);
+              rock.setDepth(20);
+              scene.tweens.add({ targets: rock, y: rock.y + 8, alpha: 0, duration: 350 + i * 80, onComplete: () => rock.destroy() });
+            }
+          } else if (impactType === 'diamond' || impactType === 'crystal') {
+            const color = impactType === 'diamond' ? 0xe0f2fe : 0xa78bfa;
+            radialSparkBurst(scene, tx, ty, color, 12);
+            const shard = scene.add.star(tx, ty, 4, 3, 8, color, 0.9);
+            shard.setDepth(20);
+            scene.tweens.add({ targets: shard, angle: 90, scaleX: 2, scaleY: 2, alpha: 0, duration: 400, ease: 'Quad.easeOut', onComplete: () => shard.destroy() });
+          } else if (impactType === 'dark') {
+            radialSparkBurst(scene, tx, ty, 0x6366f1, 10);
+            const void_ = scene.add.circle(tx, ty, 6, 0x1e1b4b, 0.8);
+            void_.setDepth(20);
+            scene.tweens.add({ targets: void_, scaleX: 2, scaleY: 2, alpha: 0, duration: 500, ease: 'Cubic.easeOut', onComplete: () => void_.destroy() });
+          }
         };
         const showRangedProjectileEffect = (weapon, target) => {
           if (!weapon || !target || !target.sprite) return;
@@ -6579,6 +6751,12 @@ function startGame(configPlayer) {
             return;
           }
           rangedProjectileLine(this, player.x, player.y, target.sprite.x, target.sprite.y, visual, 150);
+          // Ammo impact effect on hit
+          if (visual.impact) {
+            this.time.delayedCall(150, () => {
+              showAmmoImpactEffect(target.sprite.x, target.sprite.y, visual.impact);
+            });
+          }
         };
         const showCritText = (x, y) => {
           critBanner(this, x, y, tileSize);

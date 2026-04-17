@@ -5,10 +5,16 @@
  */
 export const CHANGELOG = [
   {
-    version: '0.3.0',
+    version: '0.5.0',
     date: '2026-04-17',
     entries: [
-      'Fix: character selection screen adapted to mobile (scrollable)',
+      'Ammo conjure spells: all arrow/bolt spells now create the correct item',
+      'Unique projectile visuals and impact effects for each ammo type',
+      'Burst Arrow: AoE fire splash damage + temporary light on impact',
+      'Stats bar: ammo count shown when using two-handed distance weapons',
+      'Stats bar: compact labels on mobile (3-char abbreviations)',
+      'Game Settings: zoom level persists across sessions',
+      'Fix: character selection screen scrollable on mobile',
     ],
   },
   {
