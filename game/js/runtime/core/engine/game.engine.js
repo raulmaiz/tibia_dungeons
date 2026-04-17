@@ -3511,8 +3511,8 @@ function startGame(configPlayer) {
           addCombatLog(
             `Floor ${level}: ${first.type_primary} (base dmg ${first.maxDamage}).`
           );
-          // Respawn saved convinced allies near the player start tile
-          for (let i = 0; i < savedAllyTemplates.length; i++) {
+          // Respawn saved convinced allies near the player start tile (capped)
+          for (let i = 0; i < Math.min(savedAllyTemplates.length, MAX_CONVINCED); i++) {
             const tpl = savedAllyTemplates[i];
             const textureKey = `creature_${tpl.id}`;
             if (!this.textures.exists(textureKey)) continue;
@@ -6010,7 +6010,7 @@ function startGame(configPlayer) {
           if (title === 'convince creature') {
             const front = frontSingleTile();
             const target = isWalkableTile(front.gx, front.gy) ? enemyCreatureAt(front.gx, front.gy) : null;
-            if (!target) {
+            if (!target || !target.alive) {
               addCombatLog('No creature in front of you to convince.', LOG_COLORS.SPELL);
               playerMana = Math.min(playerMaxMana, playerMana + manaCost);
               updatePlayerBar();
@@ -6473,9 +6473,9 @@ function startGame(configPlayer) {
             // Burst Arrow: AoE fire splash + temporary light
             const _firedAmmo = getEquippedAmmo();
             const _firedAmmoTitle = String((_firedAmmo && _firedAmmo.title) || '').toLowerCase();
-            if (_firedAmmoTitle === 'burst arrow') {
-              const tx = targetCreature.sprite.x;
-              const ty = targetCreature.sprite.y;
+            if (_firedAmmoTitle === 'burst arrow' && targetCreature.sprite) {
+              const tx = centerX(targetCreature.gx);
+              const ty = centerY(targetCreature.gy);
               const splashDmg = Math.max(1, Math.floor(dealt * 0.4));
               // Damage adjacent enemies
               const splashTargets = aliveCreatures().filter(c =>
@@ -8006,6 +8006,8 @@ function startGame(configPlayer) {
           return null;
         };
         const allyTurn = (ally, now) => {
+          if (gameOver || playerDead) return;
+          if (!ally.alive) return;
           if (now < ally.nextActionAt) return;
           const enemies = aliveCreatures();
           if (enemies.length === 0) {
@@ -8024,13 +8026,13 @@ function startGame(configPlayer) {
           }
           // Find nearest enemy
           const target = findNearestEnemy(ally.gx, ally.gy);
-          if (!target) { ally.nextActionAt = now + 200; return; }
+          if (!target || !target.alive) { ally.nextActionAt = now + 200; return; }
           // If adjacent — attack
           if (isCreatureMeleeAdjacent(ally.gx, ally.gy, target.gx, target.gy)) {
             orientCreatureSprite(ally, target.gx - ally.gx, target.gy - ally.gy);
             if (Math.random() < 0.15) {
               // Miss
-              showMissSmoke(target.sprite.x, target.sprite.y);
+              if (target.sprite) showMissSmoke(target.sprite.x, target.sprite.y);
             } else {
               const dmg = Math.max(1, Phaser.Math.Between(1, ally.maxDamage));
               target.hp = Math.max(0, target.hp - dmg);
@@ -8590,7 +8592,7 @@ function startGame(configPlayer) {
             else if (Phaser.Input.Keyboard.JustDown(consumableKeys.G)) consumableType = 'mana';
             else if (Phaser.Input.Keyboard.JustDown(consumableKeys.H)) consumableType = 'health';
           }
-          if (consumableType) {
+          if (consumableType && !gameOver && !playerDead) {
             consumeConsumable(consumableType);
           }
           // Keep consumable bar in sync (cheap — uses key cache)
