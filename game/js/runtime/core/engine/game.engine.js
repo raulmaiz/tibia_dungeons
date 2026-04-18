@@ -6212,6 +6212,38 @@ function startGame(configPlayer) {
             updateHud();
             return true;
           }
+          // ── Food (Exevo Pan) ───────────────────────────────────
+          if (title === 'food (spell)' || title === 'food') {
+            const foods = (itemsShopCatalog || []).filter((it) =>
+              it && String(it.item_type || '').toLowerCase() === 'food'
+            );
+            if (foods.length === 0) {
+              addCombatLog('No food items available to conjure.', LOG_COLORS.SPELL);
+              playerMana = Math.min(playerMaxMana, playerMana + manaCost);
+              updatePlayerBar();
+              return true;
+            }
+            const inv = window.debugInventory;
+            const stacks = 2 + Math.floor(Math.random() * 3); // 2..4 stacks
+            const conjured = [];
+            for (let i = 0; i < stacks; i++) {
+              const food = foods[Math.floor(Math.random() * foods.length)];
+              const qty = 1 + Math.floor(Math.random() * 3); // 1..3 per stack
+              const ok = inv && typeof inv.addLoot === 'function'
+                ? inv.addLoot({ ...food, isStackable: true, count: qty })
+                : false;
+              if (ok) conjured.push(`${qty}x ${food.title}`);
+            }
+            showSpellAuraEffect(player.x, player.y, spell, 1.0);
+            if (conjured.length > 0) {
+              addCombatLog(`Cast [${slotNumber}] ${spell.title}: ${conjured.join(', ')} added to loot bag.`, LOG_COLORS.SPELL);
+            } else {
+              addCombatLog(`Cast [${slotNumber}] ${spell.title}, but bag is full.`, LOG_COLORS.SPELL);
+            }
+            updatePlayerBar();
+            updateHud();
+            return true;
+          }
           // ── Convince Creature ──────────────────────────────────
           if (title === 'convince creature') {
             const front = frontSingleTile();
