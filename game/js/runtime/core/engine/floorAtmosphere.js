@@ -2062,9 +2062,17 @@ export function createFloorAtmosphere(scene, opts) {
   function setEquipmentLight(radiusTiles, durationMs = 0, elapsedMs = 0) {
     equipmentLightRadiusPx = Math.max(0, Number(radiusTiles) || 0) * tileSize;
     equipmentLightDurationMs = Math.max(0, Number(durationMs) || 0);
-    const sceneNow = Number(scene.time && scene.time.now) || 0;
+    // updateDarkness is called with this.time.now, which after the first Phaser
+    // preUpdate equals performance.now(). During scene.create it is still 0 —
+    // using it here for an absolute start time would skew equipmentLightStartTime
+    // by the page-lifetime, making the torch appear already partially burnt
+    // (or fully burnt) at scene start. Anchor on performance.now() so the two
+    // timestamps share the same origin regardless of when we're called.
+    const nowPerf = (typeof performance !== 'undefined' && typeof performance.now === 'function')
+      ? performance.now()
+      : Date.now();
     equipmentLightStartTime = equipmentLightDurationMs > 0
-      ? (sceneNow - Math.max(0, Number(elapsedMs) || 0))
+      ? (nowPerf - Math.max(0, Number(elapsedMs) || 0))
       : 0;
     // Force a redraw on next updateDarkness even if the player hasn't moved.
     lastDarkUpdate = 0;
