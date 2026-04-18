@@ -16,7 +16,12 @@
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Tibia Dungeons" />
+    <meta name="mobile-web-app-capable" content="yes" />
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.webmanifest" />
@@ -2766,10 +2771,87 @@
         }
       }).observe(overlay, { attributes: true, attributeFilter: ['style'] });
     </script>
+    <button id="pwaInstallBtn" type="button" aria-label="Install app" style="
+      position: fixed; right: 12px; bottom: 12px; z-index: 99999;
+      display: none; padding: 10px 14px; border-radius: 999px;
+      border: 1px solid #3a2a10; background: #e2a030; color: #0a0f18;
+      font-weight: 700; font-size: 14px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.45); cursor: pointer;
+      font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+    ">📲 Install app</button>
+
+    <div id="pwaIosHint" role="dialog" aria-live="polite" style="
+      position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 99998;
+      display: none; padding: 12px 14px; border-radius: 10px;
+      background: #152238; color: #e2e8f0; border: 1px solid #e2a030;
+      font-size: 14px; line-height: 1.4;
+      box-shadow: 0 4px 16px rgba(0,0,0,.45);
+      font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+      max-width: 520px; margin: 0 auto;
+    ">
+      <b style="color:#e2a030">Install Tibia Dungeons:</b>
+      tap the <b>Share</b> button and then <b>"Add to Home Screen"</b>.
+      <div style="margin-top:8px; text-align:right">
+        <button id="pwaIosHintClose" type="button" style="
+          padding: 6px 10px; border-radius: 6px; border: 1px solid #3a2a10;
+          background: #e2a030; color: #0a0f18; font-weight: 600; cursor: pointer;
+        ">Got it</button>
+      </div>
+    </div>
+
     <script>
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
       }
+
+      (function () {
+        var installBtn = document.getElementById('pwaInstallBtn');
+        var iosHint = document.getElementById('pwaIosHint');
+        var iosHintClose = document.getElementById('pwaIosHintClose');
+        var deferredPrompt = null;
+
+        var ua = navigator.userAgent || '';
+        var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        var isStandalone = window.matchMedia('(display-mode: standalone)').matches
+          || window.matchMedia('(display-mode: fullscreen)').matches
+          || window.navigator.standalone === true;
+        var isMobileLike = /Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(ua)
+          || window.matchMedia('(pointer: coarse)').matches;
+
+        window.addEventListener('beforeinstallprompt', function (e) {
+          e.preventDefault();
+          deferredPrompt = e;
+          if (!isStandalone) installBtn.style.display = 'inline-block';
+        });
+
+        installBtn.addEventListener('click', function () {
+          if (!deferredPrompt) return;
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.finally(function () {
+            deferredPrompt = null;
+            installBtn.style.display = 'none';
+          });
+        });
+
+        window.addEventListener('appinstalled', function () {
+          deferredPrompt = null;
+          installBtn.style.display = 'none';
+          iosHint.style.display = 'none';
+        });
+
+        if (isIOS && !isStandalone && isMobileLike) {
+          var dismissed = false;
+          try { dismissed = localStorage.getItem('pwaIosHintDismissed') === '1'; } catch (_) {}
+          if (!dismissed) {
+            setTimeout(function () { iosHint.style.display = 'block'; }, 2500);
+          }
+        }
+
+        iosHintClose.addEventListener('click', function () {
+          iosHint.style.display = 'none';
+          try { localStorage.setItem('pwaIosHintDismissed', '1'); } catch (_) {}
+        });
+      })();
     </script>
     <script>
     // ── Virtual Joystick ──────────────────────────────────────────
