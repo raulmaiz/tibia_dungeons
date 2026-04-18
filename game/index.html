@@ -968,6 +968,38 @@
         overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
       }
       .ls-meta { font-size: 7.5px; color: #6e88a8; margin-top: 1px; }
+      /* Reorder arrows — hidden on desktop, shown on tablet/mobile */
+      .ls-reorder-arrows { display: none; }
+      .ls-arrow-btn {
+        background: rgba(56,189,248,0.12);
+        border: 1px solid rgba(56,189,248,0.35);
+        color: #bae6fd;
+        border-radius: 5px;
+        cursor: pointer;
+        padding: 0;
+        font-size: 10px;
+        line-height: 1;
+        user-select: none;
+        touch-action: manipulation;
+      }
+      .ls-arrow-btn:active:not(:disabled) {
+        background: rgba(56,189,248,0.25);
+        border-color: rgba(56,189,248,0.6);
+      }
+      .ls-arrow-btn:disabled {
+        opacity: 0.25;
+        cursor: default;
+      }
+      @media (max-width: 1199px) {
+        .learned-spell-row { cursor: default; }
+        .ls-handle { display: none; }
+        .ls-reorder-arrows {
+          display: flex; flex-direction: column; gap: 2px;
+          flex-shrink: 0;
+          margin-left: 4px;
+        }
+        .ls-arrow-btn { width: 26px; height: 18px; }
+      }
       .learned-spells-foot {
         margin-top: 6px;
         font-size: 10px;

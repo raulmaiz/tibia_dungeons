@@ -1123,10 +1123,32 @@ function setupSelectorUI() {
         }
         bindTooltip(cell, lootItem);
         cell.style.cursor = 'pointer';
-        // Touch: show tooltip with action buttons instead of direct equip/sell
+        // Touch: show the Equip/Sell tooltip on tap, but only if the finger
+        // didn't travel far enough to be a scroll gesture. Leaving touchstart
+        // passive lets the browser scroll the sidebar normally when the user
+        // drags inside the loot grid; we only consume touchend for real taps
+        // so the synthesized mousedown (which auto-equips) is suppressed.
+        let tStartX = 0;
+        let tStartY = 0;
+        let tMoved = false;
         cell.addEventListener('touchstart', (ev) => {
+          const t = ev.touches && ev.touches[0];
+          if (!t) return;
+          tStartX = t.clientX;
+          tStartY = t.clientY;
+          tMoved = false;
+        }, { passive: true });
+        cell.addEventListener('touchmove', (ev) => {
+          if (tMoved) return;
+          const t = ev.touches && ev.touches[0];
+          if (!t) return;
+          if (Math.abs(t.clientX - tStartX) > 10 || Math.abs(t.clientY - tStartY) > 10) {
+            tMoved = true;
+          }
+        }, { passive: true });
+        cell.addEventListener('touchend', (ev) => {
+          if (tMoved) return;
           ev.preventDefault();
-          cell._touchedForTooltip = true;
           showTouchLootTooltip(cell, lootItem, i - 1);
         }, { passive: false });
         cell.addEventListener('contextmenu', (ev) => {
@@ -3739,6 +3761,7 @@ function startGame(configPlayer) {
           spellTooltipEl.style.left = `${Math.max(6, x)}px`;
           spellTooltipEl.style.top = `${Math.max(6, y)}px`;
         };
+        const _hasRealHover = () => !!(window.matchMedia && window.matchMedia('(hover: hover)').matches);
         const bindSpellTooltip = (el, spell) => {
           if (!el || !spellTooltipEl) return;
           const place = (ev) => {
@@ -3748,14 +3771,49 @@ function startGame(configPlayer) {
             spellTooltipEl.style.left = `${Math.max(6, x)}px`;
             spellTooltipEl.style.top = `${Math.max(6, y)}px`;
           };
-          el.addEventListener('mouseenter', (ev) => {
+          const showAt = (ev) => {
             spellTooltipEl.innerHTML = formatSpellTooltip(spell);
             spellTooltipEl.style.display = 'block';
             spellTooltipEl.style.maxWidth = '260px';
             place(ev);
+          };
+          // Hover handlers only on true hover-capable devices — on touch,
+          // synthesized mouseenter/leave fires at the end of a tap and would
+          // hide the tooltip immediately after our pointerup shows it.
+          if (_hasRealHover()) {
+            el.addEventListener('mouseenter', showAt);
+            el.addEventListener('mousemove', place);
+            el.addEventListener('mouseleave', hideSpellTooltip);
+          }
+          // Unified tap-to-show via pointer events — works for mouse, touch,
+          // and pen. Filters out taps on child buttons/reorder arrows so their
+          // own handlers (reorder / buy) don't get masked by tooltip logic.
+          let _pttX = 0;
+          let _pttY = 0;
+          let _pttMoved = false;
+          let _pttActive = false;
+          el.addEventListener('pointerdown', (ev) => {
+            _pttX = ev.clientX;
+            _pttY = ev.clientY;
+            _pttMoved = false;
+            _pttActive = true;
           });
-          el.addEventListener('mousemove', place);
-          el.addEventListener('mouseleave', hideSpellTooltip);
+          el.addEventListener('pointermove', (ev) => {
+            if (!_pttActive || _pttMoved) return;
+            if (Math.abs(ev.clientX - _pttX) > 10 || Math.abs(ev.clientY - _pttY) > 10) {
+              _pttMoved = true;
+            }
+          });
+          const pointerFinish = (ev) => {
+            if (!_pttActive) return;
+            _pttActive = false;
+            if (_pttMoved) return;
+            if (ev.pointerType === 'mouse') return; // mouse uses mouseenter
+            if (ev.target.closest && ev.target.closest('.ls-reorder-arrows, button')) return;
+            showAt(ev);
+          };
+          el.addEventListener('pointerup', pointerFinish);
+          el.addEventListener('pointercancel', () => { _pttActive = false; });
         };
         const bindSpellBarTooltip = (el, spell, slotLabel) => {
           if (!el || !spellTooltipEl) return;
@@ -3781,7 +3839,24 @@ function startGame(configPlayer) {
           if (document.hidden) hideSpellTooltip();
         });
         document.addEventListener('keydown', hideSpellTooltip);
-        document.addEventListener('click', hideSpellTooltip);
+        // Outside-tap dismissal. Runs in the capture phase so it fires even
+        // when a child handler calls stopPropagation (row taps, arrows, etc.).
+        // If the tap lands inside the tooltip itself or on a spell row
+        // (Learned Spells or Spell Shop — each shows/refreshes its own
+        // tooltip on tap), we let those flows run and don't force-hide here.
+        const TOOLTIP_KEEP_ALIVE_SELECTOR = '.learned-spell-row, .spell-row, .item-shop-row, .market-card';
+        document.addEventListener('pointerdown', (ev) => {
+          if (!spellTooltipEl || spellTooltipEl.style.display === 'none') return;
+          if (spellTooltipEl.contains(ev.target)) return;
+          if (ev.target.closest && ev.target.closest(TOOLTIP_KEEP_ALIVE_SELECTOR)) return;
+          hideSpellTooltip();
+        }, true);
+        document.addEventListener('click', (ev) => {
+          if (!spellTooltipEl || spellTooltipEl.style.display === 'none') return;
+          if (spellTooltipEl.contains(ev.target)) return;
+          if (ev.target.closest && ev.target.closest(TOOLTIP_KEEP_ALIVE_SELECTOR)) return;
+          hideSpellTooltip();
+        });
         // Update cooldown countdown text every 250ms
         setInterval(() => {
           const now2 = Date.now();
@@ -3874,17 +3949,20 @@ function startGame(configPlayer) {
             renderLearnedSpells();
           };
 
-          for (const spell of learned) {
+          for (let i = 0; i < learned.length; i += 1) {
+            const spell = learned[i];
             const spellId = Number(spell.article_id);
             const slotIdx = slotIdxBySpellId.has(spellId) ? slotIdxBySpellId.get(spellId) : -1;
             const badgeLabel = slotBadgeLabel(slotIdx);
+            const prevId = i > 0 ? Number(learned[i - 1].article_id) : null;
+            const nextId = i < learned.length - 1 ? Number(learned[i + 1].article_id) : null;
 
             const row = document.createElement('div');
             row.className = 'learned-spell-row';
             row.draggable = true;
             row.dataset.spellId = String(spellId);
 
-            // Drag handle
+            // Drag handle (desktop / mouse input)
             const handle = document.createElement('span');
             handle.className = 'ls-handle';
             handle.textContent = '⠿';
@@ -3919,6 +3997,46 @@ function startGame(configPlayer) {
             info.appendChild(titleEl);
             info.appendChild(metaEl);
             row.appendChild(info);
+
+            // Reorder arrows (touch / tablet / mobile — hidden via CSS on desktop)
+            const arrows = document.createElement('div');
+            arrows.className = 'ls-reorder-arrows';
+            const upBtn = document.createElement('button');
+            upBtn.type = 'button';
+            upBtn.className = 'ls-arrow-btn ls-arrow-up';
+            upBtn.setAttribute('aria-label', 'Move spell up');
+            upBtn.textContent = '▲';
+            upBtn.disabled = prevId == null;
+            const downBtn = document.createElement('button');
+            downBtn.type = 'button';
+            downBtn.className = 'ls-arrow-btn ls-arrow-down';
+            downBtn.setAttribute('aria-label', 'Move spell down');
+            downBtn.textContent = '▼';
+            downBtn.disabled = nextId == null;
+            const stopDragOnArrow = (ev) => { ev.stopPropagation(); };
+            upBtn.addEventListener('pointerdown', stopDragOnArrow);
+            downBtn.addEventListener('pointerdown', stopDragOnArrow);
+            upBtn.addEventListener('click', (ev) => {
+              ev.preventDefault();
+              ev.stopPropagation();
+              hideSpellTooltip();
+              if (prevId != null) applyDrop(spellId, prevId);
+            });
+            downBtn.addEventListener('click', (ev) => {
+              ev.preventDefault();
+              ev.stopPropagation();
+              hideSpellTooltip();
+              if (nextId != null) applyDrop(spellId, nextId);
+            });
+            // Tapping the row (but not the arrows) should keep the tooltip
+            // visible instead of letting the document-level click close it.
+            row.addEventListener('click', (ev) => {
+              if (ev.target.closest('.ls-reorder-arrows')) return;
+              ev.stopPropagation();
+            });
+            arrows.appendChild(upBtn);
+            arrows.appendChild(downBtn);
+            row.appendChild(arrows);
 
             bindSpellTooltip(row, spell);
 
@@ -4032,24 +4150,6 @@ function startGame(configPlayer) {
               e.preventDefault();
               _pendingSpellSlot = slotNum;
             });
-            slotsEl.appendChild(slot);
-          }
-
-          // Unslotted learned spells (no hotkey assigned)
-          for (const spell of spellsCatalog || []) {
-            const id = Number(spell.article_id);
-            if (!learnedSpellIds.has(id)) continue;
-            if (learnedSpellSlots.some((s) => s != null && Number(s) === id)) continue;
-            if (isBlockedSpellTitle(spell.title)) continue;
-            const slot = document.createElement('div');
-            slot.className = 'spell-slot active no-key';
-            slot.dataset.spellId = String(id);
-            slot.appendChild(makeImgWrap(spell, id));
-            const nameEl = document.createElement('span');
-            nameEl.className = 'spell-slot-name';
-            nameEl.textContent = spell.title;
-            slot.appendChild(nameEl);
-            bindSpellBarTooltip(slot, spell, null);
             slotsEl.appendChild(slot);
           }
         };
@@ -4229,7 +4329,31 @@ function startGame(configPlayer) {
                 if (ev.button !== 0) return;
                 buySpell(ev);
               });
-              btn.addEventListener('touchstart', buySpell, { passive: false });
+              // Touch: only trigger the buy if the finger didn't move — this
+              // way, dragging from the button scrolls the panel instead of
+              // forcing a purchase.
+              let btStartX = 0;
+              let btStartY = 0;
+              let btMoved = false;
+              btn.addEventListener('touchstart', (ev) => {
+                const t = ev.touches && ev.touches[0];
+                if (!t) return;
+                btStartX = t.clientX;
+                btStartY = t.clientY;
+                btMoved = false;
+              }, { passive: true });
+              btn.addEventListener('touchmove', (ev) => {
+                if (btMoved) return;
+                const t = ev.touches && ev.touches[0];
+                if (!t) return;
+                if (Math.abs(t.clientX - btStartX) > 10 || Math.abs(t.clientY - btStartY) > 10) {
+                  btMoved = true;
+                }
+              }, { passive: true });
+              btn.addEventListener('touchend', (ev) => {
+                if (btMoved) return;
+                buySpell(ev);
+              }, { passive: false });
             }
             row.appendChild(head);
             row.appendChild(meta);
@@ -4314,14 +4438,43 @@ function startGame(configPlayer) {
             spellTooltipEl.style.left = `${Math.max(6, x)}px`;
             spellTooltipEl.style.top = `${Math.max(6, y)}px`;
           };
-          el.addEventListener('mouseenter', (ev) => {
+          const showAt = (ev) => {
             spellTooltipEl.innerHTML = formatItemShopTooltip(item);
             spellTooltipEl.style.display = 'block';
             spellTooltipEl.style.maxWidth = '260px';
             place(ev);
+          };
+          if (_hasRealHover()) {
+            el.addEventListener('mouseenter', showAt);
+            el.addEventListener('mousemove', place);
+            el.addEventListener('mouseleave', hideSpellTooltip);
+          }
+          // Unified tap-to-show via pointer events (see bindSpellTooltip).
+          let _pitX = 0;
+          let _pitY = 0;
+          let _pitMoved = false;
+          let _pitActive = false;
+          el.addEventListener('pointerdown', (ev) => {
+            _pitX = ev.clientX;
+            _pitY = ev.clientY;
+            _pitMoved = false;
+            _pitActive = true;
           });
-          el.addEventListener('mousemove', place);
-          el.addEventListener('mouseleave', hideSpellTooltip);
+          el.addEventListener('pointermove', (ev) => {
+            if (!_pitActive || _pitMoved) return;
+            if (Math.abs(ev.clientX - _pitX) > 10 || Math.abs(ev.clientY - _pitY) > 10) {
+              _pitMoved = true;
+            }
+          });
+          el.addEventListener('pointerup', (ev) => {
+            if (!_pitActive) return;
+            _pitActive = false;
+            if (_pitMoved) return;
+            if (ev.pointerType === 'mouse') return;
+            if (ev.target.closest && ev.target.closest('button')) return;
+            showAt(ev);
+          });
+          el.addEventListener('pointercancel', () => { _pitActive = false; });
         };
         let itemsShopQuery = '';
         let _lastItemsShopKey = '';
@@ -5057,8 +5210,12 @@ function startGame(configPlayer) {
               if (existingId) sessionStorage.setItem('td.pendingSaveId', existingId);
               else sessionStorage.removeItem('td.pendingSaveId');
             } catch { /* sessionStorage quota shouldn't realistically hit */ }
-            window.location.hash = '#/saves/save';
-            window.location.reload();
+            if (window.tdAuth && typeof window.tdAuth.openSaveScreen === 'function') {
+              window.tdAuth.openSaveScreen();
+            } else {
+              window.location.hash = '#/saves/save';
+              window.location.reload();
+            }
           });
         }
         if (marketEls.openBtn) marketEls.openBtn.addEventListener('click', openMarket);

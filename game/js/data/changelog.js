@@ -6,8 +6,14 @@
 export const CHANGELOG = [
   {
     version: '0.5.0',
-    date: '2026-04-17',
+    date: '2026-04-18',
     entries: [
+      'Mobile/tablet: Learned Spells reorder via up/down arrows instead of drag',
+      'Mobile/tablet: Loot Bag, Spells Shop and Items Shop support tap-vs-scroll',
+      'Mobile/tablet: tap a spell/item to show tooltip, tap outside to close',
+      'Save Game: "Back" returns to the live run instead of the main menu',
+      'Spell bar: top HUD bar now shows only the 10 hotkey-slotted spells',
+      'Creatures: 144 creatures with all elemental modifiers at 0 reset to 100',
       'Wands & Rods: consume mana per shot based on item mana_cost attribute',
       'Ammo conjure spells: all arrow/bolt spells now create the correct item',
       'Unique projectile visuals and impact effects for each ammo type',

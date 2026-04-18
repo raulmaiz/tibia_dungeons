@@ -28,11 +28,28 @@ function getAuthToken() {
   try { return localStorage.getItem(AUTH_TOKEN_KEY) || ''; } catch { return ''; }
 }
 
+// Tracks whether the saves overlay was opened on top of a running game so the
+// "Back" button can return to the in-progress run instead of the main menu.
+let openedFromActiveGame = false;
+
 // Expose the token so other modules (game engine) can call /api/saves
 // without having to re-implement the localStorage key constants.
 window.tdAuth = {
   getToken: getAuthToken,
   clear:    clearAuth,
+  // Opens the Save Game screen on top of an active run. Logged-in users get
+  // the overlay directly (no reload, so Back returns to the live game). Guests
+  // still go through the legacy reload path that routes them to register.
+  openSaveScreen() {
+    if (getAuthToken()) {
+      openedFromActiveGame = true;
+      window.location.hash = '#/saves/save';
+      showSavesOverlay('save');
+    } else {
+      window.location.hash = '#/saves/save';
+      window.location.reload();
+    }
+  },
 };
 
 async function verifyToken() {
@@ -253,6 +270,14 @@ async function finalizeSaveAndExit(id) {
     // Strip the hash without triggering a reload.
     history.replaceState(null, '', window.location.pathname + window.location.search);
   }
+  // If the saves screen was opened on top of a live run, the Phaser game is
+  // still running underneath. Reload so the engine tears down cleanly before
+  // the user starts a new run from the character overlay.
+  if (openedFromActiveGame) {
+    openedFromActiveGame = false;
+    window.location.reload();
+    return;
+  }
   const name = (localStorage.getItem(AUTH_NAME_KEY) || '').trim();
   if (name) showCharacterOverlay(name);
   else showAuthOverlay();
@@ -370,6 +395,14 @@ function wireSavesScreen() {
       if (savesMode === 'save') clearPendingSnapshot();
       if (window.location.hash) {
         history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+      // If the saves screen was opened on top of an active run, just hide it
+      // so the player resumes exactly where they left off.
+      if (openedFromActiveGame) {
+        openedFromActiveGame = false;
+        const savesOverlay = document.getElementById('savesOverlay');
+        if (savesOverlay) savesOverlay.style.display = 'none';
+        return;
       }
       const name = (localStorage.getItem(AUTH_NAME_KEY) || '').trim();
       if (name) showCharacterOverlay(name);
