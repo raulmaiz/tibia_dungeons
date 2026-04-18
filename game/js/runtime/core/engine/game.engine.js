@@ -2348,7 +2348,10 @@ function startGame(configPlayer) {
         let playerShieldingUses = 0;
         let playerXp = 0;
         const learnedSpellIds = new Set();
-        const learnedSpellSlots = Array.from({ length: 10 }, () => null); // slots 1-9 + 0
+        // Authoritative user-chosen display/reorder order of learned spells.
+        // The first 10 entries are the hotkey slots (1-9, then 0 for index 9);
+        // entries beyond index 9 are unslotted but still user-reorderable.
+        const learnedSpellOrder = [];
         const spellCooldownUntil = new Map();
         const spellCdDurations = new Map();
         let gameOver = false;
@@ -3762,8 +3765,9 @@ function startGame(configPlayer) {
           spellTooltipEl.style.top = `${Math.max(6, y)}px`;
         };
         const _hasRealHover = () => !!(window.matchMedia && window.matchMedia('(hover: hover)').matches);
-        const bindSpellTooltip = (el, spell) => {
+        const bindSpellTooltip = (el, spell, opts = {}) => {
           if (!el || !spellTooltipEl) return;
+          const touchShow = opts.touchShow !== false; // default: show on tap
           const place = (ev) => {
             const pad = 14;
             const x = Math.min(window.innerWidth - 270, ev.clientX + pad);
@@ -3788,32 +3792,37 @@ function startGame(configPlayer) {
           // Unified tap-to-show via pointer events — works for mouse, touch,
           // and pen. Filters out taps on child buttons/reorder arrows so their
           // own handlers (reorder / buy) don't get masked by tooltip logic.
-          let _pttX = 0;
-          let _pttY = 0;
-          let _pttMoved = false;
-          let _pttActive = false;
-          el.addEventListener('pointerdown', (ev) => {
-            _pttX = ev.clientX;
-            _pttY = ev.clientY;
-            _pttMoved = false;
-            _pttActive = true;
-          });
-          el.addEventListener('pointermove', (ev) => {
-            if (!_pttActive || _pttMoved) return;
-            if (Math.abs(ev.clientX - _pttX) > 10 || Math.abs(ev.clientY - _pttY) > 10) {
-              _pttMoved = true;
-            }
-          });
-          const pointerFinish = (ev) => {
-            if (!_pttActive) return;
-            _pttActive = false;
-            if (_pttMoved) return;
-            if (ev.pointerType === 'mouse') return; // mouse uses mouseenter
-            if (ev.target.closest && ev.target.closest('.ls-reorder-arrows, button')) return;
-            showAt(ev);
-          };
-          el.addEventListener('pointerup', pointerFinish);
-          el.addEventListener('pointercancel', () => { _pttActive = false; });
+          // Callers can pass { touchShow: false } to opt out (e.g. Spells
+          // Shop uses a dedicated "Info" button instead of a tap anywhere).
+          if (touchShow) {
+            let _pttX = 0;
+            let _pttY = 0;
+            let _pttMoved = false;
+            let _pttActive = false;
+            el.addEventListener('pointerdown', (ev) => {
+              _pttX = ev.clientX;
+              _pttY = ev.clientY;
+              _pttMoved = false;
+              _pttActive = true;
+            });
+            el.addEventListener('pointermove', (ev) => {
+              if (!_pttActive || _pttMoved) return;
+              if (Math.abs(ev.clientX - _pttX) > 10 || Math.abs(ev.clientY - _pttY) > 10) {
+                _pttMoved = true;
+              }
+            });
+            const pointerFinish = (ev) => {
+              if (!_pttActive) return;
+              _pttActive = false;
+              if (_pttMoved) return;
+              if (ev.pointerType === 'mouse') return; // mouse uses mouseenter
+              if (ev.target.closest && ev.target.closest('.ls-reorder-arrows, button')) return;
+              showAt(ev);
+            };
+            el.addEventListener('pointerup', pointerFinish);
+            el.addEventListener('pointercancel', () => { _pttActive = false; });
+          }
+          return showAt;
         };
         const bindSpellBarTooltip = (el, spell, slotLabel) => {
           if (!el || !spellTooltipEl) return;
@@ -3891,20 +3900,22 @@ function startGame(configPlayer) {
           if (!learnedGrid || !learnedFoot) return;
           learnedGrid.innerHTML = '';
 
-          // Build slot index map: spellId → slotIndex (0-9)
-          const slotIdxBySpellId = new Map();
-          for (let i = 0; i < learnedSpellSlots.length; i += 1) {
-            const id = learnedSpellSlots[i];
-            if (id != null) slotIdxBySpellId.set(Number(id), i);
+          // Build position map: spellId → index in learnedSpellOrder. First
+          // 10 positions map to hotkey slots; any beyond are unslotted but
+          // still user-reorderable via the up/down arrows.
+          const posBySpellId = new Map();
+          for (let i = 0; i < learnedSpellOrder.length; i += 1) {
+            const id = learnedSpellOrder[i];
+            if (id != null) posBySpellId.set(Number(id), i);
           }
 
           const learned = (spellsCatalog || [])
             .filter((s) => learnedSpellIds.has(Number(s.article_id)))
             .filter((s) => !isBlockedSpellTitle(s.title))
             .sort((a, b) => {
-              const aSlot = slotIdxBySpellId.has(Number(a.article_id)) ? slotIdxBySpellId.get(Number(a.article_id)) : 999;
-              const bSlot = slotIdxBySpellId.has(Number(b.article_id)) ? slotIdxBySpellId.get(Number(b.article_id)) : 999;
-              if (aSlot !== bSlot) return aSlot - bSlot;
+              const aPos = posBySpellId.has(Number(a.article_id)) ? posBySpellId.get(Number(a.article_id)) : Number.MAX_SAFE_INTEGER;
+              const bPos = posBySpellId.has(Number(b.article_id)) ? posBySpellId.get(Number(b.article_id)) : Number.MAX_SAFE_INTEGER;
+              if (aPos !== bPos) return aPos - bPos;
               return String(a.title || '').localeCompare(String(b.title || ''));
             });
 
@@ -3926,24 +3937,19 @@ function startGame(configPlayer) {
           let draggedSpellId = null;
 
           const slotBadgeLabel = (slotIdx) => {
-            if (slotIdx < 0) return null;
+            if (slotIdx < 0 || slotIdx > 9) return null;
             return slotIdx < 9 ? String(slotIdx + 1) : '0';
           };
 
+          // Swap two spells' positions in the master order array. This single
+          // swap handles every case — both in hotkey slots, both unslotted, or
+          // one of each (the hotkey "label" automatically follows positions).
           const applyDrop = (fromId, toId) => {
             if (fromId === toId) return;
-            const fromIdx = learnedSpellSlots.findIndex((s) => s != null && Number(s) === fromId);
-            const toIdx   = learnedSpellSlots.findIndex((s) => s != null && Number(s) === toId);
-            if (fromIdx >= 0 && toIdx >= 0) {
-              // Both slotted — swap
-              [learnedSpellSlots[fromIdx], learnedSpellSlots[toIdx]] = [learnedSpellSlots[toIdx], learnedSpellSlots[fromIdx]];
-            } else if (fromIdx >= 0 && toIdx < 0) {
-              // Dragged is slotted, target is not — target takes the slot
-              learnedSpellSlots[fromIdx] = toId;
-            } else if (fromIdx < 0 && toIdx >= 0) {
-              // Dragged has no slot, target does — dragged takes the slot
-              learnedSpellSlots[toIdx] = fromId;
-            }
+            const fromIdx = learnedSpellOrder.findIndex((s) => Number(s) === Number(fromId));
+            const toIdx   = learnedSpellOrder.findIndex((s) => Number(s) === Number(toId));
+            if (fromIdx < 0 || toIdx < 0) return;
+            [learnedSpellOrder[fromIdx], learnedSpellOrder[toIdx]] = [learnedSpellOrder[toIdx], learnedSpellOrder[fromIdx]];
             _lastSpellBarKey = '';
             _lastSpellShopKey = '';
             renderLearnedSpells();
@@ -3952,7 +3958,8 @@ function startGame(configPlayer) {
           for (let i = 0; i < learned.length; i += 1) {
             const spell = learned[i];
             const spellId = Number(spell.article_id);
-            const slotIdx = slotIdxBySpellId.has(spellId) ? slotIdxBySpellId.get(spellId) : -1;
+            const pos = posBySpellId.has(spellId) ? posBySpellId.get(spellId) : -1;
+            const slotIdx = pos >= 0 && pos < 10 ? pos : -1;
             const badgeLabel = slotBadgeLabel(slotIdx);
             const prevId = i > 0 ? Number(learned[i - 1].article_id) : null;
             const nextId = i < learned.length - 1 ? Number(learned[i + 1].article_id) : null;
@@ -4083,7 +4090,7 @@ function startGame(configPlayer) {
           const slotsEl = document.getElementById('spellBarSlots');
           if (!slotsEl) return;
           // Skip rebuild if slot assignments haven't changed — prevents per-frame flicker
-          const barKey = learnedSpellSlots.join(',') + '|' + [...learnedSpellIds].sort((a, b) => a - b).join(',');
+          const barKey = learnedSpellOrder.slice(0, 10).join(',') + '|' + [...learnedSpellIds].sort((a, b) => a - b).join(',');
           if (barKey === _lastSpellBarKey) return;
           _lastSpellBarKey = barKey;
           slotsEl.innerHTML = '';
@@ -4127,7 +4134,7 @@ function startGame(configPlayer) {
 
           // Hotkey slots 1-9 + 0 (index 9 = slot 10 = key "0")
           for (let i = 0; i < 10; i += 1) {
-            const spellId = learnedSpellSlots[i] != null ? Number(learnedSpellSlots[i]) : null;
+            const spellId = i < learnedSpellOrder.length && learnedSpellOrder[i] != null ? Number(learnedSpellOrder[i]) : null;
             const spell = spellId != null ? spellById.get(spellId) : null;
             const slot = document.createElement('div');
             slot.className = `spell-slot ${spell ? 'active' : 'empty'}`;
@@ -4274,7 +4281,9 @@ function startGame(configPlayer) {
             right.textContent = `${price} gp`;
             head.appendChild(left);
             head.appendChild(right);
-            bindSpellTooltip(row, spell);
+            // Desktop: hover shows the tooltip. Mobile/tablet: use the
+            // "Info" button below (touchShow: false disables tap-on-row).
+            const showSpellTooltipAt = bindSpellTooltip(row, spell, { touchShow: false });
             const meta = document.createElement('div');
             meta.className = 'meta';
             meta.textContent = `Lv ${lvl}  ·  Mana ${Math.max(0, Number(spell.mana || 0))}`;
@@ -4312,12 +4321,11 @@ function startGame(configPlayer) {
                   return;
                 }
                 btn.disabled = true;
-                learnedSpellIds.add(Number(spell.article_id));
-                const freeIdx = learnedSpellSlots.findIndex((id) => id == null);
-                if (freeIdx >= 0) {
-                  learnedSpellSlots[freeIdx] = Number(spell.article_id);
-                } else {
-                  addCombatLog(`No free hotkey slot (1-9) for ${spell.title}.`);
+                const boughtId = Number(spell.article_id);
+                learnedSpellIds.add(boughtId);
+                learnedSpellOrder.push(boughtId);
+                if (learnedSpellOrder.length > 10) {
+                  addCombatLog(`Learned ${spell.title} — use ▲/▼ in Learned Spells to bring it into a hotkey slot.`);
                 }
                 addCombatLog(`Bought spell: ${spell.title} for ${price} gp.`);
                 // El inventario ya se redibuja dentro de spendGoldFromInventory (debugInventory.spendGold).
@@ -4357,7 +4365,24 @@ function startGame(configPlayer) {
             }
             row.appendChild(head);
             row.appendChild(meta);
-            row.appendChild(btn);
+            // Mobile/tablet: an explicit "Info" button opens the tooltip
+            // (tap-on-row is disabled above). Hidden on desktop via CSS,
+            // where hovering the row already shows the tooltip.
+            const infoBtn = document.createElement('button');
+            infoBtn.type = 'button';
+            infoBtn.className = 'spell-row-info-btn';
+            infoBtn.textContent = 'Info';
+            infoBtn.addEventListener('click', (ev) => {
+              ev.preventDefault();
+              ev.stopPropagation();
+              const rect = infoBtn.getBoundingClientRect();
+              showSpellTooltipAt({ clientX: rect.left, clientY: rect.top });
+            });
+            const actions = document.createElement('div');
+            actions.className = 'spell-row-actions';
+            actions.appendChild(btn);
+            actions.appendChild(infoBtn);
+            row.appendChild(actions);
             frag.appendChild(row);
           }
           spellsGrid.appendChild(frag);
@@ -5186,9 +5211,18 @@ function startGame(configPlayer) {
               : {},
             bagLootItems:     (invState && Array.isArray(invState.items))
               ? invState.items.map((i) => ({ ...i })) : [],
-            // Spells
-            learnedSpellIds:  Array.from(learnedSpellIds || []),
-            learnedSpellSlots: Array.from(learnedSpellSlots || []),
+            // Spells — learnedSpellOrder is the new authoritative order
+            // (first 10 are hotkeys, rest are unslotted). The legacy
+            // learnedSpellSlots field is preserved for old clients/saves.
+            learnedSpellIds:   Array.from(learnedSpellIds || []),
+            learnedSpellOrder: Array.from(learnedSpellOrder || []),
+            learnedSpellSlots: (() => {
+              const slots = Array.from({ length: 10 }, () => null);
+              for (let i = 0; i < 10 && i < learnedSpellOrder.length; i += 1) {
+                slots[i] = learnedSpellOrder[i];
+              }
+              return slots;
+            })(),
             // DoT statuses (if any)
             burnState:        burnState ? { ...burnState } : null,
             poisonState:      poisonState ? { ...poisonState } : null,
@@ -6099,7 +6133,10 @@ function startGame(configPlayer) {
           return true;
         };
         const castLearnedSpell = (slotNumber, now) => {
-          const articleId = learnedSpellSlots[slotNumber - 1];
+          const slotIdx = slotNumber - 1;
+          const articleId = slotIdx >= 0 && slotIdx < 10 && slotIdx < learnedSpellOrder.length
+            ? learnedSpellOrder[slotIdx]
+            : null;
           if (!articleId) return false;
           const spell = (spellsCatalog || []).find((s) => Number(s.article_id) === Number(articleId));
           if (!spell) return false;
@@ -8631,10 +8668,26 @@ function startGame(configPlayer) {
               if (Number.isFinite(n) && n > 0) learnedSpellIds.add(n);
             }
           }
-          if (Array.isArray(resumeSnap.learnedSpellSlots)) {
-            for (let i = 0; i < learnedSpellSlots.length; i += 1) {
-              const v = resumeSnap.learnedSpellSlots[i];
-              learnedSpellSlots[i] = (v != null && v !== undefined) ? Number(v) : null;
+          // Prefer the new learnedSpellOrder; fall back to legacy
+          // learnedSpellSlots for saves made before the unified order.
+          learnedSpellOrder.length = 0;
+          if (Array.isArray(resumeSnap.learnedSpellOrder) && resumeSnap.learnedSpellOrder.length > 0) {
+            for (const v of resumeSnap.learnedSpellOrder) {
+              const n = Number(v);
+              if (Number.isFinite(n) && n > 0) learnedSpellOrder.push(n);
+            }
+          } else if (Array.isArray(resumeSnap.learnedSpellSlots)) {
+            for (const v of resumeSnap.learnedSpellSlots) {
+              if (v == null) continue;
+              const n = Number(v);
+              if (Number.isFinite(n) && n > 0) learnedSpellOrder.push(n);
+            }
+          }
+          // Backfill any learned IDs that aren't already in the order (older
+          // saves may have learned spells without any slot assignment).
+          for (const id of learnedSpellIds) {
+            if (!learnedSpellOrder.some((v) => Number(v) === Number(id))) {
+              learnedSpellOrder.push(Number(id));
             }
           }
           try { renderLearnedSpells(); } catch { /* best effort */ }

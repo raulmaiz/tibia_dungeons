@@ -8,6 +8,9 @@ export const CHANGELOG = [
     version: '0.5.0',
     date: '2026-04-18',
     entries: [
+      'Spells Shop: dedicated "Info" button next to Buy on mobile/tablet',
+      'Learned Spells panel: list area doubled in size (up to 400px)',
+      'Learned Spells: up/down reorder now works for every spell, not just the hotkey 10',
       'Mobile/tablet: Learned Spells reorder via up/down arrows instead of drag',
       'Mobile/tablet: Loot Bag, Spells Shop and Items Shop support tap-vs-scroll',
       'Mobile/tablet: tap a spell/item to show tooltip, tap outside to close',
