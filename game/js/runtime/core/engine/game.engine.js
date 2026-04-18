@@ -5332,6 +5332,18 @@ function startGame(configPlayer) {
           const row = attrs.find((a) => a && String(a.name || '').toLowerCase() === 'damage_type');
           return row ? String(row.value || '').trim() : '';
         };
+        const magicWeaponManaCost = (weapon) => {
+          if (!weapon || !isMagicRangedWeapon(weapon)) return 0;
+          const attrs = Array.isArray(weapon.attributes) ? weapon.attributes : [];
+          const row = attrs.find((a) => a && String(a.name || '').toLowerCase() === 'mana_cost');
+          const n = row ? Number(row.value) : 0;
+          return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+        };
+        const hasEnoughManaForMagicWeapon = (weapon) => {
+          const cost = magicWeaponManaCost(weapon);
+          if (cost <= 0) return true;
+          return playerMana >= cost;
+        };
         const defaultElementMods = () => ({
           physical: 100,
           earth: 100,
@@ -6442,6 +6454,18 @@ function startGame(configPlayer) {
                 addCombatLog(`Out of ammo for ${activeWeapon.title}. Attacking with base melee.`);
               }
               activeWeapon = null;
+            }
+          }
+          if (activeWeapon && isMagicRangedWeapon(activeWeapon)) {
+            const manaCost = magicWeaponManaCost(activeWeapon);
+            if (manaCost > 0) {
+              if (playerMana < manaCost) {
+                addCombatLog(`Not enough mana for ${activeWeapon.title}. Attacking with base melee.`);
+                activeWeapon = null;
+              } else {
+                playerMana = Math.max(0, playerMana - manaCost);
+                updatePlayerBar();
+              }
             }
           }
           if (activeWeapon && isDistanceWeapon(activeWeapon)) {
@@ -8516,6 +8540,7 @@ function startGame(configPlayer) {
             if (!canStrafeCastMagicWeapon(w)) return;
             if (!isDistanceWeapon(w)) return;
             if (requiresAmmoForWeapon(w) && !hasAmmoForWeapon(w)) return;
+            if (isMagicRangedWeapon(w) && !hasEnoughManaForMagicWeapon(w)) return;
             if (now < nextMagicWeaponShotAt) return;
             const t = findNearestRangedTarget(effectiveWeaponRange(w));
             if (!t) return;

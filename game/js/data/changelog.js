@@ -8,6 +8,7 @@ export const CHANGELOG = [
     version: '0.5.0',
     date: '2026-04-17',
     entries: [
+      'Wands & Rods: consume mana per shot based on item mana_cost attribute',
       'Ammo conjure spells: all arrow/bolt spells now create the correct item',
       'Unique projectile visuals and impact effects for each ammo type',
       'Burst Arrow: AoE fire splash damage + temporary light on impact',
