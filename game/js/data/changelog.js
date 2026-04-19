@@ -15,6 +15,7 @@ export const CHANGELOG = [
       'Security: HMAC-signed saves flag tampering in the Load Game list',
       'Security: CSP, HSTS, XFO and other hardening headers applied across the site',
       'Security: anti-enumeration — login/register return identical generic errors with response jitter',
+      'Security: /data/*.json gated by Referer check (direct curl + search indexing blocked)',
       'Saves UI: cards now built via safe DOM APIs (no more innerHTML interpolation of user data)',
     ],
   },

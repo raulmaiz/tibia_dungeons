@@ -2,6 +2,15 @@
   "buildCommand": null,
   "outputDirectory": "game",
   "framework": null,
+  "rewrites": [
+    {
+      "source": "/data/(.*)\\.json",
+      "missing": [
+        { "type": "header", "key": "referer", "value": "^https?://([a-z0-9-]+\\.)*(tibia-dungeons\\.com|vercel\\.app)(/|$).*" }
+      ],
+      "destination": "/api/denied"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
@@ -17,6 +26,12 @@
       "headers": [
         { "key": "X-Frame-Options", "value": "DENY" },
         { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'self'; manifest-src 'self'; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; report-uri /api/csp-report" }
+      ]
+    },
+    {
+      "source": "/data/(.*)\\.json",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
       ]
     }
   ]

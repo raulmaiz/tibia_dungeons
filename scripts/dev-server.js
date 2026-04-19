@@ -451,10 +451,22 @@ function handleStats(req, res) {
 }
 
 // ── Static file serving ─────────────────────────────────────────────
+const DATA_REFERER_RE = /^https?:\/\/([a-z0-9-]+\.)*(tibia-dungeons\.com|vercel\.app|localhost|127\.0\.0\.1)(:\d+)?(\/|$).*/;
+
 function serveStatic(req, res) {
   const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   let pathname = decodeURIComponent(parsedUrl.pathname);
   if (pathname === '/') pathname = '/index.html';
+  // Mirror the production referer gate for /data/*.json so devs hit the same
+  // behavior locally — DevTools-initiated fetches from the game still work,
+  // a raw `curl http://localhost:5173/data/creature.json` returns 403.
+  if (pathname.startsWith('/data/') && pathname.endsWith('.json')) {
+    const ref = req.headers.referer || '';
+    if (!DATA_REFERER_RE.test(ref)) {
+      res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8', 'X-Robots-Tag': 'noindex, nofollow' });
+      return res.end('Forbidden');
+    }
+  }
   const full = path.normalize(path.join(GAME_DIR, pathname));
   if (!full.startsWith(GAME_DIR)) { res.writeHead(403); return res.end('forbidden'); }
   fs.stat(full, (err, st) => {
@@ -466,6 +478,9 @@ function serveStatic(req, res) {
       'X-Frame-Options': 'DENY',
       'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'self'; manifest-src 'self'; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; report-uri /api/csp-report",
     };
+    if (pathname.startsWith('/data/') && pathname.endsWith('.json')) {
+      headers['X-Robots-Tag'] = 'noindex, nofollow';
+    }
     res.writeHead(200, headers);
     fs.createReadStream(full).pipe(res);
   });

@@ -1,4 +1,6 @@
 User-agent: *
 Allow: /
+Disallow: /data/
+Disallow: /api/
 
 Sitemap: https://www.tibia-dungeons.com/sitemap.xml
