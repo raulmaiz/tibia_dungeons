@@ -6,8 +6,11 @@
 export const CHANGELOG = [
   {
     version: '0.5.0',
-    date: '2026-04-18',
+    date: '2026-04-19',
     entries: [
+      'Fix: allies no longer vanish on floor change when nearby tiles are full',
+      'Fix: allies keep following the player after floor change instead of freezing',
+      'Minimap: convinced/summoned allies shown as green dots',
       'Spells Shop: dedicated "Info" button next to Buy on mobile/tablet',
       'Learned Spells panel: list area doubled in size (up to 400px)',
       'Learned Spells: up/down reorder now works for every spell, not just the hotkey 10',
