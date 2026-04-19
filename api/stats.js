@@ -1,47 +1,28 @@
+import { redisPipeline } from './_lib/redis.js';
+import {
+  applySecurity, applyCors, clientIp, fail, ok, log,
+} from './_lib/http.js';
+import { enforceRateLimit } from './_lib/ratelimit.js';
+
 /**
- * GET /api/stats → { users, sessions, saves, runs }
- *
- * Public endpoint — returns aggregate counts from Redis.
- * No auth required (counts only, no personal data exposed).
+ * GET /api/stats → { users, activeSessions, playersWithSaves, hallOfFameRuns }
+ * Public aggregate counts. Rate-limited to prevent hammering KEYS *.
  */
 
-async function redis(cmd, ...args) {
-  const { UPSTASH_REDIS_REST_URL: url, UPSTASH_REDIS_REST_TOKEN: token } = process.env;
-  if (!url || !token) throw new Error('Redis not configured');
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify([cmd, ...args]),
-  });
-  if (!res.ok) throw new Error(`Redis HTTP ${res.status}`);
-  return res.json();
-}
-
-async function redisPipeline(commands) {
-  const { UPSTASH_REDIS_REST_URL: url, UPSTASH_REDIS_REST_TOKEN: token } = process.env;
-  if (!url || !token) throw new Error('Redis not configured');
-  const res = await fetch(`${url}/pipeline`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(commands),
-  });
-  if (!res.ok) throw new Error(`Redis HTTP ${res.status}`);
-  return res.json();
-}
-
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  if (req.method === 'OPTIONS') return res.status(204).end();
-  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  applySecurity(res);
+  if (applyCors(req, res, 'GET, OPTIONS')) return;
+  if (req.method !== 'GET') return fail(res, 405, 'Method not allowed');
+
+  const ip = clientIp(req);
+  if (await enforceRateLimit(req, res, { bucket: 'stats', subject: ip, limit: 30, windowSec: 60 })) return;
 
   try {
-    // Count keys by pattern using KEYS (fine for small datasets)
     const [usersRes, sessionsRes, savesRes, runsRes] = await redisPipeline([
       ['KEYS', 'user:*'],
       ['KEYS', 'session:*'],
       ['KEYS', 'saves:*'],
-      ['LLEN', 'hof:runs'],
+      ['ZCARD', 'hof:runs'],
     ]);
 
     const users = Array.isArray(usersRes.result) ? usersRes.result.length : 0;
@@ -49,13 +30,14 @@ export default async function handler(req, res) {
     const saves = Array.isArray(savesRes.result) ? savesRes.result.length : 0;
     const runs = Number(runsRes.result) || 0;
 
-    return res.status(200).json({
+    return ok(res, {
       users,
       activeSessions: sessions,
       playersWithSaves: saves,
       hallOfFameRuns: runs,
     });
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to fetch stats' });
+    log('error', 'stats.fail', { msg: err && err.message });
+    return fail(res, 500, 'Failed to fetch stats');
   }
 }

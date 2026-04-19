@@ -1,82 +1,121 @@
 import { randomBytes } from 'node:crypto';
+import { redis } from '../_lib/redis.js';
+import {
+  applySecurity, applyCors, readBody, clientIp, fail, ok,
+  checkJsonDepth, validate, hmacSign, hmacVerify, log,
+} from '../_lib/http.js';
+import { enforceRateLimit } from '../_lib/ratelimit.js';
+import { authenticate, requireCsrf } from '../_lib/auth.js';
 
 /**
- *   GET    /api/saves             → { saves: [...] }        (requires Bearer token)
- *   POST   /api/saves             → { id }                   body = { snapshot }
+ *   GET    /api/saves             → { saves: [...] }         (cookie or Bearer)
+ *   POST   /api/saves             → { id }                    body = { snapshot, id? }
  *   DELETE /api/saves?id=<saveId> → { ok: true }
  *
- * Storage: one Redis hash per user:
- *   saves:{lowercase(name)}  →  field = saveId, value = JSON{id, ts, character, floor, snapshot}
+ * Security layers:
+ *   1. Security headers + CORS allow-list (via _lib/http).
+ *   2. Per-user rate limit (prevents snapshot-spam filling Redis).
+ *   3. Strict payload size + JSON depth cap + prototype-pollution rejection.
+ *   4. Numeric caps (floor ≤ 100, level ≤ 200, gold ≤ 10M).
+ *   5. HMAC signature on each save — mismatches log an "integrity" warning.
+ *   6. CSRF double-submit on mutating methods.
+ *
+ * Storage: one Redis hash per user — `saves:{lowercase(name)}`:
+ *   field = saveId, value = JSON { id, ts, character, floor, …, snapshot, _sig }
  */
 
-const MAX_SAVES_PER_USER = 20;
-const MAX_SNAPSHOT_BYTES = 200_000;
+const MAX_SAVES_PER_USER   = 20;
+const MAX_SNAPSHOT_BYTES   = 200_000;
+const MAX_SNAPSHOT_DEPTH   = 8;
+const MAX_FLOOR            = 100;
+const MAX_LEVEL            = 200;
+const MAX_GOLD             = 10_000_000;
+const MAX_KILLS            = MAX_FLOOR * 200;
 
-async function redis(cmd, ...args) {
-  const { UPSTASH_REDIS_REST_URL: url, UPSTASH_REDIS_REST_TOKEN: token } = process.env;
-  if (!url || !token) throw new Error('Redis not configured');
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify([cmd, ...args]),
+const CLASS_KEYS = ['knight', 'paladin', 'sorcerer', 'druid'];
+
+function savesKey(userName) { return `saves:${String(userName || '').toLowerCase()}`; }
+
+/**
+ * Canonical stringify: keys sorted at every level so the HMAC signature
+ * doesn't flap just because the JS engine picked a different insertion order.
+ * Depth-limited via the caller's `checkJsonDepth` — safe to recurse here.
+ */
+function canonicalStringify(value) {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return '[' + value.map(canonicalStringify).join(',') + ']';
+  const keys = Object.keys(value).sort();
+  return '{' + keys.map((k) => JSON.stringify(k) + ':' + canonicalStringify(value[k])).join(',') + '}';
+}
+
+function signatureFor(entry) {
+  // Sign the stable subset — not the redundant character/floor fields we
+  // derive on the server each save (those are re-derived on load).
+  const canonical = canonicalStringify({
+    id:        entry.id,
+    ts:        entry.ts,
+    userLc:    entry.userLc,
+    snapshot:  entry.snapshot,
   });
-  if (!res.ok) throw new Error(`Redis HTTP ${res.status}`);
-  return res.json();
-}
-
-async function readBody(req) {
-  return new Promise((resolve, reject) => {
-    let data = '';
-    req.on('data', (chunk) => { data += chunk; });
-    req.on('end', () => {
-      try { resolve(data ? JSON.parse(data) : {}); }
-      catch { reject(new Error('Invalid JSON')); }
-    });
-    req.on('error', reject);
-  });
-}
-
-async function authenticate(req) {
-  const auth = req.headers.authorization || '';
-  const m = /^Bearer\s+(.+)$/i.exec(auth);
-  const token = m ? m[1].trim() : '';
-  if (!token) return null;
-  try {
-    const { result: raw } = await redis('GET', `session:${token}`);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch { return null; }
-}
-
-function savesKey(userName) {
-  return `saves:${String(userName || '').toLowerCase()}`;
+  return hmacSign(canonical);
 }
 
 async function listSaves(res, userName) {
   const { result } = await redis('HGETALL', savesKey(userName));
-  // Upstash returns HGETALL as a flat [field, value, field, value, ...] array.
   const saves = [];
   if (Array.isArray(result)) {
     for (let i = 0; i < result.length; i += 2) {
-      try { saves.push(JSON.parse(result[i + 1])); }
-      catch { /* skip */ }
+      try {
+        const entry = JSON.parse(result[i + 1]);
+        // Verify signature on load — a mismatch means someone tampered with
+        // the Redis record directly. We still return the save (don't brick
+        // the user) but flag it and log for forensics.
+        if (entry && entry._sig) {
+          const expected = signatureFor(entry);
+          if (!hmacVerify(expected, entry._sig)) {
+            entry._tampered = true;
+            log('warn', 'save.integrity.fail', { userLc: entry.userLc, id: entry.id });
+          }
+        }
+        saves.push(entry);
+      } catch { /* skip */ }
     }
   }
   saves.sort((a, b) => (b.ts || 0) - (a.ts || 0));
-  return res.status(200).json({ saves });
+  return ok(res, { saves });
 }
 
 async function createSave(req, res, userName) {
-  const body = await readBody(req);
+  if (!requireCsrf(req)) return fail(res, 403, 'CSRF token missing or invalid');
+
+  let body;
+  try { body = await readBody(req, { maxBytes: MAX_SNAPSHOT_BYTES + 4096 }); }
+  catch { return fail(res, 413, 'Payload too large'); }
+
   const snapshot = body && body.snapshot;
-  const upsertId = body && typeof body.id === 'string' && body.id ? body.id : null;
-  if (!snapshot || typeof snapshot !== 'object') {
-    return res.status(400).json({ error: 'Missing snapshot' });
+  const upsertId = body && typeof body.id === 'string' && /^[a-f0-9]{8,64}$/.test(body.id) ? body.id : null;
+  if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot)) {
+    return fail(res, 400, 'Invalid snapshot');
   }
+  if (!checkJsonDepth(snapshot, MAX_SNAPSHOT_DEPTH)) return fail(res, 400, 'Snapshot too deep');
+
   const serialized = JSON.stringify(snapshot);
-  if (serialized.length > MAX_SNAPSHOT_BYTES) {
-    return res.status(413).json({ error: 'Snapshot too large' });
-  }
+  if (serialized.length > MAX_SNAPSHOT_BYTES) return fail(res, 413, 'Snapshot too large');
+
+  const classKey = CLASS_KEYS.includes(String(snapshot.classKey)) ? String(snapshot.classKey) : 'knight';
+  const character = {
+    name:     String(snapshot.name || userName).slice(0, 20),
+    classKey,
+    sex:      snapshot.sex === 'female' ? 'female' : 'male',
+    level:    Math.max(1, Math.min(MAX_LEVEL, Math.floor(Number(snapshot.playerLevel) || 1))),
+  };
+  const floor = Math.max(1, Math.min(MAX_FLOOR, Math.floor(Number(snapshot.currentLevel) || 1)));
+  const gold  = Math.max(0, Math.min(MAX_GOLD,  Math.floor(Number(snapshot.gold) || 0)));
+  const kills = Math.max(0, Math.min(MAX_KILLS, Math.floor(Number(snapshot.runKills) || 0)));
+  const hp    = Math.max(0, Math.floor(Number(snapshot.playerHp) || 0));
+  const maxHp = Math.max(1, Math.floor(Number(snapshot.playerMaxHp) || 1));
+
+  const userLc = String(userName || '').toLowerCase();
   const { result: existingFlat } = await redis('HGETALL', savesKey(userName));
   const existing = [];
   if (Array.isArray(existingFlat)) {
@@ -85,13 +124,10 @@ async function createSave(req, res, userName) {
       catch { /* skip */ }
     }
   }
-  // Upsert path: POST with an existing id → overwrite that slot in place,
-  // preserving the save id so the same run keeps reusing it.
   let id;
   if (upsertId && existing.some((e) => e.field === upsertId)) {
     id = upsertId;
   } else {
-    // New save — trim oldest if we're over the per-user cap.
     existing.sort((a, b) => (a.entry.ts || 0) - (b.entry.ts || 0));
     while (existing.length >= MAX_SAVES_PER_USER) {
       const oldest = existing.shift();
@@ -100,49 +136,53 @@ async function createSave(req, res, userName) {
     id = randomBytes(8).toString('hex');
   }
   const entry = {
-    id,
-    ts:        Date.now(),
-    character: {
-      name:     String(snapshot.name || userName).slice(0, 20),
-      classKey: String(snapshot.classKey || 'knight'),
-      sex:      snapshot.sex === 'female' ? 'female' : 'male',
-      level:    Math.max(1, Math.floor(Number(snapshot.playerLevel) || 1)),
-    },
-    floor:    Math.max(1, Math.floor(Number(snapshot.currentLevel) || 1)),
-    gold:     Math.max(0, Math.floor(Number(snapshot.gold) || 0)),
-    kills:    Math.max(0, Math.floor(Number(snapshot.runKills) || 0)),
-    hp:       Math.max(0, Math.floor(Number(snapshot.playerHp) || 0)),
-    maxHp:    Math.max(1, Math.floor(Number(snapshot.playerMaxHp) || 1)),
+    id, ts: Date.now(), userLc,
+    character, floor, gold, kills, hp, maxHp,
     snapshot,
   };
+  entry._sig = signatureFor(entry);
   await redis('HSET', savesKey(userName), id, JSON.stringify(entry));
-  return res.status(200).json({ id });
+  log('info', 'save.upsert', { userLc, id, floor, level: character.level });
+  return ok(res, { id });
 }
 
-async function deleteSave(res, userName, id) {
-  if (!id) return res.status(400).json({ error: 'Missing id' });
+async function deleteSave(req, res, userName, id) {
+  if (!requireCsrf(req)) return fail(res, 403, 'CSRF token missing or invalid');
+  if (!id || !/^[a-f0-9]{8,64}$/.test(id)) return fail(res, 400, 'Invalid id');
   await redis('HDEL', savesKey(userName), id);
-  return res.status(200).json({ ok: true });
+  log('info', 'save.delete', { userLc: String(userName || '').toLowerCase(), id });
+  return ok(res, { ok: true });
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  applySecurity(res, { noStore: true });
+  if (applyCors(req, res, 'GET, POST, DELETE, OPTIONS')) return;
 
   const me = await authenticate(req);
-  if (!me || !me.name) return res.status(401).json({ error: 'Not authenticated' });
+  if (!me || !me.name) return fail(res, 401, 'Not authenticated');
+
+  const ip = clientIp(req);
+  const isMutation = req.method === 'POST' || req.method === 'DELETE';
+  if (isMutation) {
+    if (await enforceRateLimit(req, res, {
+      bucket: 'saves_write', subject: `${me.name}:${ip}`, limit: 60, windowSec: 60,
+    })) return;
+  } else {
+    if (await enforceRateLimit(req, res, {
+      bucket: 'saves_read', subject: me.name, limit: 300, windowSec: 60,
+    })) return;
+  }
 
   try {
     if (req.method === 'GET')    return await listSaves(res, me.name);
     if (req.method === 'POST')   return await createSave(req, res, me.name);
     if (req.method === 'DELETE') {
       const url = new URL(req.url, 'http://x');
-      return await deleteSave(res, me.name, url.searchParams.get('id'));
+      return await deleteSave(req, res, me.name, url.searchParams.get('id'));
     }
-    return res.status(405).json({ error: 'Method not allowed' });
+    return fail(res, 405, 'Method not allowed');
   } catch (e) {
-    return res.status(500).json({ error: e.message || 'Server error' });
+    log('error', 'saves.handler', { msg: e && e.message });
+    return fail(res, 500, 'Server error');
   }
 }

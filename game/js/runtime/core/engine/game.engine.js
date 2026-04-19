@@ -1947,14 +1947,12 @@ function setupSelectorUI() {
     async deleteCurrentSave() {
       const id = currentSaveId;
       if (!id) return false;
-      const token = (window.tdAuth && window.tdAuth.getToken && window.tdAuth.getToken()) || '';
-      if (!token) return false;
+      const api = window.tdAuth && window.tdAuth.apiFetch;
+      const loggedIn = window.tdAuth && window.tdAuth.isLoggedIn && window.tdAuth.isLoggedIn();
+      if (!api || !loggedIn) return false;
       currentSaveId = null;
       try {
-        await fetch(`/api/saves?id=${encodeURIComponent(id)}`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await api(`/api/saves?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
         return true;
       } catch { return false; }
     },
@@ -9057,13 +9055,19 @@ function fmtDate(ts) {
 }
 
 async function saveRun(run) {
+  // Hall of Fame submissions are now authenticated (Level 4 security plan).
+  // Guests silently skip posting — their run still stays on their screen but
+  // doesn't land on the leaderboard.
+  const api = window.tdAuth && window.tdAuth.apiFetch;
+  const loggedIn = window.tdAuth && window.tdAuth.isLoggedIn && window.tdAuth.isLoggedIn();
+  if (!api || !loggedIn) return;
   try {
-    await fetch('/api/runs', {
+    await api('/api/runs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(run),
     });
-  } catch { /* silent — local dev or offline */ }
+  } catch { /* silent — offline */ }
 }
 
 function showHallOfFame() {
@@ -9191,19 +9195,19 @@ function showHallOfFame() {
       const rows = runs.map((run, i) => {
         const rank = i + 1;
         const medal = MEDALS[i] ?? rank;
-        const cls = CLASS_META[run.classKey] || { label: run.classKey, icon: '❓' };
+        const cls = CLASS_META[run.classKey] || { label: escHtml(String(run.classKey || '—')), icon: '❓' };
         const sexIcon = run.sex === 'female' ? '♀' : '♂';
         return `
           <tr>
             <td class="col-rank">${rank <= 3 ? `<span class="rank-medal">${medal}</span>` : rank}</td>
             <td class="col-name">${sexIcon} ${escHtml(run.name)}</td>
-            <td class="col-class">${cls.icon} ${cls.label}</td>
-            <td class="col-floor col-num2">${run.floor}</td>
-            <td class="col-num2">${run.kills}</td>
-            <td class="col-num2">${run.playerLevel}</td>
-            <td class="col-gold col-num2">${fmtGold(run.gold || 0)}</td>
+            <td class="col-class">${cls.icon} ${escHtml(cls.label)}</td>
+            <td class="col-floor col-num2">${Number(run.floor) || 0}</td>
+            <td class="col-num2">${Number(run.kills) || 0}</td>
+            <td class="col-num2">${Number(run.playerLevel) || 0}</td>
+            <td class="col-gold col-num2">${fmtGold(Number(run.gold) || 0)}</td>
             <td class="col-killedby">${escHtml(run.killedBy || '—')}</td>
-            <td class="col-date col-num2">${fmtDate(run.ts || 0)}</td>
+            <td class="col-date col-num2">${fmtDate(Number(run.ts) || 0)}</td>
           </tr>`;
       }).join('');
 

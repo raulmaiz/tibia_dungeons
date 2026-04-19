@@ -1,47 +1,63 @@
 /**
  * Auth bootstrap. Runs before the game code.
  *
- * - If a valid session token sits in localStorage → jump straight to the
- *   character-creation overlay with the name prefilled and locked.
- * - Otherwise → keep the character-creation overlay hidden and show the
- *   login / register panel. Successful auth auto-transitions to the
- *   character overlay (register flow auto-logs in as part of the same
- *   POST response).
+ * Sessions now live in an HttpOnly cookie (`td_session`). This module:
+ *   - Never touches the session token — the browser sends it automatically.
+ *   - Reads `td_csrf` (non-HttpOnly) and echoes it in `X-CSRF-Token` on every
+ *     state-changing request (double-submit).
+ *   - Keeps the display name in localStorage for UX only (avoids a round-trip
+ *     to /api/auth/me on cold boot to decide which overlay to show).
  */
 
-const AUTH_TOKEN_KEY = 'td.authToken';
-const AUTH_NAME_KEY  = 'td.authName';
+const AUTH_NAME_KEY = 'td.authName';
+const CSRF_COOKIE   = 'td_csrf';
 
-function setAuth(token, name) {
-  try {
-    localStorage.setItem(AUTH_TOKEN_KEY, token);
-    localStorage.setItem(AUTH_NAME_KEY, name);
-  } catch { /* ignore quota / private mode */ }
+function readCookie(name) {
+  const raw = document.cookie || '';
+  for (const part of raw.split(';')) {
+    const [k, ...rest] = part.trim().split('=');
+    if (k === name) return decodeURIComponent(rest.join('='));
+  }
+  return '';
 }
-function clearAuth() {
-  try {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
-    localStorage.removeItem(AUTH_NAME_KEY);
-  } catch { /* ignore */ }
+function csrfToken() { return readCookie(CSRF_COOKIE); }
+
+function setAuthName(name) {
+  try { localStorage.setItem(AUTH_NAME_KEY, name); } catch { /* ignore */ }
 }
-function getAuthToken() {
-  try { return localStorage.getItem(AUTH_TOKEN_KEY) || ''; } catch { return ''; }
+function clearAuthName() {
+  try { localStorage.removeItem(AUTH_NAME_KEY); } catch { /* ignore */ }
+}
+function getAuthName() {
+  try { return localStorage.getItem(AUTH_NAME_KEY) || ''; } catch { return ''; }
 }
 
-// Tracks whether the saves overlay was opened on top of a running game so the
-// "Back" button can return to the in-progress run instead of the main menu.
+async function apiFetch(url, opts = {}) {
+  const headers = Object.assign({}, opts.headers || {});
+  const method = (opts.method || 'GET').toUpperCase();
+  if (method !== 'GET' && method !== 'HEAD') {
+    const t = csrfToken();
+    if (t) headers['X-CSRF-Token'] = t;
+  }
+  return fetch(url, Object.assign({}, opts, { headers, credentials: 'same-origin' }));
+}
+
+async function logout() {
+  try { await apiFetch('/api/auth/logout', { method: 'POST' }); }
+  catch { /* best effort — the cookies will be cleared server-side */ }
+  clearAuthName();
+}
+
 let openedFromActiveGame = false;
 
-// Expose the token so other modules (game engine) can call /api/saves
-// without having to re-implement the localStorage key constants.
 window.tdAuth = {
-  getToken: getAuthToken,
-  clear:    clearAuth,
-  // Opens the Save Game screen on top of an active run. Logged-in users get
-  // the overlay directly (no reload, so Back returns to the live game). Guests
-  // still go through the legacy reload path that routes them to register.
+  getName:    getAuthName,
+  isLoggedIn: () => !!getAuthName(),
+  csrfToken,
+  apiFetch,
+  clear:      logout,
   openSaveScreen() {
-    if (getAuthToken()) {
+    if (getAuthName()) {
       openedFromActiveGame = true;
       window.location.hash = '#/saves/save';
       showSavesOverlay('save');
@@ -53,12 +69,8 @@ window.tdAuth = {
 };
 
 async function verifyToken() {
-  const t = getAuthToken();
-  if (!t) return null;
   try {
-    const res = await fetch('/api/auth/me', {
-      headers: { Authorization: `Bearer ${t}` },
-    });
+    const res = await apiFetch('/api/auth/me');
     if (!res.ok) return null;
     const data = await res.json();
     return data && data.name ? data : null;
@@ -68,15 +80,16 @@ async function verifyToken() {
 async function submitAuth(mode, name, password) {
   const url = mode === 'register' ? '/api/auth/register' : '/api/auth/login';
   try {
-    const res = await fetch(url, {
+    const res = await apiFetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, password }),
     });
     let data = {};
     try { data = await res.json(); } catch { /* non-json */ }
-    if (!res.ok) return { error: data.error || `HTTP ${res.status}` };
-    return { token: data.token, name: data.name };
+    if (!res.ok) return { error: data.error || 'Sign-in failed' };
+    setAuthName(data.name || name);
+    return { name: data.name };
   } catch {
     return { error: 'Network error — is the server running?' };
   }
@@ -91,14 +104,12 @@ function showCharacterOverlay(name, { guest = false } = {}) {
   if (startOverlay) startOverlay.style.display = '';
   if (playerName) {
     playerName.value = name || '';
-    // Guests pick their own display name; authenticated users keep theirs.
     playerName.readOnly = !guest;
     setTimeout(() => {
       const target = guest ? playerName : document.getElementById('startBtn');
       if (target) target.focus();
     }, 30);
   }
-  // "Load saved game" is reserved for authenticated users only.
   if (loadBtn) loadBtn.style.display = guest ? 'none' : '';
 }
 
@@ -113,7 +124,7 @@ function showAuthOverlay() {
   if (firstField) firstField.focus();
 }
 
-const CLASS_ICON = { knight: '⚔️', paladin: '🏹', sorcerer: '🔥', druid: '🌿' };
+const CLASS_ICON  = { knight: '⚔️', paladin: '🏹', sorcerer: '🔥', druid: '🌿' };
 const CLASS_LABEL = { knight: 'Knight', paladin: 'Paladin', sorcerer: 'Sorcerer', druid: 'Druid' };
 
 function formatSaveTimestamp(ts) {
@@ -129,10 +140,8 @@ function formatSaveTimestamp(ts) {
 
 let cachedSaves = [];
 async function fetchSaves() {
-  const token = getAuthToken();
-  if (!token) { cachedSaves = []; return []; }
   try {
-    const res = await fetch('/api/saves', { headers: { Authorization: `Bearer ${token}` } });
+    const res = await apiFetch('/api/saves');
     if (!res.ok) { cachedSaves = []; return []; }
     const data = await res.json();
     cachedSaves = Array.isArray(data && data.saves) ? data.saves : [];
@@ -141,20 +150,13 @@ async function fetchSaves() {
 }
 
 async function deleteSaveById(id) {
-  const token = getAuthToken();
-  if (!token || !id) return false;
+  if (!id || !/^[a-f0-9]{8,64}$/.test(id)) return false;
   try {
-    const res = await fetch(`/api/saves?id=${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await apiFetch(`/api/saves?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     return res.ok;
   } catch { return false; }
 }
 
-// Mode that drives the save-list UI:
-//   'load' → Resume + Delete (default, reached from character overlay)
-//   'save' → Save button only, plus a "Save as new slot" card at the top
 let savesMode = 'load';
 
 function readPendingSnapshot() {
@@ -175,110 +177,141 @@ function clearPendingSnapshot() {
 }
 
 async function postSnapshot(snapshot, id) {
-  const token = getAuthToken();
-  if (!token) return { error: 'Not authenticated' };
   try {
-    const res = await fetch('/api/saves', {
+    const res = await apiFetch('/api/saves', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(id ? { snapshot, id } : { snapshot }),
     });
     let data = {};
     try { data = await res.json(); } catch { /* ignore */ }
-    if (!res.ok) return { error: data.error || `HTTP ${res.status}` };
+    if (!res.ok) return { error: data.error || 'Save failed' };
     return { id: data.id };
   } catch { return { error: 'Network error' }; }
+}
+
+// ── Safe DOM builders (Level 6: no more innerHTML for user data) ──────
+function el(tag, attrs = {}, children = []) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') node.className = v;
+    else if (k === 'style') node.setAttribute('style', v);
+    else if (k === 'dataset') Object.assign(node.dataset, v);
+    else if (k.startsWith('data-')) node.setAttribute(k, v);
+    else node[k] = v;
+  }
+  for (const c of [].concat(children)) {
+    if (c == null) continue;
+    node.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+  }
+  return node;
+}
+
+function buildStat(label, value) {
+  return el('span', {}, [
+    el('span', { class: 'save-stat-label' }, [label]),
+    el('span', { class: 'save-stat-val' }, [String(value)]),
+  ]);
+}
+function sep() { return el('span', { class: 'sep' }, ['·']); }
+
+function renderSaveCardDOM({ classKey, iconChar, label, name, level, floor, hp, maxHp, gold, kills, tsText, actionBtns, tamperedFlag }) {
+  const card = el('div', { class: 'save-card' });
+  card.appendChild(el('div', { class: 'save-class-icon' }, [iconChar]));
+  const main = el('div', { class: 'save-main' });
+  // Name + ` · Label`
+  const nameRow = el('div', { class: 'save-name' }, [String(name)]);
+  nameRow.appendChild(el('span', { style: 'color:#64748b;font-weight:500;font-size:0.78rem;' }, [' · ' + String(label)]));
+  if (tamperedFlag) {
+    nameRow.appendChild(el('span', { style: 'color:#f87171;font-size:0.72rem;margin-left:6px;', title: 'This save failed its integrity check.' }, ['⚠ tampered']));
+  }
+  main.appendChild(nameRow);
+  const sub = el('div', { class: 'save-sub' }, [
+    buildStat('Lv',    String(level)),    sep(),
+    buildStat('Floor', String(floor)),    sep(),
+    buildStat('HP',    `${hp}/${maxHp}`), sep(),
+    buildStat('Gold',  String(gold)),     sep(),
+    buildStat('Kills', String(kills)),    sep(),
+    el('span', { style: 'color:#64748b;' }, [tsText]),
+  ]);
+  main.appendChild(sub);
+  card.appendChild(main);
+  card.appendChild(el('div', { class: 'save-actions' }, actionBtns));
+  // Mirror the classKey on the card for styling hooks.
+  card.dataset.classKey = classKey;
+  return card;
 }
 
 function renderSaveCard(save, mode) {
   const c = save.character || {};
   const classKey = String(c.classKey || 'knight').toLowerCase();
-  const icon  = CLASS_ICON[classKey] || '•';
-  const label = CLASS_LABEL[classKey] || 'Adventurer';
-  const actions = mode === 'save'
-    ? `<button type="button" class="save-action resume" data-action="save" data-id="${save.id}">Save</button>`
-    : `
-      <button type="button" class="save-action resume" data-action="resume" data-id="${save.id}">Resume</button>
-      <button type="button" class="save-action delete" data-action="delete" data-id="${save.id}">Delete</button>
-    `;
-  const card = document.createElement('div');
-  card.className = 'save-card';
-  card.innerHTML = `
-    <div class="save-class-icon">${icon}</div>
-    <div class="save-main">
-      <div class="save-name">${escapeHtml(c.name || 'Adventurer')} <span style="color:#64748b;font-weight:500;font-size:0.78rem;"> · ${label}</span></div>
-      <div class="save-sub">
-        <span><span class="save-stat-label">Lv</span><span class="save-stat-val">${c.level || 1}</span></span>
-        <span class="sep">·</span>
-        <span><span class="save-stat-label">Floor</span><span class="save-stat-val">${save.floor || 1}</span></span>
-        <span class="sep">·</span>
-        <span><span class="save-stat-label">HP</span><span class="save-stat-val">${save.hp || 0}/${save.maxHp || 0}</span></span>
-        <span class="sep">·</span>
-        <span><span class="save-stat-label">Gold</span><span class="save-stat-val">${save.gold || 0}</span></span>
-        <span class="sep">·</span>
-        <span><span class="save-stat-label">Kills</span><span class="save-stat-val">${save.kills || 0}</span></span>
-        <span class="sep">·</span>
-        <span style="color:#64748b;">${formatSaveTimestamp(save.ts)}</span>
-      </div>
-    </div>
-    <div class="save-actions">${actions}</div>
-  `;
-  return card;
+  const iconChar = CLASS_ICON[classKey] || '•';
+  const label    = CLASS_LABEL[classKey] || 'Adventurer';
+  const actionBtns = [];
+  if (mode === 'save') {
+    actionBtns.push(el('button', {
+      type: 'button', class: 'save-action resume',
+      'data-action': 'save', 'data-id': save.id,
+    }, ['Save']));
+  } else {
+    actionBtns.push(el('button', {
+      type: 'button', class: 'save-action resume',
+      'data-action': 'resume', 'data-id': save.id,
+    }, ['Resume']));
+    actionBtns.push(el('button', {
+      type: 'button', class: 'save-action delete',
+      'data-action': 'delete', 'data-id': save.id,
+    }, ['Delete']));
+  }
+  return renderSaveCardDOM({
+    classKey, iconChar, label,
+    name:  String(c.name || 'Adventurer').slice(0, 40),
+    level: Math.max(0, Number(c.level || 1)),
+    floor: Math.max(0, Number(save.floor || 1)),
+    hp:    Math.max(0, Number(save.hp || 0)),
+    maxHp: Math.max(0, Number(save.maxHp || 0)),
+    gold:  Math.max(0, Number(save.gold || 0)),
+    kills: Math.max(0, Number(save.kills || 0)),
+    tsText: formatSaveTimestamp(save.ts),
+    actionBtns,
+    tamperedFlag: !!save._tampered,
+  });
 }
 
 function renderPendingRunCard(snapshot) {
-  // First-time save for this run — no existing slot yet. We preview the
-  // current run stats straight from the pending snapshot so the player
-  // sees what they're about to commit.
   if (!snapshot) return null;
   const classKey = String(snapshot.classKey || 'knight').toLowerCase();
-  const icon  = CLASS_ICON[classKey] || '•';
-  const label = CLASS_LABEL[classKey] || 'Adventurer';
-  const card = document.createElement('div');
-  card.className = 'save-card';
-  card.innerHTML = `
-    <div class="save-class-icon">${icon}</div>
-    <div class="save-main">
-      <div class="save-name">${escapeHtml(snapshot.name || 'Adventurer')} <span style="color:#64748b;font-weight:500;font-size:0.78rem;"> · ${label}</span></div>
-      <div class="save-sub">
-        <span><span class="save-stat-label">Lv</span><span class="save-stat-val">${snapshot.playerLevel || 1}</span></span>
-        <span class="sep">·</span>
-        <span><span class="save-stat-label">Floor</span><span class="save-stat-val">${snapshot.currentLevel || 1}</span></span>
-        <span class="sep">·</span>
-        <span><span class="save-stat-label">HP</span><span class="save-stat-val">${snapshot.playerHp || 0}/${snapshot.playerMaxHp || 0}</span></span>
-        <span class="sep">·</span>
-        <span><span class="save-stat-label">Gold</span><span class="save-stat-val">${snapshot.gold || 0}</span></span>
-        <span class="sep">·</span>
-        <span><span class="save-stat-label">Kills</span><span class="save-stat-val">${snapshot.runKills || 0}</span></span>
-        <span class="sep">·</span>
-        <span style="color:#64748b;">current run</span>
-      </div>
-    </div>
-    <div class="save-actions">
-      <button type="button" class="save-action resume" data-action="save" data-id="">Save</button>
-    </div>
-  `;
-  return card;
+  const iconChar = CLASS_ICON[classKey] || '•';
+  const label    = CLASS_LABEL[classKey] || 'Adventurer';
+  const btn = el('button', {
+    type: 'button', class: 'save-action resume',
+    'data-action': 'save', 'data-id': '',
+  }, ['Save']);
+  return renderSaveCardDOM({
+    classKey, iconChar, label,
+    name:  String(snapshot.name || 'Adventurer').slice(0, 40),
+    level: Math.max(0, Number(snapshot.playerLevel || 1)),
+    floor: Math.max(0, Number(snapshot.currentLevel || 1)),
+    hp:    Math.max(0, Number(snapshot.playerHp || 0)),
+    maxHp: Math.max(0, Number(snapshot.playerMaxHp || 0)),
+    gold:  Math.max(0, Number(snapshot.gold || 0)),
+    kills: Math.max(0, Number(snapshot.runKills || 0)),
+    tsText: 'current run',
+    actionBtns: [btn],
+  });
 }
 
-async function finalizeSaveAndExit(id) {
-  // Returning to the character-creation overlay — same behaviour as closing
-  // the run. We clear the pending snapshot and the hash, then hand over to
-  // the overlay the user would see on a fresh boot.
+async function finalizeSaveAndExit() {
   clearPendingSnapshot();
   if (window.location.hash) {
-    // Strip the hash without triggering a reload.
     history.replaceState(null, '', window.location.pathname + window.location.search);
   }
-  // If the saves screen was opened on top of a live run, the Phaser game is
-  // still running underneath. Reload so the engine tears down cleanly before
-  // the user starts a new run from the character overlay.
   if (openedFromActiveGame) {
     openedFromActiveGame = false;
     window.location.reload();
     return;
   }
-  const name = (localStorage.getItem(AUTH_NAME_KEY) || '').trim();
+  const name = getAuthName();
   if (name) showCharacterOverlay(name);
   else showAuthOverlay();
 }
@@ -288,38 +321,36 @@ async function renderSavesScreen() {
   const titleEl = document.querySelector('#savesOverlay .panel-title');
   if (!list) return;
   if (titleEl) titleEl.textContent = savesMode === 'save' ? 'Save Game' : 'Load Game';
-  list.innerHTML = '<div class="saves-empty">Loading…</div>';
+  list.replaceChildren(el('div', { class: 'saves-empty' }, ['Loading…']));
   const saves = await fetchSaves();
-  list.innerHTML = '';
+  list.replaceChildren();
 
   if (savesMode === 'save') {
-    // The Save screen is strictly about the current run: only show the slot
-    // this run lives in (if we resumed from one) so the Save button can
-    // overwrite that same record. No "new slot" option.
     const pendingId = readPendingSaveId();
     const pendingSnapshot = readPendingSnapshot();
     if (pendingId) {
       const match = saves.find((s) => s.id === pendingId);
       if (match) list.appendChild(renderSaveCard(match, 'save'));
-      else if (pendingSnapshot) list.appendChild(renderPendingRunCard(pendingSnapshot));
+      else if (pendingSnapshot) {
+        const card = renderPendingRunCard(pendingSnapshot);
+        if (card) list.appendChild(card);
+      }
     } else if (pendingSnapshot) {
-      list.appendChild(renderPendingRunCard(pendingSnapshot));
+      const card = renderPendingRunCard(pendingSnapshot);
+      if (card) list.appendChild(card);
     } else {
-      list.innerHTML = '<div class="saves-empty">No active run to save. Press "Save and Exit" from the game.</div>';
+      list.replaceChildren(el('div', { class: 'saves-empty' }, ['No active run to save. Press "Save and Exit" from the game.']));
     }
     return;
   }
 
   if (!saves.length) {
-    list.innerHTML = '<div class="saves-empty">No saved games yet.</div>';
+    list.replaceChildren(el('div', { class: 'saves-empty' }, ['No saved games yet.']));
     return;
   }
   for (const save of saves) list.appendChild(renderSaveCard(save, savesMode));
 }
 
-// Permanent event delegation on the saves list — we attach it once at
-// bootstrap time (wireSavesScreen) so re-renders don't leak listeners and
-// a stray click in the grid doesn't consume a "once" handler.
 async function handleSavesListClick(ev) {
   const btn = ev.target.closest('.save-action');
   if (!btn || btn.disabled) return;
@@ -329,8 +360,8 @@ async function handleSavesListClick(ev) {
   if (action === 'delete') {
     if (!confirm('Delete this save? This cannot be undone.')) return;
     btn.disabled = true;
-    const ok = await deleteSaveById(id);
-    if (ok) renderSavesScreen();
+    const okDel = await deleteSaveById(id);
+    if (okDel) renderSavesScreen();
     else btn.disabled = false;
     return;
   }
@@ -353,8 +384,6 @@ async function handleSavesListClick(ev) {
     btn.disabled = true;
     const prev = btn.textContent;
     btn.textContent = 'Saving…';
-    // Empty id → first save for this run (server creates the slot).
-    // Non-empty id → overwrite the existing slot for this run.
     const targetId = id || null;
     const result = await postSnapshot(snapshot, targetId);
     if (result.error) {
@@ -363,14 +392,8 @@ async function handleSavesListClick(ev) {
       btn.textContent = prev;
       return;
     }
-    await finalizeSaveAndExit(result.id);
+    await finalizeSaveAndExit();
   }
-}
-
-function escapeHtml(s) {
-  return String(s == null ? '' : s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function showSavesOverlay(mode = 'load') {
@@ -389,22 +412,17 @@ function wireSavesScreen() {
   if (closeBtn) {
     closeBtn.addEventListener('click', (ev) => {
       ev.preventDefault();
-      // Going "back" drops the user on the character overlay. If they were
-      // in Save Game mode without committing, discard the pending snapshot
-      // so it isn't dangling in sessionStorage.
       if (savesMode === 'save') clearPendingSnapshot();
       if (window.location.hash) {
         history.replaceState(null, '', window.location.pathname + window.location.search);
       }
-      // If the saves screen was opened on top of an active run, just hide it
-      // so the player resumes exactly where they left off.
       if (openedFromActiveGame) {
         openedFromActiveGame = false;
         const savesOverlay = document.getElementById('savesOverlay');
         if (savesOverlay) savesOverlay.style.display = 'none';
         return;
       }
-      const name = (localStorage.getItem(AUTH_NAME_KEY) || '').trim();
+      const name = getAuthName();
       if (name) showCharacterOverlay(name);
       else showAuthOverlay();
     });
@@ -413,8 +431,6 @@ function wireSavesScreen() {
   if (list) list.addEventListener('click', handleSavesListClick);
 }
 
-// Exposed by wireAuthForm so bootstrapAuth can flip the form into the
-// "register" tab when we detect a guest run that needs to be saved.
 let authSetMode = null;
 
 function wireAuthForm() {
@@ -458,9 +474,9 @@ function wireAuthForm() {
 
   const guestBtn = document.getElementById('authGuestBtn');
   if (guestBtn) {
-    guestBtn.addEventListener('click', (ev) => {
+    guestBtn.addEventListener('click', async (ev) => {
       ev.preventDefault();
-      clearAuth();
+      await logout();
       showCharacterOverlay('', { guest: true });
     });
   }
@@ -472,7 +488,6 @@ function wireAuthForm() {
     const password = passEl.value || '';
     const repeat   = (repEl && repEl.value) || '';
 
-    // Client-side validation mirroring the server.
     if (!name)              { errEl.textContent = 'Name required'; return; }
     if (name.length > 12)   { errEl.textContent = 'Name too long (max 12)'; return; }
     if (password.length < 6){ errEl.textContent = 'Password must be at least 6 characters'; return; }
@@ -492,10 +507,6 @@ function wireAuthForm() {
       errEl.textContent = result.error;
       return;
     }
-    setAuth(result.token, result.name);
-    // If the player arrived from an in-game "Save and Exit" while still a
-    // guest, there's a pending snapshot waiting — drop them on the Save
-    // Game screen so they can commit it right away.
     if (window.location.hash === '#/saves/save' && readPendingSnapshot()) {
       showSavesOverlay('save');
       return;
@@ -517,7 +528,6 @@ function wireLoadGameButton() {
 }
 
 async function bootstrapAuth() {
-  // Hide overlays until we've decided which one belongs on screen.
   const startOverlay = document.getElementById('startOverlay');
   const savesOverlay = document.getElementById('savesOverlay');
   if (startOverlay) startOverlay.style.display = 'none';
@@ -529,36 +539,24 @@ async function bootstrapAuth() {
 
   const me = await verifyToken();
   if (me && me.name) {
-    // URL-hash routing: #/saves/save → Save Game screen,
-    //                   #/saves/load → Load Game screen,
-    //                   #/saves       → legacy alias for load.
+    setAuthName(me.name);
     const h = window.location.hash;
-    if (h === '#/saves/save') {
-      showSavesOverlay('save');
-      return;
-    }
-    if (h === '#/saves/load' || h === '#/saves') {
-      showSavesOverlay('load');
-      return;
-    }
+    if (h === '#/saves/save') { showSavesOverlay('save'); return; }
+    if (h === '#/saves/load' || h === '#/saves') { showSavesOverlay('load'); return; }
     showCharacterOverlay(me.name);
     return;
   }
-  clearAuth();
+  clearAuthName();
   showAuthOverlay();
-  // Guest player who just hit "Save and Exit" — nudge them straight to
-  // the Register tab so the default submit creates an account and then
-  // commits the pending snapshot.
   if (window.location.hash === '#/saves/save' && readPendingSnapshot() && typeof authSetMode === 'function') {
     authSetMode('register');
   }
 }
 
-// Run immediately; the overlays are in the DOM because this module is
-// loaded as `type="module"` at the end of <body>.
 bootstrapAuth();
 
 export const authApi = {
-  getAuthToken,
-  clearAuth,
+  getAuthName,
+  clearAuth: logout,
+  apiFetch,
 };

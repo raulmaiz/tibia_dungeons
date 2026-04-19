@@ -5,6 +5,20 @@
  */
 export const CHANGELOG = [
   {
+    version: '0.6.0',
+    date: '2026-04-19',
+    entries: [
+      'Security: sessions migrated to HttpOnly + Secure cookies with CSRF double-submit',
+      'Security: Hall of Fame submissions now require login (guest runs no longer polluting the board)',
+      'Security: server-side validation and caps — floor ≤ 100, level ≤ 200, gold ≤ 10M; score recomputed server-side',
+      'Security: rate limiting on login/register/runs to stop brute force and spam',
+      'Security: HMAC-signed saves flag tampering in the Load Game list',
+      'Security: CSP, HSTS, XFO and other hardening headers applied across the site',
+      'Security: anti-enumeration — login/register return identical generic errors with response jitter',
+      'Saves UI: cards now built via safe DOM APIs (no more innerHTML interpolation of user data)',
+    ],
+  },
+  {
     version: '0.5.0',
     date: '2026-04-19',
     entries: [
