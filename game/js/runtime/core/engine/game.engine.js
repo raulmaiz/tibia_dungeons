@@ -2223,8 +2223,22 @@ function startGame(configPlayer) {
         const drawMinimapDynamic = () => {
           if (!minimapCtx || !minimapBaseImageData) return;
           minimapCtx.putImageData(minimapBaseImageData, 0, 0);
-          // Player only — creatures are intentionally hidden so the minimap
-          // stays a navigation aid, not a combat tracker.
+          // Convinced/summoned allies — green dots so the player can locate
+          // them when they wander out of sight. Enemies remain hidden to keep
+          // the minimap a navigation aid, not a combat tracker.
+          if (Array.isArray(creatures)) {
+            minimapCtx.fillStyle = '#22c55e';
+            for (const c of creatures) {
+              if (!c || !c.alive || !c.isConvinced) continue;
+              minimapCtx.fillRect(
+                MMAP_PAD + c.gx * minimapMMTile,
+                MMAP_PAD + c.gy * minimapMMTile,
+                minimapMMTile,
+                minimapMMTile
+              );
+            }
+          }
+          // Player on top so it stays visible when an ally shares the tile.
           minimapCtx.fillStyle = '#ffffff';
           minimapCtx.fillRect(
             MMAP_PAD + gridX * minimapMMTile,
@@ -3536,25 +3550,45 @@ function startGame(configPlayer) {
           addCombatLog(
             `Floor ${level}: ${first.type_primary} (base dmg ${first.maxDamage}).`
           );
-          // Respawn saved convinced allies near the player start tile (capped)
+          // Respawn saved convinced allies near the player start tile (capped).
+          // BFS outward from START_TILE through walkable tiles so the ally lands
+          // on the nearest *reachable* free tile instead of being silently
+          // dropped when the 8 immediate neighbours are all taken by enemies.
+          const findAllyRespawnTile = () => {
+            const seen = new Set([`${START_TILE.gx},${START_TILE.gy}`]);
+            const queue = [{ x: START_TILE.gx, y: START_TILE.gy, d: 0 }];
+            const steps = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]];
+            const maxDist = 15;
+            while (queue.length > 0) {
+              const cur = queue.shift();
+              if (cur.d > 0 && isWalkable(cur.x, cur.y) && !creatureAt(cur.x, cur.y)) {
+                return { gx: cur.x, gy: cur.y };
+              }
+              if (cur.d >= maxDist) continue;
+              for (const [dx, dy] of steps) {
+                const nx = cur.x + dx;
+                const ny = cur.y + dy;
+                const k = `${nx},${ny}`;
+                if (seen.has(k)) continue;
+                seen.add(k);
+                if (!isWalkable(nx, ny)) continue;
+                queue.push({ x: nx, y: ny, d: cur.d + 1 });
+              }
+            }
+            return null;
+          };
           for (let i = 0; i < Math.min(savedAllyTemplates.length, MAX_CONVINCED); i++) {
             const tpl = savedAllyTemplates[i];
-            const textureKey = `creature_${tpl.id}`;
-            if (!this.textures.exists(textureKey)) continue;
-            // Find a walkable tile near the player spawn
-            const offsets = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]];
-            let spawnGX = START_TILE.gx + (offsets[i] ? offsets[i][0] : 1);
-            let spawnGY = START_TILE.gy + (offsets[i] ? offsets[i][1] : 0);
-            if (!isWalkable(spawnGX, spawnGY) || creatureAt(spawnGX, spawnGY)) {
-              const found = offsets.find(([ox, oy]) => {
-                const tx = START_TILE.gx + ox;
-                const ty = START_TILE.gy + oy;
-                return isWalkable(tx, ty) && !creatureAt(tx, ty);
-              });
-              if (!found) continue;
-              spawnGX = START_TILE.gx + found[0];
-              spawnGY = START_TILE.gy + found[1];
-            }
+            const requestedKey = `creature_${tpl.id}`;
+            const fallbackKey = 'creature_1116';
+            const textureKey = this.textures.exists(requestedKey)
+              ? requestedKey
+              : (this.textures.exists(fallbackKey) ? fallbackKey : null);
+            if (!textureKey) continue;
+            const spot = findAllyRespawnTile();
+            if (!spot) continue;
+            const spawnGX = spot.gx;
+            const spawnGY = spot.gy;
             const sprite = this.add.sprite(centerX(spawnGX), centerY(spawnGY), textureKey);
             sprite.setOrigin(0.5, 0.5);
             applyCreatureNormalizedDisplaySize(sprite, this, tileSize);
@@ -8274,9 +8308,7 @@ function startGame(configPlayer) {
           if (gameOver || playerDead) return;
           if (!ally.alive) return;
           if (now < ally.nextActionAt) return;
-          const enemies = aliveCreatures();
-          if (enemies.length === 0) {
-            // No enemies — follow player
+          const followPlayerStep = () => {
             const stepToPlayer = findNextStepToTarget(ally.gx, ally.gy, gridX, gridY);
             if (stepToPlayer && !(stepToPlayer.x === gridX && stepToPlayer.y === gridY)) {
               orientCreatureSprite(ally, stepToPlayer.x - ally.gx, stepToPlayer.y - ally.gy);
@@ -8287,6 +8319,18 @@ function startGame(configPlayer) {
               updateCreatureBar(ally);
             }
             ally.nextActionAt = now + actionDelayFromSpeed(ally.speed);
+          };
+          const enemies = aliveCreatures();
+          if (enemies.length === 0) {
+            followPlayerStep();
+            return;
+          }
+          // If the ally drifted too far from the player (common right after a
+          // floor change when it spawns adjacent to the start tile and the
+          // player walks away), prioritize regrouping over chasing enemies.
+          const distToPlayer = Math.max(Math.abs(ally.gx - gridX), Math.abs(ally.gy - gridY));
+          if (distToPlayer > 6) {
+            followPlayerStep();
             return;
           }
           // Find nearest enemy
@@ -8327,8 +8371,12 @@ function startGame(configPlayer) {
             ally.sprite.x = centerX(ally.gx);
             ally.sprite.y = centerY(ally.gy);
             updateCreatureBar(ally);
+            ally.nextActionAt = now + actionDelayFromSpeed(ally.speed);
+            return;
           }
-          ally.nextActionAt = now + actionDelayFromSpeed(ally.speed);
+          // Path to the nearest enemy is blocked — fall back to following the
+          // player so the ally doesn't freeze in place.
+          followPlayerStep();
         };
         const findNextStepToPlayer = (fromX, fromY) => {
           const startKey = tileKey(fromX, fromY);
