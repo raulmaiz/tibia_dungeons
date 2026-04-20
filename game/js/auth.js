@@ -12,6 +12,13 @@
 const AUTH_NAME_KEY = 'td.authName';
 const CSRF_COOKIE   = 'td_csrf';
 
+// Cached role for the signed-in session. Updated by verifyToken() / submitAuth()
+// / logout(). Used by the engine to gate admin-only debug tooling
+// (window.debugGod). This is a UX guard — a determined user with DevTools can
+// always patch client-side state, so no security decision should depend on it.
+let currentRole = 'user';
+function setCurrentRole(role) { currentRole = role === 'admin' ? 'admin' : 'user'; }
+
 function readCookie(name) {
   const raw = document.cookie || '';
   for (const part of raw.split(';')) {
@@ -46,6 +53,7 @@ async function logout() {
   try { await apiFetch('/api/auth/logout', { method: 'POST' }); }
   catch { /* best effort — the cookies will be cleared server-side */ }
   clearAuthName();
+  setCurrentRole('user');
 }
 
 let openedFromActiveGame = false;
@@ -53,6 +61,8 @@ let openedFromActiveGame = false;
 window.tdAuth = {
   getName:    getAuthName,
   isLoggedIn: () => !!getAuthName(),
+  getRole:    () => currentRole,
+  isAdmin:    () => currentRole === 'admin',
   csrfToken,
   apiFetch,
   clear:      logout,
@@ -71,10 +81,15 @@ window.tdAuth = {
 async function verifyToken() {
   try {
     const res = await apiFetch('/api/auth/me');
-    if (!res.ok) return null;
+    if (!res.ok) { setCurrentRole('user'); return null; }
     const data = await res.json();
-    return data && data.name ? data : null;
-  } catch { return null; }
+    if (data && data.name) {
+      setCurrentRole(data.role || 'user');
+      return data;
+    }
+    setCurrentRole('user');
+    return null;
+  } catch { setCurrentRole('user'); return null; }
 }
 
 async function submitAuth(mode, name, password) {
@@ -89,6 +104,7 @@ async function submitAuth(mode, name, password) {
     try { data = await res.json(); } catch { /* non-json */ }
     if (!res.ok) return { error: data.error || 'Sign-in failed' };
     setAuthName(data.name || name);
+    setCurrentRole(data.role || 'user');
     return { name: data.name };
   } catch {
     return { error: 'Network error — is the server running?' };

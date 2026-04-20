@@ -63,6 +63,14 @@ export default async function handler(req, res) {
     if (!me || !me.name) return fail(res, 401, 'Not authenticated');
     if (!requireCsrf(req)) return fail(res, 403, 'CSRF token missing or invalid');
 
+    // Admin accounts are for testing + moderation — their deaths must never
+    // pollute the Hall of Fame. Accept the request so clients don't retry,
+    // but don't write anything.
+    if (me.role === 'admin') {
+      log('info', 'runs.post.skip_admin', { name: me.name });
+      return ok(res, { ok: true, skipped: 'admin' });
+    }
+
     if (await enforceRateLimit(req, res, { bucket: 'runs_post', subject: me.name, limit: 10, windowSec: 3600 })) return;
 
     let body;

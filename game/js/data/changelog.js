@@ -10,6 +10,8 @@ export const CHANGELOG = [
     entries: [
       'Admin: new /stats panel (admin-only) with registered users, saves per user, sessions and top runs',
       'Admin: user roles added — public /api/stats removed and replaced with authenticated /api/admin/stats',
+      'Admin: window.debugGod (God Mode + floor teleport) is now restricted to the admin account',
+      'Admin: admin deaths never land on the Hall of Fame (server- and client-gated)',
     ],
   },
   {

@@ -3719,7 +3719,16 @@ function startGame(configPlayer) {
           player.y = centerY(gridY);
           updatePlayerBar();
         };
+        const isAdminUser = () => {
+          try {
+            return !!(window.tdAuth && typeof window.tdAuth.isAdmin === 'function' && window.tdAuth.isAdmin());
+          } catch { return false; }
+        };
         const setGodMode = (enabled) => {
+          if (enabled && !isAdminUser()) {
+            addCombatLog('God Mode is restricted to administrators.');
+            return false;
+          }
           godModeEnabled = Boolean(enabled);
           if (godModeEnabled) {
             gameOver = false;
@@ -3734,11 +3743,17 @@ function startGame(configPlayer) {
           updateHud();
           return godModeEnabled;
         };
+        const denyNonAdmin = () => {
+          addCombatLog('debugGod is restricted to administrators.');
+          return false;
+        };
         window.debugGod = {
           enable() {
             return setGodMode(true);
           },
           disable() {
+            // Always allow disabling — no reason to trap a non-admin in god mode
+            // if it was somehow enabled before role state was known.
             return setGodMode(false);
           },
           toggle() {
@@ -3748,6 +3763,7 @@ function startGame(configPlayer) {
             return Boolean(godModeEnabled);
           },
           goToFloor(level) {
+            if (!isAdminUser()) return denyNonAdmin();
             const target = Math.max(1, Math.floor(Number(level) || 1));
             currentLevel = target;
             descendLevel(false);
@@ -3756,9 +3772,11 @@ function startGame(configPlayer) {
             return target;
           },
           nextFloor() {
+            if (!isAdminUser()) return denyNonAdmin();
             return this.goToFloor(currentLevel + 1);
           },
           prevFloor() {
+            if (!isAdminUser()) return denyNonAdmin();
             return this.goToFloor(Math.max(1, currentLevel - 1));
           },
         };
@@ -9107,6 +9125,9 @@ async function saveRun(run) {
   const api = window.tdAuth && window.tdAuth.apiFetch;
   const loggedIn = window.tdAuth && window.tdAuth.isLoggedIn && window.tdAuth.isLoggedIn();
   if (!api || !loggedIn) return;
+  // Admins play for testing — their deaths should never pollute the board,
+  // even though god mode is available to them.
+  if (window.tdAuth.isAdmin && window.tdAuth.isAdmin()) return;
   try {
     await api('/api/runs', {
       method: 'POST',

@@ -269,6 +269,7 @@ async function handleRuns(req, res) {
   if (req.method === 'POST') {
     const me = authenticate(req); if (!me) return sendJson(res, 401, { error: 'Not authenticated' });
     if (!requireCsrf(req)) return sendJson(res, 403, { error: 'CSRF token missing or invalid' });
+    if (me.role === 'admin') return sendJson(res, 200, { ok: true, skipped: 'admin' });
     if (enforceRateLimit(req, res, { bucket: 'runs_post', subject: me.name, limit: 10, windowSec: 3600 })) return;
 
     let body; try { body = await readJsonBody(req, 4096); } catch { return sendJson(res, 400, { error: 'Invalid request' }); }
