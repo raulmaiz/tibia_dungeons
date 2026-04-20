@@ -7,6 +7,7 @@ import {
   getCreatureAbilitiesById,
   getCreatureDamageModifiersById,
   getManifest,
+  imageUrl,
 } from '../../../dataService.js';
 import {
   parseDamageRangeString,
@@ -235,7 +236,7 @@ function updateEquippedLightSlotImage() {
   const elapsed = getCurrentLightElapsedMs();
   const img = getLightItemImage(cur.articleId, cur.title, elapsed, cur.duration);
   if (!img) return;
-  const desiredSrc = `./data/images/${img}`;
+  const desiredSrc = imageUrl(img);
   if (!slotImg.src.endsWith(img)) slotImg.src = desiredSrc;
 }
 function applyCurrentLightStateToAtmosphere() {
@@ -935,7 +936,7 @@ function setupSelectorUI() {
     }
     equippedSlots[slotKey] = item;
     if (item.image) {
-      slotImg.src = `./data/images/${item.image}`;
+      slotImg.src = imageUrl(item.image);
       slotImg.style.display = 'block';
       slotIcon.textContent = '';
     } else {
@@ -1109,7 +1110,7 @@ function setupSelectorUI() {
         const resolvedImage = getLootLightItemImage(lootItem) || lootItem.image;
         if (resolvedImage) {
           const img = document.createElement('img');
-          img.src = `./data/images/${resolvedImage}`;
+          img.src = imageUrl(resolvedImage);
           img.alt = lootItem.title || 'Loot item';
           cell.appendChild(img);
         } else {
@@ -1566,7 +1567,7 @@ function setupSelectorUI() {
         },
       };
       if (bag.image) {
-        bagImg.src = `./data/images/${bag.image}`;
+        bagImg.src = imageUrl(bag.image);
         bagImg.style.display = 'block';
         bagIcon.textContent = '';
       } else {
@@ -1948,8 +1949,11 @@ function setupSelectorUI() {
       const id = currentSaveId;
       if (!id) return false;
       const api = window.tdAuth && window.tdAuth.apiFetch;
-      const loggedIn = window.tdAuth && window.tdAuth.isLoggedIn && window.tdAuth.isLoggedIn();
-      if (!api || !loggedIn) return false;
+      if (!api) return false;
+      if (!OFFLINE_BUILD) {
+        const loggedIn = window.tdAuth.isLoggedIn && window.tdAuth.isLoggedIn();
+        if (!loggedIn) return false;
+      }
       currentSaveId = null;
       try {
         await api(`/api/saves?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
@@ -2002,14 +2006,14 @@ function startGame(configPlayer) {
         });
 
         for (let i = 0; i < 4; i += 1) {
-          this.load.image(frameTextureName('male', i), `./data/images/outfit_frames/male_${i}.png`);
-          this.load.image(frameTextureName('female', i), `./data/images/outfit_frames/female_${i}.png`);
+          this.load.image(frameTextureName('male', i), imageUrl(`outfit_frames/male_${i}.png`));
+          this.load.image(frameTextureName('female', i), imageUrl(`outfit_frames/female_${i}.png`));
         }
-        this.load.image(deathTextureName('male'), './data/images/other/you_are_death_male.jpg');
-        this.load.image(deathTextureName('female'), './data/images/other/you_are_death_female.jpg');
+        this.load.image(deathTextureName('male'), imageUrl('other/you_are_death_male.jpg'));
+        this.load.image(deathTextureName('female'), imageUrl('other/you_are_death_female.jpg'));
         // Hazard-field tile sprites (reused across every tile in a field).
-        this.load.image('fx_fire_field', './data/images/item/Fire.gif');
-        this.load.image('fx_poison_field', './data/images/item/Poison Gas.gif');
+        this.load.image('fx_fire_field', imageUrl('item/Fire.gif'));
+        this.load.image('fx_poison_field', imageUrl('item/Poison Gas.gif'));
         const unique = new Map();
         for (const tier of typeProgressionGroups) {
           for (const c of tier.creatures) {
@@ -2017,7 +2021,7 @@ function startGame(configPlayer) {
           }
         }
         for (const c of unique.values()) {
-          this.load.image(creatureKey(c), `./data/images/${c.image}`);
+          this.load.image(creatureKey(c), imageUrl(c.image));
         }
       },
       create() {
@@ -2694,7 +2698,7 @@ function startGame(configPlayer) {
               ensureTextMarker('📦');
               if (entry.loadingTextureKey !== textureKey) {
                 entry.loadingTextureKey = textureKey;
-                this.load.image(textureKey, `./data/images/${firstItem.image}`);
+                this.load.image(textureKey, imageUrl(firstItem.image));
                 this.load.once(`filecomplete-image-${textureKey}`, () => {
                   entry.loadingTextureKey = null;
                   refreshGroundLootMarker(entry);
@@ -4291,7 +4295,7 @@ function startGame(configPlayer) {
             if (item && item.image) {
               const img = document.createElement('img');
               img.className = 'spell-slot-img';
-              img.src = `./data/images/${item.image}`;
+              img.src = imageUrl(item.image);
               img.alt = item.title;
               imgWrap.appendChild(img);
             }
@@ -4630,7 +4634,7 @@ function startGame(configPlayer) {
               const imgWrap = document.createElement('div');
               imgWrap.className = 'item-shop-img-wrap';
               const img = document.createElement('img');
-              img.src = `./data/images/${item.image}`;
+              img.src = imageUrl(item.image);
               img.alt = item.title || 'Item';
               imgWrap.appendChild(img);
               head.appendChild(imgWrap);
@@ -4898,7 +4902,7 @@ function startGame(configPlayer) {
             imgWrap.className = 'card-img-wrap';
             if (item.image) {
               const img = document.createElement('img');
-              img.src = `./data/images/${item.image}`;
+              img.src = imageUrl(item.image);
               img.alt = item.title || '';
               imgWrap.appendChild(img);
             }
@@ -4957,7 +4961,7 @@ function startGame(configPlayer) {
           imgWrap.className = 'detail-img-wrap';
           if (item.image) {
             const img = document.createElement('img');
-            img.src = `./data/images/${item.image}`;
+            img.src = imageUrl(item.image);
             img.alt = item.title || '';
             imgWrap.appendChild(img);
           }
@@ -5069,7 +5073,7 @@ function startGame(configPlayer) {
           imgWrap.className = 'splash-img';
           if (item.image) {
             const img = document.createElement('img');
-            img.src = `./data/images/${item.image}`;
+            img.src = imageUrl(item.image);
             img.alt = item.title || '';
             imgWrap.appendChild(img);
           }
@@ -5236,8 +5240,11 @@ function startGame(configPlayer) {
           marketEls.openBtn.title = clear ? '' : 'Clear all creatures first';
         };
         const saveGameBtnEl = document.getElementById('saveGameBtn');
+        // Offline build: no cloud saves, and the itch.io audience expects
+        // a simple pick-up-and-play experience. Hide the button entirely.
+        if (OFFLINE_BUILD && saveGameBtnEl) saveGameBtnEl.style.display = 'none';
         const updateSaveGameButton = () => {
-          if (!saveGameBtnEl) return;
+          if (!saveGameBtnEl || OFFLINE_BUILD) return;
           const clear = aliveCreatures().length === 0;
           saveGameBtnEl.disabled = !clear;
           saveGameBtnEl.title = clear ? '' : 'Clear all creatures first';
@@ -9122,12 +9129,18 @@ async function saveRun(run) {
   // Hall of Fame submissions are now authenticated (Level 4 security plan).
   // Guests silently skip posting — their run still stays on their screen but
   // doesn't land on the leaderboard.
+  //
+  // In the OFFLINE build there is no real leaderboard to pollute; every run
+  // goes to localStorage so the player's personal Hall of Fame stays populated.
   const api = window.tdAuth && window.tdAuth.apiFetch;
-  const loggedIn = window.tdAuth && window.tdAuth.isLoggedIn && window.tdAuth.isLoggedIn();
-  if (!api || !loggedIn) return;
-  // Admins play for testing — their deaths should never pollute the board,
-  // even though god mode is available to them.
-  if (window.tdAuth.isAdmin && window.tdAuth.isAdmin()) return;
+  if (!api) return;
+  if (!OFFLINE_BUILD) {
+    const loggedIn = window.tdAuth.isLoggedIn && window.tdAuth.isLoggedIn();
+    if (!loggedIn) return;
+    // Admins play for testing — their deaths should never pollute the board,
+    // even though god mode is available to them.
+    if (window.tdAuth.isAdmin && window.tdAuth.isAdmin()) return;
+  }
   try {
     await api('/api/runs', {
       method: 'POST',
@@ -9269,7 +9282,7 @@ function showHallOfFame() {
           <span class="hof-trophy">🏆</span>
           <div>
             <div class="hof-title">Hall of Fame</div>
-            <div class="hof-subtitle">Top 100 adventurers of all time</div>
+            <div class="hof-subtitle">${OFFLINE_BUILD ? 'Your personal top runs on this device' : 'Top 100 adventurers of all time'}</div>
           </div>
         </div>
         <button class="hof-close" id="hofCloseBtn">✕ Close</button>
@@ -9289,7 +9302,8 @@ function showHallOfFame() {
 
   const MEDALS = ['🥇', '🥈', '🥉'];
 
-  fetch('/api/runs')
+  const hofFetch = (window.tdAuth && window.tdAuth.apiFetch) || fetch;
+  hofFetch('/api/runs')
     .then((r) => {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return r.json();

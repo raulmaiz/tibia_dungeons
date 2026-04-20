@@ -2648,7 +2648,7 @@
       </div>
     </div>
 
-    <div class="overlay" id="authOverlay">
+    <div class="overlay" id="authOverlay" style="display:none;">
       <div class="panel">
         <div class="panel-title">Tibia Dungeons</div>
         <div class="panel-subtitle" id="authSubtitle">Sign in to play</div>
@@ -2762,6 +2762,9 @@
           <div id="loadingBar" style="height:100%; width:0%; background:linear-gradient(90deg,#8a5a12 0%,#e2a030 50%,#f4c054 100%); border-radius:999px; transition:width 0.28s ease; box-shadow:0 0 14px rgba(226,160,48,0.6);"></div>
         </div>
         <div id="loadingPct" style="font-size:0.85rem; color:#9a8468; margin-top:0.7em; letter-spacing:0.14em;">0%</div>
+        <div id="loadingDomain" style="margin-top:1em; font-size:0.78rem; letter-spacing:0.22em; text-transform:uppercase; color:#c9b589; opacity:0.75;">
+          <a href="https://www.tibia-dungeons.com" target="_blank" rel="noopener" style="color:#f4c054; text-decoration:none; border-bottom:1px dashed rgba(244,192,84,0.35); padding-bottom:1px;">www.tibia-dungeons.com</a>
+        </div>
 
         <div id="changelogPanel">
           <div id="changelogHeader">What's new</div>
@@ -2776,6 +2779,20 @@
         </div>
       </div>
     </div>
+
+    <!-- Offline build badge: linked from the itch.io / standalone flavor to the
+         hosted online version. Hidden by default; shown by auth.js when
+         OFFLINE_BUILD is true. -->
+    <a id="offlineOnlineBadge" href="https://www.tibia-dungeons.com" target="_blank" rel="noopener"
+       style="display:none; position:fixed; right:12px; bottom:12px; z-index:99998;
+              padding:8px 14px; border-radius:999px; font-size:0.72rem; font-weight:700;
+              letter-spacing:0.14em; text-transform:uppercase; text-decoration:none;
+              background:rgba(8,10,20,0.88); color:#f4c054;
+              border:1px solid rgba(226,160,48,0.5);
+              box-shadow:0 4px 18px rgba(0,0,0,0.6), 0 0 20px rgba(226,160,48,0.18);
+              backdrop-filter:blur(6px);">
+      🏰 Play online · tibia-dungeons.com
+    </a>
 
     <script type="module" src="./dist/main.min.js"></script>
     <script type="module" src="./dist/loading-screen.min.js"></script>
@@ -2808,10 +2825,8 @@
     </div>
 
     <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').catch(() => {});
-      }
-
+      // Service worker registration moved into dist/loading-screen.min.js
+      // so the OFFLINE_BUILD flag can tree-shake it out of the itch.io build.
       (function () {
         var installBtn = document.getElementById('pwaInstallBtn');
         var iosHint = document.getElementById('pwaIosHint');

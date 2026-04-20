@@ -7,7 +7,14 @@
  *     state-changing request (double-submit).
  *   - Keeps the display name in localStorage for UX only (avoids a round-trip
  *     to /api/auth/me on cold boot to decide which overlay to show).
+ *
+ * When built with OFFLINE_BUILD=true (scripts/build.js --offline), every
+ * `/api/*` call is routed through `offlineFetch` (localStorage-backed), and
+ * the login overlay is bypassed — the player goes straight into character
+ * select with a persisted guest name.
  */
+
+import { offlineFetch, offlineCurrentName, offlineSetName } from './offline-api.js';
 
 const AUTH_NAME_KEY = 'td.authName';
 const CSRF_COOKIE   = 'td_csrf';
@@ -40,6 +47,7 @@ function getAuthName() {
 }
 
 async function apiFetch(url, opts = {}) {
+  if (OFFLINE_BUILD) return offlineFetch(url, opts);
   const headers = Object.assign({}, opts.headers || {});
   const method = (opts.method || 'GET').toUpperCase();
   if (method !== 'GET' && method !== 'HEAD') {
@@ -552,6 +560,34 @@ async function bootstrapAuth() {
   wireAuthForm();
   wireLoadGameButton();
   wireSavesScreen();
+
+  // Offline (itch.io / standalone) build: there is no server and no accounts.
+  // Skip auth entirely, load the persisted guest name from localStorage, and
+  // drop the player straight into character select with the name editable.
+  if (OFFLINE_BUILD) {
+    const authOverlay = document.getElementById('authOverlay');
+    if (authOverlay) authOverlay.style.display = 'none';
+    const badge = document.getElementById('offlineOnlineBadge');
+    if (badge) badge.style.display = '';
+    const name = offlineCurrentName();
+    setAuthName(name);
+    setCurrentRole('user');
+    // Persist any edit the player makes to the name on character select so
+    // next run they see the same adventurer.
+    const nameInput = document.getElementById('playerName');
+    if (nameInput) {
+      const persist = () => {
+        const trimmed = offlineSetName(nameInput.value);
+        setAuthName(trimmed);
+      };
+      nameInput.addEventListener('blur', persist);
+      nameInput.addEventListener('change', persist);
+    }
+    const h = window.location.hash;
+    if (h === '#/saves/load' || h === '#/saves') { showSavesOverlay('load'); return; }
+    showCharacterOverlay(name, { guest: true });
+    return;
+  }
 
   const me = await verifyToken();
   if (me && me.name) {

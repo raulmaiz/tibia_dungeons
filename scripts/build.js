@@ -2,10 +2,15 @@
 /**
  * Bundle + minify the game's client JS with esbuild.
  *
- *   node scripts/build.js           # dev build (unminified, inline sourcemaps)
- *   node scripts/build.js --prod    # prod build (minified, mangled, no maps,
- *                                     deletes game/js/ source after bundling)
- *   node scripts/build.js --watch   # dev build + watch game/js/ for changes
+ *   node scripts/build.js             # dev build (unminified, inline sourcemaps)
+ *   node scripts/build.js --prod      # prod build (minified, mangled, no maps,
+ *                                       deletes game/js/ source after bundling)
+ *   node scripts/build.js --prod --offline
+ *                                     # offline build for itch.io / standalone
+ *                                       (OFFLINE_BUILD=true → localStorage stubs
+ *                                       replace /api/* calls; tree-shake drops
+ *                                       the online branch)
+ *   node scripts/build.js --watch     # dev build + watch game/js/ for changes
  *
  * Entry points:
  *   game/js/main.js            → game/dist/main.min.js
@@ -24,8 +29,9 @@ const ROOT    = path.resolve(__dirname, '..');
 const JS_DIR  = path.join(ROOT, 'game/js');
 const OUT_DIR = path.join(ROOT, 'game/dist');
 
-const prod  = process.argv.includes('--prod') || !!process.env.VERCEL;
-const watch = process.argv.includes('--watch');
+const prod    = process.argv.includes('--prod') || !!process.env.VERCEL;
+const watch   = process.argv.includes('--watch');
+const offline = process.argv.includes('--offline') || process.env.OFFLINE_BUILD === '1';
 
 const opts = {
   entryPoints: [
@@ -44,6 +50,18 @@ const opts = {
   legalComments: 'none',
   sourcemap: prod ? false : 'inline',
   logLevel: 'info',
+  // Build-time constants. `OFFLINE_BUILD` toggles the itch.io / standalone
+  // flavor (localStorage-backed API stubs, no login screen). esbuild replaces
+  // the identifier in source, and minification dead-code-eliminates the
+  // unused branch so online and offline bundles stay lean.
+  define: {
+    OFFLINE_BUILD:    String(offline),
+    ONLINE_SITE_URL:  JSON.stringify('https://www.tibia-dungeons.com'),
+    // Prefix for /data/images/* URLs. Empty for online builds (served from the
+    // same origin); the Vercel domain for the offline build, so the itch.io
+    // ZIP can omit the 14k-file image tree and fetch images on demand.
+    IMAGE_BASE_URL:   JSON.stringify(offline ? 'https://www.tibia-dungeons.com' : ''),
+  },
   // Prod builds keep no identifying strings that make reverse-engineering
   // trivial. dev builds keep everything for stack traces.
   drop: prod ? ['debugger'] : [],
@@ -60,7 +78,8 @@ const opts = {
 
   await esbuild.build(opts);
   const label = prod ? 'prod (minified, mangled)' : 'dev (readable, sourcemaps)';
-  console.log(`✓ bundled → game/dist/ [${label}]`);
+  const flavor = offline ? ' [OFFLINE — itch.io / standalone]' : '';
+  console.log(`✓ bundled → game/dist/ [${label}]${flavor}`);
 
   if (prod) {
     // Don't ship the original sources to Vercel — only the bundle and the

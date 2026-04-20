@@ -1,4 +1,4 @@
-const CACHE = 'tibia-dungeons-v4';
+const CACHE = 'tibia-dungeons-v5';
 
 // Cache-first: sirve desde cache, si no existe descarga y guarda
 async function cacheFirst(request) {
@@ -44,11 +44,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Phaser desde CDN: cache-first (versión fija)
-  if (url.hostname === 'unpkg.com') {
-    event.respondWith(cacheFirst(event.request));
-    return;
-  }
+  // Cross-origin CDN (unpkg/jsDelivr): let the browser load it natively.
+  // Our CSP's connect-src is 'self', so fetch()ing from inside the SW
+  // throws — and intercepting-then-failing breaks the <script> tag.
+  // Not calling respondWith() passes the request straight to the network.
+  if (url.origin !== self.location.origin) return;
 
   // Assets estáticos SEO/PWA: cache-first
   if (['/favicon.svg', '/manifest.webmanifest'].includes(path) || path === '/data/images/game/preview.jpg') {

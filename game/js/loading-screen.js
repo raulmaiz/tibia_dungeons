@@ -2,9 +2,21 @@
  * Loading-screen changelog animation. Imported as the second module from
  * index.html so VERSION + CHANGELOG get inlined into the bundle instead of
  * loaded as raw source files at runtime.
+ *
+ * Also responsible for the service-worker registration (moved here from an
+ * inline <script> in index.html so esbuild's OFFLINE_BUILD define can
+ * tree-shake it out of the itch.io / standalone flavor, where the SW just
+ * gets in the way).
  */
 import { VERSION }   from './data/version.js';
 import { CHANGELOG } from './data/changelog.js';
+
+// Service worker registration — online builds only. In the offline flavor
+// there is no network cache to manage and an SW inside the itch.io iframe
+// tends to intercept cross-origin CDN loads we can't control (Phaser).
+if (!OFFLINE_BUILD && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
 
 // Version badge in title
 const verEl = document.getElementById('loadingVersion');

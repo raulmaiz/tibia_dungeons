@@ -7,3 +7,7 @@
 .env.*.local
 node_modules
 game/dist
+
+# Build / tool artifacts (regenerated on demand)
+dist
+.claude

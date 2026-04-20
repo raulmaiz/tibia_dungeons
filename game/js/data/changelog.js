@@ -5,6 +5,19 @@
  */
 export const CHANGELOG = [
   {
+    version: '1.0.0',
+    date: '2026-04-20',
+    entries: [
+      'Milestone: first stable release — Tibia Dungeons 1.0',
+      'UI: pre-game menus redesigned with cinematic dungeon key art (auth, character select, saved games, loading, Hall of Fame)',
+      'UI: new palette — ember torchlight on deep navy, ice-blue sword accents, crimson destructive actions, parchment text',
+      'UI: loading screen now shows www.tibia-dungeons.com below the progress bar',
+      'Build: new "itch.io / standalone" flavor via `npm run build:itch` — no accounts, saves + Hall of Fame stored in localStorage',
+      'Build: OFFLINE_BUILD esbuild flag routes /api/* through a localStorage stub and skips the login overlay',
+      'SW: cache bumped to v5; cross-origin CDN requests (Phaser) now pass through the service worker natively',
+    ],
+  },
+  {
     version: '0.10.0',
     date: '2026-04-20',
     entries: [

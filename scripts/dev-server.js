@@ -568,6 +568,19 @@ async function startEsbuildWatch() {
     target: 'es2020',
     sourcemap: 'inline',
     logLevel: 'info',
+    // Match build.js: OFFLINE_BUILD toggles the itch/standalone flavor. In
+    // dev we keep it false so the local API stays live; set OFFLINE_BUILD=1
+    // before `npm run dev` to preview the offline bundle locally.
+    define: {
+      OFFLINE_BUILD:   String(process.env.OFFLINE_BUILD === '1'),
+      ONLINE_SITE_URL: JSON.stringify('https://www.tibia-dungeons.com'),
+      // Image URL prefix. Dev mirrors the local origin (images served from the
+      // dev server); set `IMAGE_CDN=1` together with `OFFLINE_BUILD=1` to
+      // preview the CDN-backed itch flavor without re-zipping.
+      IMAGE_BASE_URL: JSON.stringify(
+        process.env.IMAGE_CDN === '1' ? 'https://www.tibia-dungeons.com' : ''
+      ),
+    },
   });
   await ctx.rebuild();
   await ctx.watch();

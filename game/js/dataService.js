@@ -649,9 +649,21 @@ export async function getCreatureDamageModifiersById() {
   return creatureDamageModifiersByIdPromise;
 }
 
+/**
+ * Build a URL for an image under data/images/.
+ *
+ * The base prefix is controlled by the `IMAGE_BASE_URL` esbuild define:
+ *   - online / dev:  '' → relative path like `/data/images/foo.png`
+ *   - offline build: 'https://www.tibia-dungeons.com' so the itch.io ZIP can
+ *                    ship without the 14k-file image tree (fetched on demand
+ *                    from the production CDN instead).
+ *
+ * Never pass this helper paths starting with `game/` — those are small
+ * CSS-background assets bundled locally with the offline build.
+ */
 export function imageUrl(relPath) {
   if (!relPath) return null;
-  return `./data/images/${relPath}`;
+  return `${IMAGE_BASE_URL}/data/images/${relPath}`;
 }
 
 export async function searchAll(q) {
