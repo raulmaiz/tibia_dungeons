@@ -1,4 +1,4 @@
-const CACHE = 'tibia-dungeons-v3';
+const CACHE = 'tibia-dungeons-v4';
 
 // Cache-first: sirve desde cache, si no existe descarga y guarda
 async function cacheFirst(request) {
@@ -51,7 +51,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Assets estáticos SEO/PWA: cache-first
-  if (['/favicon.svg', '/og-image.svg', '/manifest.webmanifest'].includes(path)) {
+  if (['/favicon.svg', '/manifest.webmanifest'].includes(path) || path === '/data/images/game/preview.jpg') {
     event.respondWith(cacheFirst(event.request));
     return;
   }

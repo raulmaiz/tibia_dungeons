@@ -9145,98 +9145,140 @@ function showHallOfFame() {
   overlay.id = 'hofOverlay';
   overlay.style.cssText = `
     position: fixed; inset: 0; z-index: 10001;
-    background: radial-gradient(ellipse at 50% 20%, rgba(12,20,42,0.99) 0%, rgba(4,8,18,1) 100%);
+    background:
+      radial-gradient(ellipse at 50% 30%, rgba(4,6,14,0.6) 0%, rgba(3,5,12,0.93) 65%, rgba(1,2,6,0.98) 100%),
+      url('/data/images/game/sword.jpg') center/cover no-repeat fixed,
+      #05070f;
     display: flex; flex-direction: column; align-items: center;
-    font-family: "Segoe UI", system-ui, sans-serif; color: #e2e8f0;
+    font-family: "Segoe UI", system-ui, sans-serif; color: #efe4c9;
     animation: hofFadeIn 0.35s ease; overflow: hidden;
   `;
 
   overlay.innerHTML = `
     <style>
       @keyframes hofFadeIn { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
-      #hofOverlay { --accent: #38bdf8; --accent2: #818cf8; }
+      #hofOverlay::before {
+        content: ''; position: absolute; inset: 0;
+        background: repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0 1px, transparent 1px 3px);
+        pointer-events: none; mix-blend-mode: multiply; opacity: 0.5;
+      }
+      #hofOverlay .hof-panel {
+        position: relative;
+        width: 100%; max-width: 920px;
+        margin: 28px 16px;
+        flex: 1; min-height: 0;
+        display: flex; flex-direction: column;
+        background: linear-gradient(165deg, rgba(24,18,10,0.88) 0%, rgba(10,12,24,0.92) 100%);
+        border: 1px solid rgba(226,160,48,0.32);
+        border-radius: 18px;
+        box-shadow:
+          0 0 0 1px rgba(226,160,48,0.08) inset,
+          0 32px 80px rgba(0,0,0,0.85),
+          0 0 90px rgba(226,160,48,0.08);
+        backdrop-filter: blur(6px);
+      }
+      #hofOverlay .hof-panel::before {
+        content: ''; position: absolute; top: 0; left: 14%; right: 14%; height: 2px;
+        background: linear-gradient(90deg, transparent, #e2a030 50%, transparent);
+        filter: blur(0.4px); opacity: 0.8;
+      }
       #hofOverlay .hof-header {
-        width: 100%; max-width: 900px; padding: 28px 32px 0;
+        padding: 26px 32px 0;
         display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
       }
       #hofOverlay .hof-title-wrap { display: flex; align-items: center; gap: 14px; }
-      #hofOverlay .hof-trophy { font-size: 2.2rem; filter: drop-shadow(0 0 12px #fbbf2488); }
+      #hofOverlay .hof-trophy { font-size: 2.2rem; filter: drop-shadow(0 0 14px rgba(244,192,84,0.7)); }
       #hofOverlay .hof-title {
-        font-size: clamp(1.3rem, 3vw, 1.8rem); font-weight: 900;
-        letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent);
-        text-shadow: 0 0 24px #38bdf855;
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: clamp(1.4rem, 3vw, 1.9rem); font-weight: 900;
+        letter-spacing: 0.14em; text-transform: uppercase; color: #f4c054;
+        text-shadow:
+          0 0 24px rgba(226,160,48,0.55),
+          0 0 4px rgba(255,200,120,0.7),
+          0 2px 0 rgba(0,0,0,0.7);
       }
-      #hofOverlay .hof-subtitle { font-size: 0.72rem; color: #475569; letter-spacing: 0.2em; text-transform: uppercase; margin-top: 1px; }
+      #hofOverlay .hof-subtitle { font-size: 0.72rem; color: #c9b589; letter-spacing: 0.22em; text-transform: uppercase; margin-top: 3px; opacity: 0.8; }
       #hofOverlay .hof-close {
-        background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 8px; color: #94a3b8; font-size: 1rem; padding: 7px 14px;
-        cursor: pointer; transition: background 0.15s, color 0.15s; letter-spacing: 0.06em;
+        background: rgba(138, 42, 42, 0.28); border: 1px solid rgba(215, 72, 72, 0.45);
+        border-radius: 8px; color: #f5c5c5; font-size: 0.78rem; font-weight: 700;
+        padding: 8px 14px;
+        letter-spacing: 0.12em; text-transform: uppercase;
+        cursor: pointer; font-family: inherit;
+        transition: background 0.15s, color 0.15s, box-shadow 0.15s;
       }
-      #hofOverlay .hof-close:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; }
+      #hofOverlay .hof-close:hover {
+        background: rgba(153, 27, 27, 0.55); color: #fff;
+        box-shadow: 0 0 18px rgba(215,72,72,0.3);
+      }
       #hofOverlay .hof-divider {
-        width: 100%; max-width: 900px; height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(56,189,248,0.2), transparent);
-        margin: 18px 0 0; flex-shrink: 0;
+        height: 1px; margin: 18px 32px 0; flex-shrink: 0;
+        background: linear-gradient(90deg, transparent, rgba(226,160,48,0.45), transparent);
       }
       #hofOverlay .hof-scroll {
-        width: 100%; max-width: 900px; flex: 1; overflow-y: auto; padding: 0 32px 28px;
-        scrollbar-width: thin; scrollbar-color: rgba(56,189,248,0.2) transparent;
+        flex: 1; overflow-y: auto; padding: 0 32px 28px;
+        scrollbar-width: thin; scrollbar-color: rgba(226,160,48,0.3) transparent;
       }
       #hofOverlay .hof-scroll::-webkit-scrollbar { width: 5px; }
-      #hofOverlay .hof-scroll::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.2); border-radius: 3px; }
+      #hofOverlay .hof-scroll::-webkit-scrollbar-thumb { background: rgba(226,160,48,0.35); border-radius: 3px; }
       #hofOverlay table { width: 100%; border-collapse: collapse; margin-top: 16px; }
       #hofOverlay thead th {
-        font-size: 0.68rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
-        color: #475569; padding: 0 10px 10px; text-align: left; white-space: nowrap;
-        border-bottom: 1px solid rgba(255,255,255,0.07);
+        font-size: 0.68rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+        color: #c9b589; padding: 0 10px 10px; text-align: left; white-space: nowrap;
+        border-bottom: 1px solid rgba(226,160,48,0.25);
+        opacity: 0.85;
       }
       #hofOverlay thead th.col-num { text-align: center; width: 44px; }
       #hofOverlay thead th.col-num2 { text-align: right; }
       #hofOverlay tbody tr {
-        border-bottom: 1px solid rgba(255,255,255,0.04);
+        border-bottom: 1px solid rgba(226,160,48,0.08);
         transition: background 0.12s;
       }
-      #hofOverlay tbody tr:hover { background: rgba(56,189,248,0.04); }
-      #hofOverlay tbody tr.hof-me { background: rgba(56,189,248,0.07); }
-      #hofOverlay tbody tr.hof-me td { color: #bae6fd; }
+      #hofOverlay tbody tr:hover { background: rgba(226,160,48,0.07); }
+      #hofOverlay tbody tr.hof-me {
+        background: linear-gradient(90deg, rgba(226,160,48,0.1), rgba(226,160,48,0.04));
+        box-shadow: inset 3px 0 0 #f4c054;
+      }
+      #hofOverlay tbody tr.hof-me td { color: #ffe7ba; }
       #hofOverlay tbody td {
-        padding: 11px 10px; font-size: 0.88rem; color: #cbd5e1; white-space: nowrap;
+        padding: 11px 10px; font-size: 0.88rem; color: #d9cba8; white-space: nowrap;
       }
-      #hofOverlay td.col-rank { text-align: center; font-weight: 900; font-size: 1rem; width: 44px; }
+      #hofOverlay td.col-rank { text-align: center; font-weight: 900; font-size: 1rem; width: 44px; color: #c9b589; }
       #hofOverlay td.col-num2 { text-align: right; }
-      #hofOverlay .col-name { font-weight: 700; color: #e2e8f0; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
-      #hofOverlay .col-class { color: #94a3b8; }
-      #hofOverlay .col-floor { font-weight: 800; font-size: 1rem; color: #e2e8f0; }
-      #hofOverlay .col-gold { color: #fbbf24; font-weight: 600; }
-      #hofOverlay .col-killedby { color: #f87171; font-size: 0.82rem; }
-      #hofOverlay .col-date { color: #334155; font-size: 0.78rem; }
-      #hofOverlay .rank-medal { font-size: 1.1rem; }
+      #hofOverlay .col-name { font-weight: 700; color: #efe4c9; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+      #hofOverlay .col-class { color: #c9b589; }
+      #hofOverlay .col-floor { font-weight: 800; font-size: 1rem; color: #efe4c9; }
+      #hofOverlay .col-gold { color: #f4c054; font-weight: 700; text-shadow: 0 0 6px rgba(226,160,48,0.35); }
+      #hofOverlay .col-killedby { color: #f5a9a9; font-size: 0.82rem; }
+      #hofOverlay .col-date { color: #8c7858; font-size: 0.78rem; }
+      #hofOverlay .rank-medal { font-size: 1.15rem; filter: drop-shadow(0 0 6px rgba(244,192,84,0.55)); }
       #hofOverlay .hof-loading, #hofOverlay .hof-empty, #hofOverlay .hof-error {
-        text-align: center; padding: 60px 20px; color: #475569;
-        font-size: 0.95rem; letter-spacing: 0.08em;
+        text-align: center; padding: 60px 20px; color: #9a8468;
+        font-size: 0.95rem; letter-spacing: 0.1em;
       }
-      #hofOverlay .hof-error { color: #ef4444; }
+      #hofOverlay .hof-error { color: #f5a9a9; }
       #hofOverlay .hof-spinner {
         display: inline-block; width: 28px; height: 28px;
-        border: 3px solid rgba(56,189,248,0.15); border-top-color: #38bdf8;
+        border: 3px solid rgba(226,160,48,0.18); border-top-color: #f4c054;
         border-radius: 50%; animation: hofSpin 0.7s linear infinite; margin-bottom: 14px;
       }
       @keyframes hofSpin { to { transform: rotate(360deg); } }
     </style>
-    <div class="hof-header">
-      <div class="hof-title-wrap">
-        <span class="hof-trophy">🏆</span>
-        <div>
-          <div class="hof-title">Hall of Fame</div>
-          <div class="hof-subtitle">Top 100 adventurers of all time</div>
+    <div class="hof-panel">
+      <div class="hof-header">
+        <div class="hof-title-wrap">
+          <span class="hof-trophy">🏆</span>
+          <div>
+            <div class="hof-title">Hall of Fame</div>
+            <div class="hof-subtitle">Top 100 adventurers of all time</div>
+          </div>
         </div>
+        <button class="hof-close" id="hofCloseBtn">✕ Close</button>
       </div>
-      <button class="hof-close" id="hofCloseBtn">✕ Close</button>
-    </div>
-    <div class="hof-divider"></div>
-    <div class="hof-scroll">
-      <div class="hof-loading" id="hofContent">
-        <div class="hof-spinner"></div><br>Loading leaderboard...
+      <div class="hof-divider"></div>
+      <div class="hof-scroll">
+        <div class="hof-loading" id="hofContent">
+          <div class="hof-spinner"></div><br>Loading leaderboard...
+        </div>
       </div>
     </div>
   `;
