@@ -2,15 +2,6 @@
   "buildCommand": null,
   "outputDirectory": "game",
   "framework": null,
-  "rewrites": [
-    {
-      "source": "/data/(.*)\\.json",
-      "missing": [
-        { "type": "header", "key": "referer", "value": "^https?://([a-z0-9-]+\\.)*(tibia-dungeons\\.com|vercel\\.app)(/|$).*" }
-      ],
-      "destination": "/api/denied"
-    }
-  ],
   "headers": [
     {
       "source": "/(.*)",

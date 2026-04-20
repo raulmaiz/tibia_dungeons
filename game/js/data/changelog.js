@@ -5,6 +5,13 @@
  */
 export const CHANGELOG = [
   {
+    version: '0.7.0',
+    date: '2026-04-20',
+    entries: [
+      'Security: /data/*.json now gated by Vercel Edge Middleware (same-site Referer required)',
+    ],
+  },
+  {
     version: '0.6.0',
     date: '2026-04-19',
     entries: [
