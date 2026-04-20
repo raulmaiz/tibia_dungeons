@@ -15,8 +15,9 @@
     <link rel="canonical" href="https://www.tibia-dungeons.com/" />
 
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -1998,6 +1999,12 @@
           url('/data/images/game/sword.jpg') center/cover no-repeat fixed,
           #05070f;
       }
+      #authOverlay {
+        background:
+          radial-gradient(ellipse at 50% 35%, rgba(4,6,14,0.55) 0%, rgba(3,5,12,0.92) 70%, rgba(2,3,8,0.98) 100%),
+          url('/data/images/game/explore.jpg') center/cover no-repeat fixed,
+          #05070f;
+      }
       .panel {
         position: relative;
         width: min(520px, 96vw);
@@ -2784,6 +2791,7 @@
 
         <button id="startBtn">Enter Dungeon</button>
         <button type="button" id="loadGameBtn" class="auth-guest-btn" style="display:none;">Load saved game</button>
+        <button type="button" id="logoutBtn" class="auth-guest-btn" style="display:none;">Log out</button>
         <div class="hint">Press Enter to start</div>
       </div>
     </div>

@@ -124,6 +124,7 @@ function showCharacterOverlay(name, { guest = false } = {}) {
   const startOverlay = document.getElementById('startOverlay');
   const playerName   = document.getElementById('playerName');
   const loadBtn      = document.getElementById('loadGameBtn');
+  const logoutBtn    = document.getElementById('logoutBtn');
   if (authOverlay) authOverlay.style.display = 'none';
   if (startOverlay) startOverlay.style.display = '';
   if (playerName) {
@@ -134,7 +135,8 @@ function showCharacterOverlay(name, { guest = false } = {}) {
       if (target) target.focus();
     }, 30);
   }
-  if (loadBtn) loadBtn.style.display = guest ? 'none' : '';
+  if (loadBtn)   loadBtn.style.display   = guest ? 'none' : '';
+  if (logoutBtn) logoutBtn.style.display = guest ? 'none' : '';
 }
 
 function showAuthOverlay() {
@@ -551,6 +553,25 @@ function wireLoadGameButton() {
   });
 }
 
+function wireLogoutButton() {
+  const btn = document.getElementById('logoutBtn');
+  if (!btn) return;
+  btn.addEventListener('click', async (ev) => {
+    ev.preventDefault();
+    btn.disabled = true;
+    const prev = btn.textContent;
+    btn.textContent = 'Logging out…';
+    try { await logout(); } finally {
+      btn.disabled = false;
+      btn.textContent = prev;
+    }
+    if (window.location.hash) {
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+    showAuthOverlay();
+  });
+}
+
 async function bootstrapAuth() {
   const startOverlay = document.getElementById('startOverlay');
   const savesOverlay = document.getElementById('savesOverlay');
@@ -559,6 +580,7 @@ async function bootstrapAuth() {
 
   wireAuthForm();
   wireLoadGameButton();
+  wireLogoutButton();
   wireSavesScreen();
 
   // Offline (itch.io / standalone) build: there is no server and no accounts.

@@ -5,6 +5,16 @@
  */
 export const CHANGELOG = [
   {
+    version: '1.1.0',
+    date: '2026-04-20',
+    entries: [
+      'UI: login overlay now uses explore.jpg as background art (character select keeps preview.jpg)',
+      'UI: "Log out" button in character select screen — clears the session and returns to login',
+      'Branding: favicon, PWA icons and store image all regenerated from preview.jpg',
+      'SW: cache bumped to v6; /icons/* and /favicon.png added to cache-first list',
+    ],
+  },
+  {
     version: '1.0.0',
     date: '2026-04-20',
     entries: [

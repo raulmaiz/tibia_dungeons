@@ -37,6 +37,8 @@ OFFLINE_BUILD=1 npm run dev
 
 ## Offline / itch.io Build
 
+> **⚠ Don't run `npm run build:itch` unless the user explicitly asks for it.** The offline bundle is only rebuilt ahead of itch.io submissions — it's not part of the regular push/release flow and running it unsolicited wastes time and pollutes `dist/`.
+
 Package the game as a self-contained browser app (no server, no accounts) for itch.io and similar HTML5 portals:
 
 ```
