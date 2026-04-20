@@ -1,4 +1,4 @@
-const CACHE = 'tibia-dungeons-v2';
+const CACHE = 'tibia-dungeons-v3';
 
 // Cache-first: sirve desde cache, si no existe descarga y guarda
 async function cacheFirst(request) {
@@ -53,6 +53,14 @@ self.addEventListener('fetch', (event) => {
   // Assets estáticos SEO/PWA: cache-first
   if (['/favicon.svg', '/og-image.svg', '/manifest.webmanifest'].includes(path)) {
     event.respondWith(cacheFirst(event.request));
+    return;
+  }
+
+  // Bundled game JS: network-first. The URL is immutable per deploy
+  // (no hash in the filename), but we prefer a fresh copy when online
+  // so version bumps propagate without waiting for the SW update cycle.
+  if (path.startsWith('/dist/') && path.endsWith('.js')) {
+    event.respondWith(networkFirst(event.request));
     return;
   }
 });

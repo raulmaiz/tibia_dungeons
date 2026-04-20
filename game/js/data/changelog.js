@@ -5,6 +5,14 @@
  */
 export const CHANGELOG = [
   {
+    version: '0.10.0',
+    date: '2026-04-20',
+    entries: [
+      'Build: client JS now bundled + minified + mangled with esbuild — raw source no longer served in production',
+      'Build: service worker cache bumped to v3 with network-first for /dist/*.js',
+    ],
+  },
+  {
     version: '0.9.0',
     date: '2026-04-20',
     entries: [

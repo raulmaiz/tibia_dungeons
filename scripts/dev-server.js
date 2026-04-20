@@ -545,6 +545,38 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+// Bundle + watch game JS so index.html's ./dist/*.min.js always reflects the
+// current source. Dev builds skip minification and embed inline sourcemaps
+// so stack traces point at real files.
+async function startEsbuildWatch() {
+  let esbuild;
+  try { esbuild = require('esbuild'); }
+  catch {
+    console.warn('│  ⚠  esbuild not installed — run `npm install` to enable bundled dev mode.');
+    return;
+  }
+  const ctx = await esbuild.context({
+    entryPoints: [
+      path.join(GAME_DIR, 'js/main.js'),
+      path.join(GAME_DIR, 'js/loading-screen.js'),
+    ],
+    bundle: true,
+    minify: false,
+    format: 'esm',
+    outdir: path.join(GAME_DIR, 'dist'),
+    outExtension: { '.js': '.min.js' },
+    target: 'es2020',
+    sourcemap: 'inline',
+    logLevel: 'info',
+  });
+  await ctx.rebuild();
+  await ctx.watch();
+}
+
+startEsbuildWatch().catch((err) => {
+  console.error('│  ⚠  esbuild failed to start:', err.message);
+});
+
 server.listen(PORT, () => {
   // Prune expired sessions on boot.
   const now = Date.now(); let pruned = 0;
