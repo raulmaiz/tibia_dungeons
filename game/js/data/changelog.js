@@ -5,6 +5,15 @@
  */
 export const CHANGELOG = [
   {
+    version: '0.8.0',
+    date: '2026-04-20',
+    entries: [
+      'Performance: spatial cache for creature lookups — BFS pathfinding no longer re-scans the creatures array per step',
+      'Performance: BFS queue now uses a head pointer (no O(n) shifts) and caps exploration at 400 nodes',
+      'Performance: health-bar updates culled beyond 18 tiles from the player (bars still sync on move / damage)',
+    ],
+  },
+  {
     version: '0.7.0',
     date: '2026-04-20',
     entries: [

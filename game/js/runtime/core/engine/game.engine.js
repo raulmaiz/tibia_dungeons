@@ -2598,7 +2598,26 @@ function startGame(configPlayer) {
         const aliveCreatures = () => creatures.filter((c) => c.alive && !c.isConvinced);
         const aliveAllies = () => creatures.filter((c) => c.alive && c.isConvinced);
         const allAliveCreatures = () => creatures.filter((c) => c.alive);
-        const creatureAt = (gx, gy) => allAliveCreatures().find((c) => c.gx === gx && c.gy === gy) || null;
+        // Spatial cache for O(1) tile lookups. Invalidated on move/death/spawn;
+        // rebuilt lazily on first read. BFS calls isOccupiedByActor thousands
+        // of times per tick — without this, each call re-scans the full
+        // creatures array.
+        let _creatureTileMap = null;
+        const _invalidateCreatureTileMap = () => { _creatureTileMap = null; };
+        const _getCreatureTileMap = () => {
+          if (_creatureTileMap) return _creatureTileMap;
+          const m = new Map();
+          for (let i = 0; i < creatures.length; i += 1) {
+            const c = creatures[i];
+            if (c && c.alive) m.set(c.gx * 100000 + c.gy, c);
+          }
+          _creatureTileMap = m;
+          return m;
+        };
+        const creatureAt = (gx, gy) => {
+          const c = _getCreatureTileMap().get(gx * 100000 + gy);
+          return (c && c.alive) ? c : null;
+        };
         const enemyCreatureAt = (gx, gy) => aliveCreatures().find((c) => c.gx === gx && c.gy === gy) || null;
         const MAX_CONVINCED = 2;
         // Saved ally templates for floor transitions
@@ -3016,7 +3035,21 @@ function startGame(configPlayer) {
         };
         const updateAllHealthBars = () => {
           updatePlayerBar();
-          for (const c of creatures) updateCreatureBar(c);
+          // Per-move mutations already call updateCreatureBar themselves, so
+          // this per-frame pass only needs to sync creatures near the player
+          // (the ones the user can actually see). Off-screen monsters keep
+          // their last bar state until they next move/take damage.
+          const CULL_RANGE_TILES = 18;
+          for (let i = 0; i < creatures.length; i += 1) {
+            const c = creatures[i];
+            if (!c.alive) continue;
+            const dx = c.gx - gridX;
+            const dy = c.gy - gridY;
+            const absdx = dx < 0 ? -dx : dx;
+            const absdy = dy < 0 ? -dy : dy;
+            if ((absdx > absdy ? absdx : absdy) > CULL_RANGE_TILES) continue;
+            updateCreatureBar(c);
+          }
         };
         const pickGroupForLevel = (level) => {
           if (!typeProgressionGroups.length) return null;
@@ -7240,6 +7273,7 @@ function startGame(configPlayer) {
           fresh.hpBar.fill.setDepth(17);
           fresh.nameTag.setDepth(18);
           creatures.push(fresh);
+          _invalidateCreatureTileMap();
           updateCreatureBar(fresh);
           return fresh;
         };
@@ -8272,11 +8306,13 @@ function startGame(configPlayer) {
           }
           if (goalKeys.size === 0) return null;
           const queue = [{ x: fromX, y: fromY }];
+          let head = 0;
           const visited = new Set([startKey]);
           const prev = new Map();
           const dirs = [{ x:1,y:0 },{ x:-1,y:0 },{ x:0,y:1 },{ x:0,y:-1 }];
-          while (queue.length > 0) {
-            const cur = queue.shift();
+          const MAX_BFS_NODES = 400;
+          while (head < queue.length && visited.size < MAX_BFS_NODES) {
+            const cur = queue[head++];
             const curKey = tileKey(cur.x, cur.y);
             if (goalKeys.has(curKey)) {
               if (curKey === startKey) return null;
@@ -8312,6 +8348,7 @@ function startGame(configPlayer) {
               orientCreatureSprite(ally, stepToPlayer.x - ally.gx, stepToPlayer.y - ally.gy);
               ally.gx = stepToPlayer.x;
               ally.gy = stepToPlayer.y;
+              _invalidateCreatureTileMap();
               ally.sprite.x = centerX(ally.gx);
               ally.sprite.y = centerY(ally.gy);
               updateCreatureBar(ally);
@@ -8366,6 +8403,7 @@ function startGame(configPlayer) {
             orientCreatureSprite(ally, step.x - ally.gx, step.y - ally.gy);
             ally.gx = step.x;
             ally.gy = step.y;
+            _invalidateCreatureTileMap();
             ally.sprite.x = centerX(ally.gx);
             ally.sprite.y = centerY(ally.gy);
             updateCreatureBar(ally);
@@ -8396,6 +8434,7 @@ function startGame(configPlayer) {
           if (goalKeys.size === 0) return null;
 
           const queue = [{ x: fromX, y: fromY }];
+          let head = 0;
           const visited = new Set([startKey]);
           const prev = new Map();
           const directions = [
@@ -8404,9 +8443,10 @@ function startGame(configPlayer) {
             { x: 0, y: 1 },
             { x: 0, y: -1 },
           ];
+          const MAX_BFS_NODES = 400;
 
-          while (queue.length > 0) {
-            const cur = queue.shift();
+          while (head < queue.length && visited.size < MAX_BFS_NODES) {
+            const cur = queue[head++];
             const curKey = tileKey(cur.x, cur.y);
             if (goalKeys.has(curKey)) {
               if (curKey === startKey) return null;
@@ -8440,6 +8480,7 @@ function startGame(configPlayer) {
           orientCreatureSprite(creature, next.x - creature.gx, next.y - creature.gy);
           creature.gx = next.x;
           creature.gy = next.y;
+          _invalidateCreatureTileMap();
           creature.sprite.x = centerX(creature.gx);
           creature.sprite.y = centerY(creature.gy);
           updateCreatureBar(creature);
@@ -8466,6 +8507,7 @@ function startGame(configPlayer) {
             orientCreatureSprite(creature, d.dx, d.dy);
             creature.gx = nx;
             creature.gy = ny;
+            _invalidateCreatureTileMap();
             creature.sprite.x = centerX(creature.gx);
             creature.sprite.y = centerY(creature.gy);
             updateCreatureBar(creature);
@@ -8500,6 +8542,7 @@ function startGame(configPlayer) {
             if (!best) return false;
             orientCreatureSprite(creature, best.d.dx, best.d.dy);
             creature.gx = best.nx; creature.gy = best.ny;
+            _invalidateCreatureTileMap();
             creature.sprite.x = centerX(creature.gx);
             creature.sprite.y = centerY(creature.gy);
             updateCreatureBar(creature);
@@ -8511,6 +8554,7 @@ function startGame(configPlayer) {
           if (!next) return false;
           orientCreatureSprite(creature, next.x - creature.gx, next.y - creature.gy);
           creature.gx = next.x; creature.gy = next.y;
+          _invalidateCreatureTileMap();
           creature.sprite.x = centerX(creature.gx);
           creature.sprite.y = centerY(creature.gy);
           updateCreatureBar(creature);
@@ -8542,6 +8586,7 @@ function startGame(configPlayer) {
           orientCreatureSprite(creature, best.d.dx, best.d.dy);
           creature.gx = best.nx;
           creature.gy = best.ny;
+          _invalidateCreatureTileMap();
           creature.sprite.x = centerX(creature.gx);
           creature.sprite.y = centerY(creature.gy);
           updateCreatureBar(creature);
@@ -8555,6 +8600,7 @@ function startGame(configPlayer) {
 
         const creatureTurn = () => {
           if (gameOver) return;
+          _invalidateCreatureTileMap();
           const now = this.time.now;
           attackersPressureInTurn = 0;
           for (const creature of aliveCreatures()) {
