@@ -211,11 +211,12 @@ function authenticate(req) {
   if (!token) return null;
   const sess = authStore.sessions[token]; if (!sess) return null;
   if ((sess.createdAt || 0) + SESSION_TTL_MS < Date.now()) { delete authStore.sessions[token]; persistAuth(); return null; }
-  return { name: sess.name, token, csrf: sess.csrf };
+  return { name: sess.name, role: sess.role === 'admin' ? 'admin' : 'user', token, csrf: sess.csrf };
 }
-function createSession(name, res) {
+function createSession(name, res, { role = 'user' } = {}) {
   const token = newToken(32); const csrf = newToken(24);
-  authStore.sessions[token] = { name, createdAt: Date.now(), csrf };
+  const normalizedRole = role === 'admin' ? 'admin' : 'user';
+  authStore.sessions[token] = { name, role: normalizedRole, createdAt: Date.now(), csrf };
   persistAuth();
   const ttl = Math.floor(SESSION_TTL_MS / 1000);
   setCookie(res, SESSION_COOKIE, token, { maxAgeSec: ttl, httpOnly: true });
@@ -315,8 +316,8 @@ async function handleAuthRegister(req, res) {
   const name = String(body.name).trim(); const key = name.toLowerCase();
   if (authStore.users[key]) { await jitter(); return sendJson(res, 401, { error: 'Invalid credentials' }); }
   const salt = crypto.randomBytes(16).toString('hex'); const hash = hashPassword(body.password, salt);
-  authStore.users[key] = { name, salt, hash, createdAt: Date.now() };
-  const { csrf } = createSession(name, res);
+  authStore.users[key] = { name, salt, hash, role: 'user', createdAt: Date.now() };
+  const { csrf } = createSession(name, res, { role: 'user' });
   return sendJson(res, 200, { name, csrf });
 }
 
@@ -335,8 +336,9 @@ async function handleAuthLogin(req, res) {
   const user = authStore.users[String(body.name).trim().toLowerCase()];
   if (!user) return sendJson(res, 401, { error: 'Invalid credentials' });
   if (hashPassword(body.password, user.salt) !== user.hash) return sendJson(res, 401, { error: 'Invalid credentials' });
-  const { csrf } = createSession(user.name, res);
-  return sendJson(res, 200, { name: user.name, csrf });
+  const role = user.role === 'admin' ? 'admin' : 'user';
+  const { csrf } = createSession(user.name, res, { role });
+  return sendJson(res, 200, { name: user.name, csrf, role });
 }
 
 function handleAuthLogout(req, res) {
@@ -350,7 +352,7 @@ function handleAuthMe(req, res) {
   if (req.method !== 'GET') return sendJson(res, 405, { error: 'Method not allowed' });
   if (enforceRateLimit(req, res, { bucket: 'me', subject: clientIp(req), limit: 120, windowSec: 60 })) return;
   const me = authenticate(req); if (!me) return sendJson(res, 401, { error: 'Not authenticated' });
-  return sendJson(res, 200, { name: me.name, csrf: me.csrf || '' });
+  return sendJson(res, 200, { name: me.name, role: me.role, csrf: me.csrf || '' });
 }
 
 // ── /api/saves ──────────────────────────────────────────────────────
@@ -436,17 +438,50 @@ async function handleCspReport(req, res) {
   res.statusCode = 204; return res.end();
 }
 
-function handleStats(req, res) {
+function handleAdminStats(req, res) {
   if (applyCors(req, res, 'GET, OPTIONS')) return;
   if (req.method !== 'GET') return sendJson(res, 405, { error: 'Method not allowed' });
-  if (enforceRateLimit(req, res, { bucket: 'stats', subject: clientIp(req), limit: 30, windowSec: 60 })) return;
-  const saveCount = Object.values(savesStore).reduce((n, u) => n + Object.keys(u || {}).length, 0);
+  const me = authenticate(req);
+  if (!me || me.role !== 'admin') return sendJson(res, 403, { error: 'Forbidden' });
+  if (enforceRateLimit(req, res, { bucket: 'admin_stats', subject: me.name, limit: 60, windowSec: 60 })) return;
+
+  const users = Object.values(authStore.users || {}).map((u) => ({
+    name: u.name,
+    role: u.role === 'admin' ? 'admin' : 'user',
+    createdAt: Number(u.createdAt) || 0,
+  })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+  const savesPerUser = {};
+  let savesTotal = 0;
+  for (const [nameLc, bag] of Object.entries(savesStore || {})) {
+    const n = Object.keys(bag || {}).length;
+    savesPerUser[nameLc] = n;
+    savesTotal += n;
+  }
+
+  const topRuns = [...runs].sort((a, b) => (b._score || 0) - (a._score || 0)).slice(0, 50);
+  const runsPerUser = {};
+  for (const r of topRuns) {
+    const k = String(r.name || '').toLowerCase();
+    if (k) runsPerUser[k] = (runsPerUser[k] || 0) + 1;
+  }
+
+  const usersWithDetails = users.map((u) => {
+    const lc = String(u.name || '').toLowerCase();
+    return { ...u, saves: savesPerUser[lc] || 0, runsInTop: runsPerUser[lc] || 0 };
+  });
+
   return sendJson(res, 200, {
-    users: Object.keys(authStore.users).length,
-    activeSessions: Object.keys(authStore.sessions).length,
-    playersWithSaves: Object.keys(savesStore).length,
-    hallOfFameRuns: runs.length,
-    saves: saveCount,
+    totals: {
+      users: users.length,
+      activeSessions: Object.keys(authStore.sessions || {}).length,
+      playersWithSaves: Object.keys(savesPerUser).length,
+      totalSaves: savesTotal,
+      hallOfFameRuns: runs.length,
+    },
+    users: usersWithDetails,
+    topRuns,
+    generatedAt: Date.now(),
   });
 }
 
@@ -457,6 +492,8 @@ function serveStatic(req, res) {
   const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   let pathname = decodeURIComponent(parsedUrl.pathname);
   if (pathname === '/') pathname = '/index.html';
+  // Mirror Vercel's /stats → /stats.html rewrite locally.
+  if (pathname === '/stats') pathname = '/stats.html';
   // Mirror the production referer gate for /data/*.json so devs hit the same
   // behavior locally — DevTools-initiated fetches from the game still work,
   // a raw `curl http://localhost:5173/data/creature.json` returns 403.
@@ -498,7 +535,7 @@ const server = http.createServer(async (req, res) => {
     if (req.url.startsWith('/api/saves'))            return await handleSaves(req, res);
     if (req.url.startsWith('/api/events'))           return await handleEvents(req, res);
     if (req.url.startsWith('/api/csp-report'))       return await handleCspReport(req, res);
-    if (req.url.startsWith('/api/stats'))            return handleStats(req, res);
+    if (req.url.startsWith('/api/admin/stats'))      return handleAdminStats(req, res);
     if (req.url.startsWith('/api/'))                 return sendJson(res, 404, { error: 'Unknown endpoint' });
     return serveStatic(req, res);
   } catch (e) {

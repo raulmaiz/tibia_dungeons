@@ -55,9 +55,11 @@ async function handleRegister(req, res) {
 
   const salt = randomBytes(16).toString('hex');
   const hash = hashPassword(password, salt);
-  const user = { name, salt, hash, createdAt: Date.now() };
+  // role is never writable via the public register endpoint — admin is only
+  // created out-of-band by scripts/seed-admin.js.
+  const user = { name, salt, hash, role: 'user', createdAt: Date.now() };
   await redis('SET', userKey, JSON.stringify(user));
-  const { csrf } = await createSession(name, res);
+  const { csrf } = await createSession(name, res, { role: 'user' });
   log('info', 'auth.register', { name, ip });
   return ok(res, { name, csrf });
 }
@@ -87,9 +89,10 @@ async function handleLogin(req, res) {
     log('warn', 'auth.login.fail', { name: user.name, ip });
     return fail(res, 401, 'Invalid credentials');
   }
-  const { csrf } = await createSession(user.name, res);
-  log('info', 'auth.login', { name: user.name, ip });
-  return ok(res, { name: user.name, csrf });
+  const role = user.role === 'admin' ? 'admin' : 'user';
+  const { csrf } = await createSession(user.name, res, { role });
+  log('info', 'auth.login', { name: user.name, ip, role });
+  return ok(res, { name: user.name, csrf, role });
 }
 
 async function handleLogout(req, res) {
@@ -109,8 +112,8 @@ async function handleMe(req, res) {
   try {
     const { result: raw } = await redis('GET', `session:${me.token}`);
     const sess = raw ? JSON.parse(raw) : null;
-    return ok(res, { name: me.name, csrf: sess && sess.csrf ? sess.csrf : '' });
-  } catch { return ok(res, { name: me.name, csrf: '' }); }
+    return ok(res, { name: me.name, role: me.role, csrf: sess && sess.csrf ? sess.csrf : '' });
+  } catch { return ok(res, { name: me.name, role: me.role, csrf: '' }); }
 }
 
 export default async function handler(req, res) {

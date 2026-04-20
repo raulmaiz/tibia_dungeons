@@ -18,7 +18,7 @@ export const SESSION_COOKIE = 'td_session';
 export const CSRF_COOKIE    = 'td_csrf';
 
 /**
- * Returns { name } for the authenticated caller, or null.
+ * Returns { name, role } for the authenticated caller, or null.
  * Prefers the HttpOnly `td_session` cookie; falls back to Bearer for legacy
  * clients during the migration period.
  */
@@ -33,7 +33,13 @@ export async function authenticate(req) {
     const { result: raw } = await redis('GET', `session:${token}`);
     if (!raw) return null;
     const sess = JSON.parse(raw);
-    return sess && sess.name ? { name: sess.name, token, viaCookie: !!cookieTok } : null;
+    if (!sess || !sess.name) return null;
+    return {
+      name: sess.name,
+      role: sess.role === 'admin' ? 'admin' : 'user',
+      token,
+      viaCookie: !!cookieTok,
+    };
   } catch { return null; }
 }
 
@@ -42,15 +48,16 @@ export async function authenticate(req) {
  * return the pair so handlers can include them in the body too (helpful for
  * bootstrapping the double-submit CSRF token on the client).
  */
-export async function createSession(name, res) {
+export async function createSession(name, res, { role = 'user' } = {}) {
   const token = newSessionToken();
   const csrf  = newCsrfToken();
+  const normalizedRole = role === 'admin' ? 'admin' : 'user';
   await redis('SETEX', `session:${token}`, SESSION_TTL_SECONDS,
-    JSON.stringify({ name, createdAt: Date.now(), csrf }));
+    JSON.stringify({ name, role: normalizedRole, createdAt: Date.now(), csrf }));
   setCookie(res, SESSION_COOKIE, token, { maxAgeSec: SESSION_TTL_SECONDS, httpOnly: true, sameSite: 'Lax' });
   // CSRF cookie is readable by JS so the client can echo it in X-CSRF-Token.
   setCookie(res, CSRF_COOKIE,    csrf,  { maxAgeSec: SESSION_TTL_SECONDS, httpOnly: false, sameSite: 'Lax' });
-  return { token, csrf, name };
+  return { token, csrf, name, role: normalizedRole };
 }
 
 export async function destroySession(req, res) {
@@ -64,6 +71,17 @@ export async function destroySession(req, res) {
   }
   clearCookie(res, SESSION_COOKIE);
   clearCookie(res, CSRF_COOKIE, { httpOnly: false });
+}
+
+/**
+ * Gate for admin-only endpoints. Returns the authenticated session on
+ * success, or null if the caller is not an admin. Handlers should 401/403
+ * on a null return.
+ */
+export async function requireAdmin(req) {
+  const me = await authenticate(req);
+  if (!me || me.role !== 'admin') return null;
+  return me;
 }
 
 /**

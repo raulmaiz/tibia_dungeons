@@ -2,7 +2,17 @@
   "buildCommand": null,
   "outputDirectory": "game",
   "framework": null,
+  "rewrites": [
+    { "source": "/stats", "destination": "/stats.html" }
+  ],
   "headers": [
+    {
+      "source": "/stats.html",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
+        { "key": "Cache-Control", "value": "no-store" }
+      ]
+    },
     {
       "source": "/(.*)",
       "headers": [

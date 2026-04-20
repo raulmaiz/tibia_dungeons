@@ -5,6 +5,14 @@
  */
 export const CHANGELOG = [
   {
+    version: '0.9.0',
+    date: '2026-04-20',
+    entries: [
+      'Admin: new /stats panel (admin-only) with registered users, saves per user, sessions and top runs',
+      'Admin: user roles added — public /api/stats removed and replaced with authenticated /api/admin/stats',
+    ],
+  },
+  {
     version: '0.8.0',
     date: '2026-04-20',
     entries: [

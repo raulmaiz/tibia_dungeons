@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Tibia Dungeons — Admin Stats</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0f17;
+      --panel: #111827;
+      --panel-2: #1f2937;
+      --border: #334155;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --accent: #f59e0b;
+      --ok: #34d399;
+      --danger: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    html, body { background: var(--bg); color: var(--text); margin: 0; padding: 0; font-family: "Segoe UI", system-ui, sans-serif; }
+    header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    header h1 { margin: 0; font-size: 20px; letter-spacing: 0.02em; }
+    header .who { font-size: 13px; color: var(--muted); }
+    header button { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+    header button:hover { background: #273447; }
+    main { padding: 24px; max-width: 1200px; margin: 0 auto; }
+    .login { max-width: 380px; margin: 80px auto; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 28px; }
+    .login h2 { margin: 0 0 16px; font-size: 18px; }
+    .login label { display: block; font-size: 13px; color: var(--muted); margin-top: 12px; margin-bottom: 4px; }
+    .login input { width: 100%; padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border); background: #0b0f17; color: var(--text); font-size: 14px; }
+    .login button { margin-top: 18px; width: 100%; background: var(--accent); color: #111; border: 0; padding: 10px 12px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px; }
+    .login .err { color: var(--danger); font-size: 13px; margin-top: 12px; min-height: 1em; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+    .card .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+    .card .value { font-size: 28px; font-weight: 700; margin-top: 4px; color: var(--accent); }
+    section { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; margin-bottom: 20px; }
+    section h2 { margin: 0 0 14px; font-size: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+    tr:last-child td { border-bottom: 0; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .pill { display: inline-block; background: var(--panel-2); border: 1px solid var(--border); padding: 2px 8px; border-radius: 999px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .pill.admin { background: #7c2d12; border-color: #c2410c; color: #fed7aa; }
+    .muted { color: var(--muted); }
+    .fetching { text-align: center; padding: 40px; color: var(--muted); }
+    .refresh-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .refresh-bar .stamp { font-size: 12px; color: var(--muted); }
+    .error-banner { background: #450a0a; border: 1px solid var(--danger); color: #fecaca; padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Tibia Dungeons — Admin</h1>
+    <div>
+      <span class="who" id="who"></span>
+      <button id="logout" style="display:none;">Log out</button>
+    </div>
+  </header>
+  <main id="app">
+    <div class="fetching">Loading…</div>
+  </main>
+
+  <script>
+    const api = (path, opts = {}) => fetch(path, { credentials: 'include', ...opts });
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+    const fmtDate = (ms) => !ms ? '—' : new Date(ms).toLocaleString();
+    const fmtNum = (n) => Number(n || 0).toLocaleString();
+
+    const app = document.getElementById('app');
+    const who = document.getElementById('who');
+    const logoutBtn = document.getElementById('logout');
+
+    logoutBtn.addEventListener('click', async () => {
+      const csrf = document.cookie.split('; ').find(r => r.startsWith('td_csrf='));
+      const csrfTok = csrf ? decodeURIComponent(csrf.split('=')[1]) : '';
+      await api('/api/auth/logout', { method: 'POST', headers: { 'X-CSRF-Token': csrfTok } });
+      location.reload();
+    });
+
+    function renderLogin(errorMsg = '') {
+      who.textContent = '';
+      logoutBtn.style.display = 'none';
+      app.innerHTML = `
+        <form class="login" id="loginForm">
+          <h2>Admin login</h2>
+          <label for="name">Username</label>
+          <input id="name" name="name" autocomplete="username" required />
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required />
+          <button type="submit">Log in</button>
+          <div class="err" id="err">${esc(errorMsg)}</div>
+        </form>
+      `;
+      document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('name').value.trim();
+        const password = document.getElementById('password').value;
+        const err = document.getElementById('err');
+        err.textContent = '';
+        try {
+          const r = await api('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, password }),
+          });
+          if (!r.ok) {
+            err.textContent = 'Invalid credentials';
+            return;
+          }
+          const body = await r.json();
+          if (body.role !== 'admin') {
+            err.textContent = 'Access denied — admin only.';
+            await api('/api/auth/logout', { method: 'POST' });
+            return;
+          }
+          boot();
+        } catch {
+          err.textContent = 'Network error';
+        }
+      });
+    }
+
+    function renderStats(data, me) {
+      who.innerHTML = `signed in as <strong>${esc(me.name)}</strong> <span class="pill admin">admin</span>`;
+      logoutBtn.style.display = 'inline-block';
+      const t = data.totals || {};
+      const users = Array.isArray(data.users) ? data.users : [];
+      const runs = Array.isArray(data.topRuns) ? data.topRuns : [];
+      app.innerHTML = `
+        <div class="refresh-bar">
+          <div class="stamp">Updated ${esc(fmtDate(data.generatedAt))}</div>
+          <button id="refresh" style="background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 12px;cursor:pointer;">Refresh</button>
+        </div>
+        <div class="cards">
+          <div class="card"><div class="label">Registered users</div><div class="value">${fmtNum(t.users)}</div></div>
+          <div class="card"><div class="label">Active sessions</div><div class="value">${fmtNum(t.activeSessions)}</div></div>
+          <div class="card"><div class="label">Players with saves</div><div class="value">${fmtNum(t.playersWithSaves)}</div></div>
+          <div class="card"><div class="label">Total saves</div><div class="value">${fmtNum(t.totalSaves)}</div></div>
+          <div class="card"><div class="label">Hall of Fame runs</div><div class="value">${fmtNum(t.hallOfFameRuns)}</div></div>
+        </div>
+
+        <section>
+          <h2>Users (${fmtNum(users.length)})</h2>
+          ${users.length === 0 ? '<div class="muted">No users yet.</div>' : `
+            <table>
+              <thead><tr>
+                <th>Name</th><th>Role</th><th>Joined</th>
+                <th class="num">Saves</th><th class="num">Runs (in top)</th>
+              </tr></thead>
+              <tbody>${users.map(u => `
+                <tr>
+                  <td>${esc(u.name)}</td>
+                  <td>${u.role === 'admin' ? '<span class="pill admin">admin</span>' : '<span class="pill">user</span>'}</td>
+                  <td>${esc(fmtDate(u.createdAt))}</td>
+                  <td class="num">${fmtNum(u.saves)}</td>
+                  <td class="num">${fmtNum(u.runsInTop)}</td>
+                </tr>
+              `).join('')}</tbody>
+            </table>`}
+        </section>
+
+        <section>
+          <h2>Top runs (${fmtNum(runs.length)})</h2>
+          ${runs.length === 0 ? '<div class="muted">No runs on the leaderboard.</div>' : `
+            <table>
+              <thead><tr>
+                <th class="num">#</th>
+                <th>Name</th>
+                <th>Class</th>
+                <th class="num">Floor</th>
+                <th class="num">Level</th>
+                <th class="num">Kills</th>
+                <th class="num">Gold</th>
+                <th>Killed by</th>
+                <th>Date</th>
+              </tr></thead>
+              <tbody>${runs.map((r, i) => `
+                <tr>
+                  <td class="num">${i + 1}</td>
+                  <td>${esc(r.name)}</td>
+                  <td>${esc(r.classKey)}</td>
+                  <td class="num">${fmtNum(r.floor)}</td>
+                  <td class="num">${fmtNum(r.playerLevel)}</td>
+                  <td class="num">${fmtNum(r.kills)}</td>
+                  <td class="num">${fmtNum(r.gold)}</td>
+                  <td>${esc(r.killedBy || 'Unknown')}</td>
+                  <td>${esc(fmtDate(r.ts))}</td>
+                </tr>
+              `).join('')}</tbody>
+            </table>`}
+        </section>
+      `;
+      document.getElementById('refresh').addEventListener('click', boot);
+    }
+
+    async function boot() {
+      app.innerHTML = '<div class="fetching">Loading…</div>';
+      let me;
+      try {
+        const r = await api('/api/auth/me');
+        if (!r.ok) { renderLogin(); return; }
+        me = await r.json();
+      } catch {
+        renderLogin('Network error');
+        return;
+      }
+      if (!me || me.role !== 'admin') { renderLogin('Admin login required.'); return; }
+      try {
+        const r = await api('/api/admin/stats');
+        if (r.status === 403) { renderLogin('Access denied.'); return; }
+        if (!r.ok) { app.innerHTML = '<div class="error-banner">Failed to fetch stats.</div>'; return; }
+        const data = await r.json();
+        renderStats(data, me);
+      } catch {
+        app.innerHTML = '<div class="error-banner">Network error while fetching stats.</div>';
+      }
+    }
+
+    boot();
+  </script>
+</body>
+</html>

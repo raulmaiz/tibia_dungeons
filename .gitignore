@@ -2,3 +2,6 @@
 .runs.local.json
 .auth.local.json
 .saves.local.json
+.env
+.env.local
+.env.*.local
