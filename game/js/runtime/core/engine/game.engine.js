@@ -93,7 +93,6 @@ function writeEquipmentFootText(text) {
   if (textEl) textEl.textContent = String(text == null ? '' : text);
 }
 let currentLightItemState = null; // { articleId, title, radius, duration, startTime, initialElapsed }
-const lightBurnElapsedByArticleId = new Map();
 // Lowercased set of image paths (e.g. "item/lit candlestick.gif") known to
 // exist in the manifest. Used to check whether the "Lit X.gif" / "Used X.gif"
 // variants are shipped for a given light-source item before picking them.
@@ -144,14 +143,6 @@ function bridgeClockNow() {
 }
 function applyEquipmentLightFromItem(item) {
   const now = bridgeClockNow();
-  // Snapshot accumulated burn time for the previously-lit item so that the
-  // torch's progression carries over if the player unequips and re-equips it.
-  if (currentLightItemState) {
-    const cur = currentLightItemState;
-    const sessionElapsed = now - cur.startTime;
-    const total = cur.initialElapsed + sessionElapsed;
-    lightBurnElapsedByArticleId.set(cur.articleId, total);
-  }
   if (!item) {
     currentLightItemState = null;
     atmosphereSetEquipmentLight(0, 0, 0);
@@ -160,7 +151,12 @@ function applyEquipmentLightFromItem(item) {
   const articleId = Number(item.article_id || item.id || 0);
   const radius = lightRadiusForLightSourceItem(item);
   const durationMs = durationMsFromItemAttrs(item);
-  const initialElapsed = Number(lightBurnElapsedByArticleId.get(articleId) || 0);
+  // Burn progress lives on the item instance itself (`_burnElapsedMs`). The
+  // callers that move a torch from slot → bag (unequip or swap) stamp the
+  // current elapsed there first, so re-equipping the SAME physical item
+  // resumes its progress without bleeding onto a different torch that just
+  // happens to share the same article_id (e.g. a fresh one from the market).
+  const initialElapsed = Number((item && item._burnElapsedMs) || 0);
   currentLightItemState = {
     articleId,
     title: String(item.title || '').trim(),
@@ -211,11 +207,10 @@ function getLootLightItemImage(item) {
   const articleId = Number(item.article_id || item.id || 0);
   const title = String(item.title || '').trim();
   const duration = durationMsFromItemAttrs(item);
-  let elapsed = Number(lightBurnElapsedByArticleId.get(articleId) || 0);
-  // If this item is the one currently equipped, account for the live session.
-  if (currentLightItemState && currentLightItemState.articleId === articleId) {
-    elapsed = currentLightItemState.initialElapsed + (bridgeClockNow() - currentLightItemState.startTime);
-  }
+  // Per-instance burn progress. A stub value of 0 for fresh items (market
+  // purchases, loot drops) so the bag preview shows a lit icon rather than
+  // inheriting some other torch's burn state.
+  let elapsed = Number((item && item._burnElapsedMs) || 0);
   const isExpired = duration > 0 && elapsed >= duration;
   if (articleId === 1396) { // Torch
     return isExpired ? 'item/Torch (Small).gif' : 'item/Torch.gif';
@@ -1230,6 +1225,13 @@ function setupSelectorUI() {
           if (!slotKey) return;
           const equipped = equippedSlots[slotKey];
           const equippedCopy = equipped ? { ...equipped } : null;
+          // Torch being swapped out: freeze its burn progress onto the bag
+          // copy so re-equipping resumes where we left off (and so a second
+          // torch with the same article_id, e.g. a market purchase, doesn't
+          // inherit this one's burn state).
+          if (slotKey === 'light' && equippedCopy) {
+            equippedCopy._burnElapsedMs = getCurrentLightElapsedMs();
+          }
           const equipOk = setEquippedSlotVisual(
             slotKey,
             { ...current },
@@ -1798,6 +1800,11 @@ function setupSelectorUI() {
       if (ev.button !== 0) return;
       const equipped = equippedSlots[slotKey];
       if (!equipped) return;
+      // Before shallow-copying the torch into the bag, freeze its current
+      // burn progress on the object so re-equipping resumes correctly.
+      if (slotKey === 'light') {
+        equipped._burnElapsedMs = getCurrentLightElapsedMs();
+      }
       const stored = addLootItemToBag(
         { ...equipped },
         { disableAutoEquip: true, excludeEquippedSlotKey: slotKey }

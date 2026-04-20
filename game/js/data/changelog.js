@@ -5,6 +5,14 @@
  */
 export const CHANGELOG = [
   {
+    version: '1.2.0',
+    date: '2026-04-20',
+    entries: [
+      'Fix: torches bought from the Items Shop now illuminate as soon as equipped (burn progress was bleeding between different physical torches sharing article_id 1396)',
+      'Light sources: burn progress is now tracked per-item instance instead of per-article_id, so swapping torches preserves each one\'s individual state',
+    ],
+  },
+  {
     version: '1.1.0',
     date: '2026-04-20',
     entries: [
