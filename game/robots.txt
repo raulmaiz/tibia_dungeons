@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
+Allow: /data/images/game/
 Disallow: /data/
 Disallow: /api/
 

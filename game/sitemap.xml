@@ -1,10 +1,47 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://www.tibia-dungeons.com/</loc>
-    <lastmod>2026-04-14</lastmod>
+    <lastmod>2026-04-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
+
+    <image:image>
+      <image:loc>https://www.tibia-dungeons.com/data/images/game/preview.jpg</image:loc>
+      <image:title>Tibia Dungeons — browser dungeon crawler RPG inspired by Tibia</image:title>
+      <image:caption>Knight with an enchanted blue sword standing in a torchlit stone dungeon corridor. Free browser dungeon crawler RPG inspired by the classic Tibia MMORPG.</image:caption>
+    </image:image>
+
+    <image:image>
+      <image:loc>https://www.tibia-dungeons.com/data/images/game/explore.jpg</image:loc>
+      <image:title>Tibia Dungeons — knight exploring a torchlit dungeon</image:title>
+      <image:caption>Hooded knight holding a torch at the entrance of a stone arch dungeon, open treasure chest full of gold coins beside him. Key art for Tibia Dungeons.</image:caption>
+    </image:image>
+
+    <image:image>
+      <image:loc>https://www.tibia-dungeons.com/data/images/game/sword.jpg</image:loc>
+      <image:title>Tibia Dungeons — knight with magic sword and treasure hoard</image:title>
+      <image:caption>Fantasy knight wielding a glowing magic sword beside an open treasure chest overflowing with gold coins, deep inside a dungeon lit by torches.</image:caption>
+    </image:image>
+
+    <image:image>
+      <image:loc>https://www.tibia-dungeons.com/data/images/game/cover-landscape-1920x1080.jpg</image:loc>
+      <image:title>Tibia Dungeons — landscape cover art (16:9)</image:title>
+      <image:caption>Cinematic landscape cover for the Tibia Dungeons browser RPG, 1920x1080.</image:caption>
+    </image:image>
+
+    <image:image>
+      <image:loc>https://www.tibia-dungeons.com/data/images/game/cover-portrait-800x1200.jpg</image:loc>
+      <image:title>Tibia Dungeons — portrait cover art (2:3)</image:title>
+      <image:caption>Vertical cover art for the Tibia Dungeons browser RPG, 800x1200.</image:caption>
+    </image:image>
+
+    <image:image>
+      <image:loc>https://www.tibia-dungeons.com/data/images/game/cover-square-800x800.jpg</image:loc>
+      <image:title>Tibia Dungeons — square cover art (1:1)</image:title>
+      <image:caption>Square cover art for the Tibia Dungeons browser RPG, 800x800.</image:caption>
+    </image:image>
   </url>
 </urlset>
