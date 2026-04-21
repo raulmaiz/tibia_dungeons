@@ -43,7 +43,18 @@ import {
   rangedProjectileLine,
   missEffect,
   critBanner,
-} from '../../../vfx.js';
+} from '../../../rendering/Renderer.js';
+import {
+  frameTextureName,
+  deathTextureName,
+  creatureKey,
+  applyCreatureSize,
+  createPlayerSprite,
+  createCreatureSprite,
+  createGroundTile,
+  createFireFieldSprite,
+  createPoisonFieldSprite,
+} from '../../../rendering/SpriteFactory.js';
 import {
   TILE_SIZE,
   MAP_W,
@@ -375,24 +386,6 @@ const SPELL_FX_OVERRIDES = {
 // Dimensiones del mapa actual (se actualizan en cada descendLevel).
 let dungeonW = MAP_W;
 let dungeonH = MAP_H;
-
-function frameTextureName(sex, frame) {
-  return `player_${sex}_${frame}`;
-}
-
-function deathTextureName(sex) {
-  return `player_death_${sex}`;
-}
-
-function creatureKey(template) {
-  return `creature_${template.id}`;
-}
-
-function applyCreatureNormalizedDisplaySize(sprite, scene, tileSize) {
-  void scene;
-  const fillPx = tileSize * CREATURE_FILL_TARGET;
-  if (sprite) sprite.setDisplaySize(fillPx, fillPx);
-}
 
 function creaturePlural(name, count) {
   return `${name}${count === 1 ? '' : 's'}`;
@@ -2064,15 +2057,7 @@ function startGame(configPlayer) {
         for (let y = 0; y < MAX_DUNGEON_H; y += 1) {
           mapTiles[y] = [];
           for (let x = 0; x < MAX_DUNGEON_W; x += 1) {
-            const rect = this.add.rectangle(
-              worldX(x),
-              worldY(y),
-              tileSize - 1,
-              tileSize - 1,
-              0x080e18
-            );
-            rect.setDepth(0);
-            mapTiles[y][x] = rect;
+            mapTiles[y][x] = createGroundTile(this, x, y);
           }
         }
 
@@ -2086,11 +2071,8 @@ function startGame(configPlayer) {
         atmosphereSetEquipmentLight = (r, d, e) => floorAtmosphere.setEquipmentLight(r, d, e);
         applyCurrentLightStateToAtmosphere();
 
-        const player = this.add.sprite(tileSize * 1.5, tileSize * 1.5, frameTextureName(configPlayer.sex, 0));
-        // Centrado visual y tamano menor a 1 tile para evitar solapes entre casillas vecinas.
-        player.setOrigin(0.5, 0.5);
-        player.setDisplaySize(tileSize * 0.9, tileSize * 0.9);
-        player.setDepth(25);
+        // SpriteFactory handles centering, 0.9-tile fill, and depth 25.
+        const player = createPlayerSprite(this, configPlayer.sex, START_TILE.gx, START_TILE.gy);
         const deathCaption = this.add.text(player.x, player.y + tileSize * 0.72, 'You are dead.', {
           color: '#ffffff',
           fontSize: '12px',
@@ -3577,16 +3559,11 @@ function startGame(configPlayer) {
             if (safeTextureKey !== requestedTextureKey) {
               addCombatLog(`Floor ${level}: texture missing for ${template.title || 'creature'}, using fallback sprite.`);
             }
-            const sprite = this.add.sprite(centerX(spawn.gx), centerY(spawn.gy), safeTextureKey);
-            sprite.setOrigin(0.5, 0.5);
-            applyCreatureNormalizedDisplaySize(sprite, this, tileSize);
-            sprite.x = centerX(spawn.gx);
-            sprite.y = centerY(spawn.gy);
+            const sprite = createCreatureSprite(this, safeTextureKey, spawn.gx, spawn.gy);
             const creatureId = Number(template.id);
             const damageMul = Number(CREATURE_DAMAGE_MULTIPLIER_BY_ID.get(creatureId) || 1);
             const baseMaxDamage = Math.max(1, Number(template.maxDamage || 1));
             const adjustedMaxDamage = Math.max(1, Math.floor(baseMaxDamage * damageMul));
-            sprite.setDepth(15);
             creatures.push({
               id: creatureId,
               sprite,
@@ -3662,10 +3639,7 @@ function startGame(configPlayer) {
             if (!spot) continue;
             const spawnGX = spot.gx;
             const spawnGY = spot.gy;
-            const sprite = this.add.sprite(centerX(spawnGX), centerY(spawnGY), textureKey);
-            sprite.setOrigin(0.5, 0.5);
-            applyCreatureNormalizedDisplaySize(sprite, this, tileSize);
-            sprite.setDepth(15);
+            const sprite = createCreatureSprite(this, textureKey, spawnGX, spawnGY);
             const ally = {
               id: tpl.id, sprite, gx: spawnGX, gy: spawnGY,
               hp: tpl.hp, maxHp: tpl.maxHp, maxDamage: tpl.maxDamage,
@@ -6482,10 +6456,7 @@ function startGame(configPlayer) {
             }
             // Spawn the summoned ally
             const texKey = `creature_${best.id}`;
-            const sprite = this.add.sprite(centerX(spawnTile.gx), centerY(spawnTile.gy), texKey);
-            sprite.setOrigin(0.5, 0.5);
-            applyCreatureNormalizedDisplaySize(sprite, this, tileSize);
-            sprite.setDepth(15);
+            const sprite = createCreatureSprite(this, texKey, spawnTile.gx, spawnTile.gy);
             sprite.setTint(0x88ffaa);
             const ally = {
               id: Number(best.id),
@@ -7285,7 +7256,7 @@ function startGame(configPlayer) {
               if (!creature.sprite || !creature.sprite.scene) return;
               creature.sprite.clearTint();
               if (creature.isConvinced) creature.sprite.setTint(0x88ffaa);
-              applyCreatureNormalizedDisplaySize(creature.sprite, this, tileSize);
+              applyCreatureSize(creature.sprite);
               creature.sprite.x = centerX(creature.gx);
               creature.sprite.y = centerY(creature.gy);
               updateCreatureBar(creature);
@@ -7320,10 +7291,7 @@ function startGame(configPlayer) {
         const spawnSummonFromTemplate = (template, gx, gy, parent) => {
           const textureKey = creatureKey(template);
           if (!this.textures.exists(textureKey)) return null;
-          const sprite = this.add.sprite(centerX(gx), centerY(gy), textureKey);
-          sprite.setOrigin(0.5, 0.5);
-          applyCreatureNormalizedDisplaySize(sprite, this, tileSize);
-          sprite.setDepth(15);
+          const sprite = createCreatureSprite(this, textureKey, gx, gy);
           const creatureId = Number(template.id);
           const damageMul = Number(CREATURE_DAMAGE_MULTIPLIER_BY_ID.get(creatureId) || 1);
           const baseMaxDamage = Math.max(1, Number(template.maxDamage || 1));
@@ -7425,10 +7393,7 @@ function startGame(configPlayer) {
           }
           const cx = centerX(gx);
           const cy = centerY(gy);
-          const sprite = this.add.image(cx, cy, 'fx_fire_field');
-          sprite.setOrigin(0.5, 0.5);
-          sprite.setDisplaySize(tileSize * 0.95, tileSize * 0.95);
-          sprite.setDepth(6);
+          const sprite = createFireFieldSprite(this, gx, gy);
           // Subtle life-sign pulse so the tile doesn't look static.
           const spriteTween = this.tweens.add({
             targets: sprite,
@@ -7498,10 +7463,7 @@ function startGame(configPlayer) {
           }
           const cx = centerX(gx);
           const cy = centerY(gy);
-          const sprite = this.add.image(cx, cy, 'fx_poison_field');
-          sprite.setOrigin(0.5, 0.5);
-          sprite.setDisplaySize(tileSize * 0.95, tileSize * 0.95);
-          sprite.setDepth(6);
+          const sprite = createPoisonFieldSprite(this, gx, gy);
           const spriteTween = this.tweens.add({
             targets: sprite,
             scaleX: { from: sprite.scaleX * 0.96, to: sprite.scaleX * 1.06 },
@@ -7856,7 +7818,7 @@ function startGame(configPlayer) {
             scaleX: summoned.sprite.scaleX * (1 / 0.4),
             scaleY: summoned.sprite.scaleY * (1 / 0.4),
             duration: 260, ease: 'Back.easeOut',
-            onComplete: () => applyCreatureNormalizedDisplaySize(summoned.sprite, this, tileSize),
+            onComplete: () => applyCreatureSize(summoned.sprite),
           });
         };
         // Healing abilities use the ability.effect range for the shape of the
@@ -7942,7 +7904,7 @@ function startGame(configPlayer) {
             ease: 'Sine.easeOut',
             onComplete: () => {
               creature.sprite.clearTint();
-              applyCreatureNormalizedDisplaySize(creature.sprite, this, tileSize);
+              applyCreatureSize(creature.sprite);
             },
           });
           floatingCombatText(this, x, y - tileSize * 0.65, `+${healAmount}`, {
