@@ -5,11 +5,11 @@
 // exported by runtime/playerSession.js instead of direct reassignment.
 //
 // Owns (private to this module):
-//   • selectedSex / selectedClass — chosen on the character screen
-//   • playerConfig                — boot payload fed to startGame()
+//   • panelState.selectedSex / panelState.selectedClass — chosen on the character screen
+//   • panelState.playerConfig                — boot payload fed to startGame()
 //   • bootGame / _starting        — one-shot guard + game boot
 //   • currentSaveId               — backing store for window.tdGame API
-//   • equippedSlots / bagLootItems / currentBagCapacity — inventory state
+//   • equippedSlots / bagLootItems / panelState.currentBagCapacity — inventory state
 //
 // Reads live bindings from runtime/playerSession.js:
 //   • onPanelLog (combat-log sink), onConsumeFood, onUseLiquid, onUseTool
@@ -40,7 +40,6 @@ import {
   applyEquipmentLightFromItem,
   getCurrentLightElapsedMs,
   getLootLightItemImage,
-  parseDurationStringToMs,
 } from '../systems/lighting/LightItems.js';
 import {
   onPanelLog,
@@ -59,58 +58,55 @@ import { bus, EVENTS } from '../core/EventBus.js';
 // catalogs + ammo cache) so it has to live in the engine module.
 import { loadEngineData } from '../engine/game.engine.js';
 
-// DOM helper local to this module (previously at module scope in the engine).
-// Rewrites the equipment-panel footer text without disturbing the status
-// chips that live alongside it.
+// ── panel sub-modules (Phase 3a extractions) ────────────────────────────
+import { panelState } from './panels/state.js';
+import { SLOT_RULES, ARMOR_AUTO_SLOT_BY_TYPE } from './panels/constants.js';
+import { setHungryUi, installHungerWindowApi } from './panels/hunger.js';
+import { setupCharacterSelect } from './panels/characterSelect.js';
+import { startAccessoryTimer, stopAccessoryTimer } from './panels/accessoryTimers.js';
+import {
+  hideItemTooltip,
+  getFoodTimeSeconds,
+  escapeHtml,
+  formatItemTooltip,
+  bindTooltip,
+  showTouchLootTooltip,
+} from './panels/itemTooltip.js';
+
+// DOM helper local to this module. Rewrites the equipment-panel footer
+// text without disturbing the status chips that live alongside it.
 function writeEquipmentFootText(text) {
   const textEl = document.getElementById('equipmentFootText');
   if (textEl) textEl.textContent = String(text == null ? '' : text);
 }
 
-// Session state owned by this module. Not exported — the only consumer is
-// the boot path inside this same file.
-let selectedSex = 'male';
-let selectedClass = 'knight';
-let playerConfig = null;
-
 export function setupInventoryPanel(deps) {
   const { startGame } = deps;
-  const choiceMale = document.getElementById('choiceMale');
-  const choiceFemale = document.getElementById('choiceFemale');
-  const classKnight = document.getElementById('classKnight');
-  const classPaladin = document.getElementById('classPaladin');
-  const classSorcerer = document.getElementById('classSorcerer');
-  const classDruid = document.getElementById('classDruid');
   const startBtn = document.getElementById('startBtn');
   const playerNameInput = document.getElementById('playerName');
-  const hungryIndicator = document.getElementById('hungryIndicator');
-  const hungryLabel = document.getElementById('hungryLabel');
   const lootContextMenu = document.getElementById('lootContextMenu');
   const discardLootBtn = document.getElementById('discardLootBtn');
-  playerNameInput.focus();
 
-  function setChoice(sex) {
-    selectedSex = sex;
-    choiceMale.classList.toggle('active', sex === 'male');
-    choiceFemale.classList.toggle('active', sex === 'female');
-  }
+  // Character-select UI (sex/class buttons + name input focus).
+  setupCharacterSelect();
 
-  choiceMale.addEventListener('click', () => setChoice('male'));
-  choiceFemale.addEventListener('click', () => setChoice('female'));
-  function setClassChoice(classKey) {
-    selectedClass = classKey;
-    if (classKnight) classKnight.classList.toggle('active', classKey === 'knight');
-    if (classPaladin) classPaladin.classList.toggle('active', classKey === 'paladin');
-    if (classSorcerer) classSorcerer.classList.toggle('active', classKey === 'sorcerer');
-    if (classDruid) classDruid.classList.toggle('active', classKey === 'druid');
-  }
-  if (classKnight) classKnight.addEventListener('click', () => setClassChoice('knight'));
-  if (classPaladin) classPaladin.addEventListener('click', () => setClassChoice('paladin'));
-  if (classSorcerer) classSorcerer.addEventListener('click', () => setClassChoice('sorcerer'));
-  if (classDruid) classDruid.addEventListener('click', () => setClassChoice('druid'));
-  let currentBagCapacity = 0;
+  // Hunger indicator. Lives on window.setHungryUi for the engine to call.
+  installHungerWindowApi();
+  setHungryUi(true, 0);
+
+  // Wire sub-module helpers into panelState so accessoryTimers + itemTooltip
+  // can call back into the still-local functions (resolveEquipSlotForItem,
+  // resolveSellUnitPrice, clearEquippedSlotVisual, renderLootSlots). Function
+  // declarations are hoisted so these references resolve correctly even though
+  // the functions are defined later in this file.
+  panelState.helpers.resolveEquipSlotForItem = resolveEquipSlotForItem;
+  panelState.helpers.resolveSellUnitPrice    = resolveSellUnitPrice;
+  panelState.helpers.clearEquippedSlotVisual = clearEquippedSlotVisual;
+  panelState.helpers.renderLootSlots         = renderLootSlots;
+
+  // currentBagCapacity lives on panelState (initialized to 0 in state.js).
   let currentBagItem = null;
-  let currentPlayerCapacity = progressionStatsForLevel(1, selectedClass).capacity;
+  let currentPlayerCapacity = progressionStatsForLevel(1, panelState.selectedClass).capacity;
   setLastLootRejectReason('');
   const equippedSlots = {
     armor: null,
@@ -123,104 +119,18 @@ export function setupInventoryPanel(deps) {
     amulet: null,
     hand: null,
   };
+  // Sub-modules (accessoryTimers, itemTooltip) read equippedSlots via
+  // panelState.equippedSlots. Share the reference so local reads and
+  // sub-module reads stay in sync.
+  panelState.equippedSlots = equippedSlots;
   let bagLootItems = [];
   const coinTemplateById = new Map([
     [GOLD_COIN_ID, { id: GOLD_COIN_ID, title: 'Gold Coin', isStackable: true, raw: { article_id: GOLD_COIN_ID, value_sell: 1, value_buy: 1, weight: 0.1 }, item_type: 'Valuables', item_class: 'Currency' }],
     [PLATINUM_COIN_ID, { id: PLATINUM_COIN_ID, title: 'Platinum Coin', isStackable: true, raw: { article_id: PLATINUM_COIN_ID, value_sell: 100, value_buy: 100, weight: 0.1 }, item_type: 'Valuables', item_class: 'Currency' }],
     [CRYSTAL_COIN_ID, { id: CRYSTAL_COIN_ID, title: 'Crystal Coin', isStackable: true, raw: { article_id: CRYSTAL_COIN_ID, value_sell: 10000, value_buy: 10000, weight: 0.1 }, item_type: 'Valuables', item_class: 'Currency' }],
   ]);
-  const slotRules = {
-    armor: { id: 'Armor', iconDefault: 'BODY', requireType: 'Armors', footName: 'armor' },
-    shield: { id: 'Shield', iconDefault: 'SHLD', requireType: 'Shields', footName: 'shield' },
-    legs: { id: 'Legs', iconDefault: 'LEGS', requireType: 'Legs', footName: 'legs' },
-    boots: { id: 'Boots', iconDefault: 'FEET', requireType: 'Boots', footName: 'boots' },
-    ring: { id: 'Ring', iconDefault: 'RING', requireType: 'Rings', footName: 'ring' },
-    ammunition: { id: 'Ammo', iconDefault: 'AMMO', requireType: 'Ammunition', footName: 'ammunition' },
-    helmet: { id: 'Helmet', iconDefault: 'HEAD', requireType: 'Helmets', footName: 'helmet' },
-    amulet: { id: 'Amulet', iconDefault: 'NECK', requireType: 'Amulets and Necklaces', footName: 'amulet' },
-    hand: { id: 'Hand', iconDefault: 'HAND', requireClass: 'Weapons', footName: 'weapon' },
-    light: { id: 'Light', iconDefault: 'LIT', requireSecondaryType: 'Illumination', requireTypeAlt: 'Light Sources', footName: 'light source' },
-  };
-  const armorAutoSlotByType = {
-    armors: 'armor',
-    helmets: 'helmet',
-    boots: 'boots',
-    legs: 'legs',
-    'amulets and necklaces': 'amulet',
-  };
-  // --- Accessory (ring / amulet) duration timers ---
-  const accessoryTimerState = { ring: null, amulet: null };
 
-  // Canonical duration parser lives in systems/lighting/LightItems.js and
-  // returns milliseconds — convert here since the accessory UI ticks once
-  // a second.
-  const parseDurationSeconds = (raw) => Math.floor(parseDurationStringToMs(raw) / 1000);
-
-  function stopAccessoryTimer(slotKey) {
-    const t = accessoryTimerState[slotKey];
-    if (!t) return;
-    clearInterval(t.intervalId);
-    accessoryTimerState[slotKey] = null;
-  }
-
-  function startAccessoryTimer(slotKey, item) {
-    stopAccessoryTimer(slotKey);
-    const attrs = Array.isArray(item && item.attributes) ? item.attributes : [];
-    const durationRow = attrs.find((a) => a && String(a.name || '').toLowerCase() === 'duration');
-    const chargesRow = attrs.find((a) => a && String(a.name || '').toLowerCase() === 'charges');
-    let secondsLeft = 0;
-    if (durationRow) {
-      secondsLeft = parseDurationSeconds(durationRow.value);
-    } else if (chargesRow) {
-      secondsLeft = Math.max(1, Number(chargesRow.value) || 0) * 60;
-    }
-    if (secondsLeft <= 0) return;
-    const rule = slotRules[slotKey];
-    const slotLabel = rule ? document.getElementById(`slot${rule.id}Label`) : null;
-    const formatLabel = (secs) => {
-      const mm = Math.floor(secs / 60);
-      const ss = String(secs % 60).padStart(2, '0');
-      return `${item.title} (${mm}:${ss})`;
-    };
-    if (slotLabel) slotLabel.textContent = formatLabel(secondsLeft);
-    const intervalId = setInterval(() => {
-      secondsLeft -= 1;
-      if (slotLabel) slotLabel.textContent = formatLabel(Math.max(0, secondsLeft));
-      if (secondsLeft <= 0) {
-        stopAccessoryTimer(slotKey);
-        clearEquippedSlotVisual(slotKey, `${item.title} has expired.`);
-        if (typeof onPanelLog === 'function') onPanelLog(`Your ${item.title} has expired.`);
-        renderLootSlots(currentBagCapacity);
-      }
-    }, 1000);
-    accessoryTimerState[slotKey] = { intervalId };
-  }
-
-  const itemTooltip = document.getElementById('itemTooltip');
   let lootContextIndex = -1;
-  let _activeTouchSlotCleanup = null;
-  const hideItemTooltip = () => {
-    if (!itemTooltip) return;
-    itemTooltip.style.display = 'none';
-    itemTooltip.textContent = '';
-    itemTooltip.classList.remove('touch-mode');
-    if (_activeTouchSlotCleanup) { _activeTouchSlotCleanup(); _activeTouchSlotCleanup = null; }
-  };
-
-  function setHungryUi(isHungry, secondsLeft = 0) {
-    if (!hungryIndicator || !hungryLabel) return;
-    if (isHungry) {
-      hungryIndicator.classList.remove('sated');
-      hungryLabel.textContent = 'Hungry';
-      hungryIndicator.title = 'You are hungry.';
-    } else {
-      hungryIndicator.classList.add('sated');
-      hungryLabel.textContent = '';
-      hungryIndicator.title = 'Food regeneration active.';
-    }
-  }
-  window.setHungryUi = setHungryUi;
-  setHungryUi(true, 0);
   window.addEventListener('blur', hideItemTooltip);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) hideItemTooltip();
@@ -259,7 +169,7 @@ export function setupInventoryPanel(deps) {
       const removed = bagLootItems[lootContextIndex];
       bagLootItems.splice(lootContextIndex, 1);
       hideLootContextMenu();
-      renderLootSlots(currentBagCapacity);
+      renderLootSlots(panelState.currentBagCapacity);
       if (removed) {
         const equipmentFoot = document.getElementById('equipmentFoot');
         if (equipmentFoot) writeEquipmentFootText(`Discarded: ${removed.title}`);
@@ -284,272 +194,9 @@ export function setupInventoryPanel(deps) {
     }));
   }
 
-  function getFoodTimeSeconds(item) {
-    const attrs = Array.isArray(item && item.attributes) ? item.attributes : [];
-    const foodAttr = attrs.find((a) => (a && (a.name || '').toLowerCase() === 'food_time'));
-    if (!foodAttr) return 0;
-    const n = Number(foodAttr.value);
-    return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
-  }
-
-  function escapeHtml(text) {
-    return String(text == null ? '' : text)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
-  function formatItemTooltip(item) {
-    if (!item) return '';
-    const raw = item.raw && typeof item.raw === 'object' ? item.raw : {};
-    const title = item.title || raw.title || 'Unknown Item';
-    const cls = item.item_class || raw.item_class || 'Item';
-    const type = item.item_type || raw.item_type || 'Unknown';
-    const sellRaw = Number(raw.value_sell || 0);
-    const buyRaw = Number(raw.value_buy || 0);
-    const price = Math.max(0, sellRaw > 0 ? sellRaw : buyRaw);
-    const weight = Number(raw.weight != null ? raw.weight : item.weight || 0);
-    const safeTitle = escapeHtml(title);
-    const safeCls = escapeHtml(cls);
-    const safeType = escapeHtml(type);
-    const safeWeight = Number.isFinite(weight) ? weight : 0;
-    const isEquippable = Boolean(resolveEquipSlotForItem(item));
-    const isSameItem = (a, b) => {
-      if (!a || !b) return false;
-      if (a.id != null && b.id != null) return Number(a.id) === Number(b.id);
-      return String(a.title || '').trim().toLowerCase() === String(b.title || '').trim().toLowerCase();
-    };
-    const isCurrentlyEquipped = Object.values(equippedSlots || {}).some((eq) => isSameItem(eq, item));
-    const primaryAction = isCurrentlyEquipped ? 'Unequip' : (isEquippable ? 'Equip' : 'Use');
-    const attrs = Array.isArray(item.attributes) ? item.attributes : [];
-    const attrNum = (name) => {
-      const row = attrs.find((a) => a && String(a.name || '').toLowerCase() === name);
-      const n = Number(row && row.value);
-      return Number.isFinite(n) ? n : null;
-    };
-    const attackStat = attrNum('attack');
-    const defenseStat = attrNum('defense');
-    const armorStat = attrNum('armor');
-    const attrText = (name) => {
-      const row = attrs.find((a) => a && String(a.name || '').toLowerCase() === String(name).toLowerCase());
-      return row ? String(row.value || '').trim() : '';
-    };
-    const handsAttr = attrText('hands').toLowerCase();
-    const handsLabel = handsAttr === 'two'
-      ? 'Two-handed'
-      : (handsAttr === 'one' ? 'One-handed' : null);
-    const isWeaponClass = String(cls || '').toLowerCase() === 'weapons';
-    const ttRow = (label, value) =>
-      `<div class="tt-row"><span class="tt-label">${label}</span><span class="tt-value">${value}</span></div>`;
-    const statLines = [];
-    if (isEquippable) {
-      if (attackStat != null) statLines.push(ttRow('Attack', attackStat));
-      if (defenseStat != null) statLines.push(ttRow('Defense', defenseStat));
-      if (armorStat != null) statLines.push(ttRow('Armor', armorStat));
-      if (isWeaponClass && handsLabel) statLines.push(ttRow('Hands', handsLabel));
-    }
-    const typeLower = String(type || '').toLowerCase();
-    if (typeLower === 'wands' || typeLower === 'rods') {
-      const hud = (typeof window !== 'undefined' && window.__gameHud) ? window.__gameHud : { ml: 0, pl: 1 };
-      const mlHud = Number(hud.ml) || 0;
-      const plHud = Number(hud.pl) || 1;
-      const rangeStr = attrText('range');
-      const dmgType = attrText('damage_type');
-      const dmgRange = attrText('damage_range');
-      const manaCost = attrText('mana_cost');
-      const levelReq = attrText('level');
-      const vocation = attrText('vocation');
-      const hands = attrText('hands');
-      const magicBonus = attrText('magic');
-      const previewAvg = averageMagicWeaponHitPreview(dmgRange, mlHud, plHud);
-      statLines.push('<div class="tt-sep"></div>');
-      statLines.push('<div class="tt-section">Magic Weapon</div>');
-      if (rangeStr) statLines.push(ttRow('Range', `${escapeHtml(rangeStr)} tiles`));
-      if (dmgType) statLines.push(ttRow('Damage type', escapeHtml(dmgType)));
-      if (dmgRange) statLines.push(ttRow('Damage', escapeHtml(dmgRange)));
-      if (previewAvg != null) statLines.push(ttRow(`Est. hit (ML ${mlHud})`, `~${previewAvg}`));
-      if (manaCost) statLines.push(ttRow('Mana / shot', escapeHtml(manaCost)));
-      if (levelReq) statLines.push(ttRow('Req. level', escapeHtml(levelReq)));
-      if (vocation) statLines.push(ttRow('Vocation', escapeHtml(vocation)));
-      if (hands) statLines.push(ttRow('Hands', escapeHtml(hands)));
-      if (magicBonus) statLines.push(ttRow('Magic', escapeHtml(magicBonus)));
-      const skipNames = new Set(['is_walkable', 'upgrade_classification', 'weapon_type', 'range', 'damage_type', 'damage_range', 'mana_cost', 'level', 'vocation', 'hands', 'magic']);
-      const showExtra = attrs.filter((a) => a && a.name && !skipNames.has(String(a.name).toLowerCase())).slice(0, 8);
-      if (showExtra.length > 0) {
-        statLines.push('<div class="tt-sep"></div>');
-        for (const a of showExtra) {
-          statLines.push(ttRow(escapeHtml(String(a.name || '')), escapeHtml(String(a.value != null ? a.value : ''))));
-        }
-      }
-    }
-    if (typeLower === 'rings' || typeLower === 'amulets and necklaces') {
-      const ACCESSORY_FRIENDLY = {
-        'duration': 'Duration',
-        'charges': 'Charges',
-        'speed': 'Speed bonus',
-        'regeneration': 'Regeneration',
-        'magic': 'Magic level',
-        'fist': 'Fist fighting',
-        'sword': 'Sword fighting',
-        'club': 'Club fighting',
-        'axe': 'Axe fighting',
-        'distance': 'Distance fighting',
-        'shielding': 'Shielding',
-        'physical%': 'Physical resist.',
-        'fire%': 'Fire resist.',
-        'earth%': 'Earth resist.',
-        'energy%': 'Energy resist.',
-        'ice%': 'Ice resist.',
-        'death%': 'Death resist.',
-        'holy%': 'Holy resist.',
-      };
-      const priorityOrder = ['duration', 'charges', 'speed', 'regeneration',
-        'magic', 'fist', 'sword', 'club', 'axe', 'distance', 'shielding',
-        'physical%', 'fire%', 'earth%', 'energy%', 'ice%', 'death%', 'holy%'];
-      const skipAccessory = new Set(['is_walkable', 'upgrade_classification', 'weapon_type']);
-      const shown = new Set();
-      if (attrs.length > 0) {
-        statLines.push('<div class="tt-sep"></div>');
-        for (const pKey of priorityOrder) {
-          const row = attrs.find((a) => a && String(a.name || '').toLowerCase() === pKey);
-          if (!row) continue;
-          shown.add(pKey);
-          statLines.push(ttRow(escapeHtml(ACCESSORY_FRIENDLY[pKey] || pKey), escapeHtml(String(row.value != null ? row.value : ''))));
-        }
-        for (const a of attrs) {
-          const nm = String(a.name || '').toLowerCase();
-          if (skipAccessory.has(nm) || shown.has(nm)) continue;
-          statLines.push(ttRow(escapeHtml(ACCESSORY_FRIENDLY[nm] || a.name), escapeHtml(String(a.value != null ? a.value : ''))));
-        }
-      }
-    }
-    const bodyRows = [
-      `<div class="tt-row"><span class="tt-label">Type</span><span class="tt-value">${safeType}</span></div>`,
-      price > 0 ? `<div class="tt-row"><span class="tt-label">Price</span><span class="tt-value tt-gold">${price} gp</span></div>` : '',
-      safeWeight > 0 ? `<div class="tt-row"><span class="tt-label">Weight</span><span class="tt-value">${safeWeight} oz</span></div>` : '',
-      ...statLines,
-    ].filter(Boolean).join('');
-    const actionRow = `<div class="tt-actions"><span class="tt-act-icon">⟵</span> ${primaryAction}&ensp;<span class="tt-act-sep">|</span>&ensp;<span class="tt-act-icon">⟶</span> Sell</div>`;
-    return `<div class="tt-header"><div class="tt-title">${safeTitle}</div></div><div class="tt-body">${bodyRows}</div><div class="tt-footer">${actionRow}</div>`;
-  }
-
-  const _isTouchDevice = () => 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
-  function bindTooltip(el, item) {
-    if (!el || !itemTooltip || !item) return;
-    const text = formatItemTooltip(item);
-    if (!text) return;
-    const placeNearElement = () => {
-      const rect = el.getBoundingClientRect();
-      const tipW = itemTooltip.offsetWidth || 210;
-      const tipH = itemTooltip.offsetHeight || 80;
-      // Always LEFT of the item, clamped to viewport
-      let x = rect.left - tipW - 4;
-      if (x < 4) x = rect.right + 4;
-      if (x + tipW > window.innerWidth - 4) x = 4;
-      // Vertically center the tooltip on the item cell
-      let y = rect.top + (rect.height / 2) - (tipH / 2);
-      if (y + tipH > window.innerHeight - 6) y = Math.max(4, window.innerHeight - tipH - 6);
-      if (y < 4) y = 4;
-      itemTooltip.style.left = `${Math.floor(x)}px`;
-      itemTooltip.style.top = `${Math.floor(y)}px`;
-    };
-    const show = () => {
-      itemTooltip.innerHTML = text;
-      itemTooltip.classList.remove('touch-mode');
-      itemTooltip.style.display = 'block';
-      void itemTooltip.offsetWidth;
-      placeNearElement();
-    };
-    const move = () => { placeNearElement(); };
-    const hide = () => { hideItemTooltip(); };
-    el.addEventListener('mouseenter', show);
-    el.addEventListener('mousemove', move);
-    el.addEventListener('mouseleave', hide);
-  }
-
-  // Touch-friendly tooltip with action buttons for loot items
-  function showTouchLootTooltip(el, item, lootIndex) {
-    if (!el || !itemTooltip || !item) return;
-    // Clean up previous
-    if (_activeTouchSlotCleanup) { _activeTouchSlotCleanup(); _activeTouchSlotCleanup = null; }
-    hideItemTooltip();
-
-    const text = formatItemTooltip(item);
-    if (!text) return;
-
-    // Determine action label
-    const typeLower = (item.item_type || '').toLowerCase();
-    let useLabel = 'Equip';
-    if (typeLower === 'food') useLabel = 'Eat';
-    else if (typeLower === 'liquids') useLabel = 'Drink';
-    else if (typeLower === 'tools') useLabel = 'Use';
-
-    const sellPrice = resolveSellUnitPrice(item) * Math.max(1, Number(item.count || 1));
-
-    // Build tooltip with action buttons
-    itemTooltip.innerHTML = text
-      + `<div class="tt-touch-actions">`
-      + `<button class="tt-touch-btn tt-touch-btn-use" data-action="use">${useLabel}</button>`
-      + `<button class="tt-touch-btn tt-touch-btn-sell" data-action="sell">Sell (${Math.floor(sellPrice)} gp)</button>`
-      + `</div>`;
-    itemTooltip.classList.add('touch-mode');
-    itemTooltip.style.display = 'block';
-    void itemTooltip.offsetWidth;
-
-    // Position
-    const rect = el.getBoundingClientRect();
-    const tipW = itemTooltip.offsetWidth || 210;
-    const tipH = itemTooltip.offsetHeight || 80;
-    let x = rect.left - tipW - 4;
-    if (x < 4) x = rect.right + 4;
-    if (x + tipW > window.innerWidth - 4) x = Math.max(4, (window.innerWidth - tipW) / 2);
-    let y = rect.top + (rect.height / 2) - (tipH / 2);
-    if (y + tipH > window.innerHeight - 6) y = Math.max(4, window.innerHeight - tipH - 6);
-    if (y < 4) y = 4;
-    itemTooltip.style.left = `${Math.floor(x)}px`;
-    itemTooltip.style.top = `${Math.floor(y)}px`;
-
-    // Button handlers
-    const onBtn = (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      const action = ev.target.dataset.action;
-      if (action === 'use') {
-        // Simulate left-click on this slot
-        el.dispatchEvent(new MouseEvent('mousedown', { button: 0, bubbles: true }));
-      } else if (action === 'sell') {
-        // Simulate right-click sell
-        el.dispatchEvent(new Event('contextmenu', { bubbles: true }));
-      }
-      hideItemTooltip();
-    };
-
-    const useBtn = itemTooltip.querySelector('[data-action="use"]');
-    const sellBtn = itemTooltip.querySelector('[data-action="sell"]');
-    if (useBtn) useBtn.addEventListener('click', onBtn);
-    if (sellBtn) sellBtn.addEventListener('click', onBtn);
-
-    // Dismiss on tap outside
-    const dismissHandler = (ev) => {
-      if (itemTooltip.contains(ev.target)) return;
-      if (el.contains(ev.target)) return;
-      hideItemTooltip();
-      document.removeEventListener('touchstart', dismissHandler, true);
-    };
-    setTimeout(() => {
-      document.addEventListener('touchstart', dismissHandler, true);
-    }, 50);
-
-    _activeTouchSlotCleanup = () => {
-      document.removeEventListener('touchstart', dismissHandler, true);
-    };
-  }
 
   function setEquippedSlotVisual(slotKey, item, equipmentFootText = null, options = {}) {
-    const rule = slotRules[slotKey];
+    const rule = SLOT_RULES[slotKey];
     if (!rule) return false;
     const slotImg = document.getElementById(`slot${rule.id}Img`);
     const slotIcon = document.getElementById(`slot${rule.id}Icon`);
@@ -626,7 +273,7 @@ export function setupInventoryPanel(deps) {
   const setEquippedslotVisual = setEquippedSlotVisual;
 
   function canEquipItemInSlot(slotKey, item) {
-    const rule = slotRules[slotKey];
+    const rule = SLOT_RULES[slotKey];
     if (!rule || !item) return false;
     const matchesType = !rule.requireType || (item.item_type || '').toLowerCase() === rule.requireType.toLowerCase();
     const matchesClass = !rule.requireClass || (item.item_class || '').toLowerCase() === rule.requireClass.toLowerCase();
@@ -647,7 +294,7 @@ export function setupInventoryPanel(deps) {
   }
 
   function clearEquippedSlotVisual(slotKey, footText = null) {
-    const rule = slotRules[slotKey];
+    const rule = SLOT_RULES[slotKey];
     if (!rule) return false;
     const slotRoot = document.getElementById(`slot${rule.id}`);
     const slotImg = document.getElementById(`slot${rule.id}Img`);
@@ -671,7 +318,7 @@ export function setupInventoryPanel(deps) {
   setInventoryClearEquippedSlotVisual(clearEquippedSlotVisual);
 
   function tryAutoEquipArmorUpgrade(item) {
-    const slotKey = armorAutoSlotByType[(item.item_type || '').toLowerCase()];
+    const slotKey = ARMOR_AUTO_SLOT_BY_TYPE[(item.item_type || '').toLowerCase()];
     if (!slotKey) return false;
     const nextArmor = Number(item.armor_value || 0);
     if (!Number.isFinite(nextArmor) || nextArmor <= 0) return false;
@@ -832,7 +479,7 @@ export function setupInventoryPanel(deps) {
           const totalGold = Math.max(0, Math.floor(unitPrice * amount));
           bagLootItems.splice(idx, 1);
           addCoinsToInventory(totalGold);
-          renderLootSlots(currentBagCapacity);
+          renderLootSlots(panelState.currentBagCapacity);
           if (typeof onPanelLog === 'function') {
             onPanelLog(`Sold ${current.title} for ${totalGold} gold.`);
           }
@@ -859,7 +506,7 @@ export function setupInventoryPanel(deps) {
             } else {
               bagLootItems.splice(idx, 1);
             }
-            renderLootSlots(currentBagCapacity);
+            renderLootSlots(panelState.currentBagCapacity);
             return;
           }
           if ((current.item_type || '').toLowerCase() === 'liquids') {
@@ -871,7 +518,7 @@ export function setupInventoryPanel(deps) {
             } else {
               bagLootItems.splice(idx, 1);
             }
-            renderLootSlots(currentBagCapacity);
+            renderLootSlots(panelState.currentBagCapacity);
             return;
           }
 
@@ -891,7 +538,7 @@ export function setupInventoryPanel(deps) {
             } else {
               bagLootItems.splice(idx, 1);
             }
-            renderLootSlots(currentBagCapacity);
+            renderLootSlots(panelState.currentBagCapacity);
             return;
           }
 
@@ -918,7 +565,7 @@ export function setupInventoryPanel(deps) {
           } else {
             bagLootItems.splice(idx, 1);
           }
-          renderLootSlots(currentBagCapacity);
+          renderLootSlots(panelState.currentBagCapacity);
         });
       } else {
         cell.className = 'loot-slot empty-slot';
@@ -930,9 +577,9 @@ export function setupInventoryPanel(deps) {
   }
 
   function applyCapacityForLevel(level) {
-    const stats = progressionStatsForLevel(level, selectedClass);
+    const stats = progressionStatsForLevel(level, panelState.selectedClass);
     currentPlayerCapacity = stats.capacity;
-    renderLootSlots(currentBagCapacity);
+    renderLootSlots(panelState.currentBagCapacity);
   }
   applyCapacityForLevel(1);
   setOnPlayerLevelStatsUpdate((level) => applyCapacityForLevel(level));
@@ -978,7 +625,7 @@ export function setupInventoryPanel(deps) {
     const stackIdx = bagLootItems.findIndex((it) => Number(it.id) === GOLD_COIN_ID);
     if (stackIdx >= 0) {
       bagLootItems[stackIdx].count = Math.max(1, Number(bagLootItems[stackIdx].count || 1)) + amount;
-    } else if (bagLootItems.length < currentBagCapacity) {
+    } else if (bagLootItems.length < panelState.currentBagCapacity) {
       bagLootItems.push(incoming);
     } else {
       // If there is no slot, try to force conversion by replacing lower-value coin stacks if present.
@@ -1030,7 +677,7 @@ export function setupInventoryPanel(deps) {
     const total = getTotalGoldInInventory();
     if (total < cost) return false;
     setCoinsFromTotalGold(total - cost);
-    renderLootSlots(currentBagCapacity);
+    renderLootSlots(panelState.currentBagCapacity);
     return true;
   }
 
@@ -1169,18 +816,18 @@ export function setupInventoryPanel(deps) {
       if (stackIdx >= 0) {
         bagLootItems[stackIdx].count = Math.max(1, Number(bagLootItems[stackIdx].count || 1)) + incoming.count;
         normalizeCoinStacks();
-        renderLootSlots(currentBagCapacity);
+        renderLootSlots(panelState.currentBagCapacity);
         return true;
       }
     }
     const occupiedSlots = bagLootItems.length - (excludeBagIndex != null ? 1 : 0);
-    if (occupiedSlots >= currentBagCapacity) {
+    if (occupiedSlots >= panelState.currentBagCapacity) {
       setLastLootRejectReason('slots');
       return false;
     }
     bagLootItems.push(incoming);
     normalizeCoinStacks();
-    renderLootSlots(currentBagCapacity);
+    renderLootSlots(panelState.currentBagCapacity);
     return true;
   }
 
@@ -1198,7 +845,7 @@ export function setupInventoryPanel(deps) {
         bagIcon.textContent = 'BAG';
         bagLabel.textContent = 'Empty';
         writeEquipmentFootText('No item equipped');
-        currentBagCapacity = 0;
+        panelState.currentBagCapacity = 0;
         currentBagItem = null;
         bagLootItems = [];
         renderLootSlots(0);
@@ -1209,7 +856,7 @@ export function setupInventoryPanel(deps) {
         bagIcon.textContent = 'BAG';
         bagLabel.textContent = 'Invalid';
         writeEquipmentFootText('BAG slot only supports Containers');
-        currentBagCapacity = 0;
+        panelState.currentBagCapacity = 0;
         currentBagItem = null;
         bagLootItems = [];
         renderLootSlots(0);
@@ -1257,19 +904,19 @@ export function setupInventoryPanel(deps) {
         writeEquipmentFootText(`Cannot equip ${bag.title}: requires ${nextCapacity} slots, carrying ${bagLootItems.length}.`);
         return false;
       }
-      currentBagCapacity = nextCapacity;
+      panelState.currentBagCapacity = nextCapacity;
       currentBagItem = bag;
       bagLabel.textContent = bag.title;
       bindTooltip(bagRoot, bag);
       writeEquipmentFootText(`Equipped: ${bag.title}`);
-      renderLootSlots(currentBagCapacity);
+      renderLootSlots(panelState.currentBagCapacity);
       return true;
     } catch (_err) {
       bagImg.style.display = 'none';
       bagIcon.textContent = 'BAG';
       bagLabel.textContent = 'Empty';
       writeEquipmentFootText('No item equipped');
-      currentBagCapacity = 0;
+      panelState.currentBagCapacity = 0;
       currentBagItem = null;
       bagLootItems = [];
       renderLootSlots(0);
@@ -1278,7 +925,7 @@ export function setupInventoryPanel(deps) {
   }
 
   async function equipItemInSlot(slotKey, articleId) {
-    const rule = slotRules[slotKey];
+    const rule = SLOT_RULES[slotKey];
     if (!rule) return false;
     const slotImg = document.getElementById(`slot${rule.id}Img`);
     const slotIcon = document.getElementById(`slot${rule.id}Icon`);
@@ -1394,7 +1041,7 @@ export function setupInventoryPanel(deps) {
       return {
         bag: currentBagItem,
         equipped: { ...equippedSlots },
-        bagSlots: currentBagCapacity,
+        bagSlots: panelState.currentBagCapacity,
         capacity: currentPlayerCapacity,
         carriedWeight,
         used: bagLootItems.length,
@@ -1409,7 +1056,7 @@ export function setupInventoryPanel(deps) {
     },
     addGold(amount) {
       addCoinsToInventory(amount);
-      renderLootSlots(currentBagCapacity);
+      renderLootSlots(panelState.currentBagCapacity);
     },
     findConsumable(type) {
       for (let i = 0; i < bagLootItems.length; i++) {
@@ -1447,14 +1094,14 @@ export function setupInventoryPanel(deps) {
       } else {
         bagLootItems.splice(idx, 1);
       }
-      renderLootSlots(currentBagCapacity);
+      renderLootSlots(panelState.currentBagCapacity);
       return true;
     },
   };
 
   // Left click equipped slot to unequip into loot bag when there is space/capacity.
-  for (const slotKey of Object.keys(slotRules)) {
-    const rule = slotRules[slotKey];
+  for (const slotKey of Object.keys(SLOT_RULES)) {
+    const rule = SLOT_RULES[slotKey];
     const slotRoot = document.getElementById(`slot${rule.id}`);
     if (!slotRoot) continue;
     slotRoot.addEventListener('contextmenu', (ev) => {
@@ -1467,7 +1114,7 @@ export function setupInventoryPanel(deps) {
       const totalGold = Math.max(0, Math.floor(unitPrice * amount));
       clearEquippedSlotVisual(slotKey, `Sold ${equipped.title} for ${totalGold} gold.`);
       addCoinsToInventory(totalGold);
-      renderLootSlots(currentBagCapacity);
+      renderLootSlots(panelState.currentBagCapacity);
       if (typeof onPanelLog === 'function') {
         onPanelLog(`Sold equipped ${equipped.title} for ${totalGold} gold.`);
       }
@@ -1488,7 +1135,7 @@ export function setupInventoryPanel(deps) {
       if (!stored) return;
       clearEquippedSlotVisual(slotKey);
       if (typeof onPanelLog === 'function') onPanelLog(`Unequipped ${equipped.title} to loot bag.`);
-      renderLootSlots(currentBagCapacity);
+      renderLootSlots(panelState.currentBagCapacity);
     });
   }
 
@@ -1498,7 +1145,7 @@ export function setupInventoryPanel(deps) {
       equippedSlots[slotKey] = null;
       clearEquippedSlotVisual(slotKey);
     }
-    currentBagCapacity = 0;
+    panelState.currentBagCapacity = 0;
     currentBagItem = null;
     setLastLootRejectReason('');
     renderLootSlots(0);
@@ -1526,7 +1173,7 @@ export function setupInventoryPanel(deps) {
     const sex = (cfg && cfg.sex) || 'male';
     const classKey = (cfg && cfg.classKey) || 'knight';
     currentPlayerCapacity = progressionStatsForLevel(1, classKey).capacity;
-    playerConfig = { name: playerName, sex, classKey, resumeSnapshot: snap };
+    panelState.playerConfig = { name: playerName, sex, classKey, resumeSnapshot: snap };
 
     const loadingOverlay = document.getElementById('loadingOverlay');
     if (loadingOverlay) loadingOverlay.style.display = 'flex';
@@ -1585,11 +1232,11 @@ export function setupInventoryPanel(deps) {
     document.getElementById('startOverlay').style.display = 'none';
     const savesOv = document.getElementById('savesOverlay');
     if (savesOv) savesOv.style.display = 'none';
-    startGame(playerConfig);
+    startGame(panelState.playerConfig);
   }
   startBtn.addEventListener('click', () => {
     const playerName = (playerNameInput.value || '').trim() || 'Adventurer';
-    bootGame({ name: playerName, sex: selectedSex, classKey: selectedClass });
+    bootGame({ name: playerName, sex: panelState.selectedSex, classKey: panelState.selectedClass });
   });
   // Exposed so the saves screen ("Resume") can re-enter the game.
   window.tdGame = {
