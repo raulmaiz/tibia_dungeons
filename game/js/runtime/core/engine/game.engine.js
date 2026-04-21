@@ -102,6 +102,17 @@ import {
 } from '../../../config/visual.config.js';
 import { bus, EVENTS } from '../../../core/EventBus.js';
 import { worldX, worldY } from '../../../world/Projection.js';
+import {
+  attachAtmosphereLightSink,
+  loadKnownItemImages,
+  applyEquipmentLightFromItem,
+  getCurrentLightElapsedMs,
+  getLootLightItemImage,
+  updateEquippedLightSlotImage,
+  applyCurrentLightStateToAtmosphere,
+} from '../../../systems/lighting/LightItems.js';
+import { SPELL_FX_OVERRIDES } from '../../../data/spellFxOverrides.js';
+import { CREATURE_DAMAGE_MULTIPLIER_BY_ID } from '../../../data/creatureDamageModifiers.js';
 
 // Expose the bus for debugging / browser console listeners.
 if (typeof window !== 'undefined') window.tdEvents = bus;
@@ -140,12 +151,6 @@ const CONJURE_AMMO_MAP = new Map([
 ]);
 const _conjureAmmoCache = new Map();
 let inventoryClearEquippedSlotVisual = null;
-// Equipment-light bridge: the UI layer updates this whenever a Light Sources
-// item is equipped/unequipped. The scene wires it to
-// floorAtmosphere.setEquipmentLight once the atmosphere exists; the pending
-// state is applied on creation so pre-scene equips (starting torch) light up
-// as soon as the dungeon renders.
-let atmosphereSetEquipmentLight = () => {};
 // The equipment-panel footer now hosts the debuff status-chip bar plus a
 // small text line below. All callers push their transient messages through
 // this helper so the status chips keep rendering alongside any text.
@@ -153,235 +158,14 @@ function writeEquipmentFootText(text) {
   const textEl = document.getElementById('equipmentFootText');
   if (textEl) textEl.textContent = String(text == null ? '' : text);
 }
-let currentLightItemState = null; // { articleId, title, radius, duration, startTime, initialElapsed }
-// Lowercased set of image paths (e.g. "item/lit candlestick.gif") known to
-// exist in the manifest. Used to check whether the "Lit X.gif" / "Used X.gif"
-// variants are shipped for a given light-source item before picking them.
-let knownItemImages = null;
-async function loadKnownItemImages() {
-  try {
-    const m = await getManifest();
-    const s = new Set();
-    for (const it of (m && m.items) || []) {
-      const img = String((it && it.image) || '').trim().toLowerCase();
-      if (img) s.add(img);
-    }
-    knownItemImages = s;
-  } catch {
-    knownItemImages = new Set();
-  }
-}
-function hasItemImage(filename) {
-  if (!knownItemImages) return false;
-  return knownItemImages.has(`item/${filename}`.toLowerCase());
-}
-function lightRadiusForLightSourceItem(item) {
-  const id = Number((item && (item.article_id || item.id)) || 0);
-  if (id === LIGHT_ITEM_ID_TORCH)      return LIGHT_RADIUS_TORCH;
-  if (id === LIGHT_ITEM_ID_LIGHT_WAND) return LIGHT_RADIUS_LIGHT_WAND;
-  return LIGHT_RADIUS_DEFAULT;         // any other Light Sources → utevo gran lux
-}
-function parseDurationStringToMs(raw) {
-  if (!raw) return 0;
-  const s = String(raw).toLowerCase().trim();
-  const m = /^(\d+(?:\.\d+)?)\s*(second|minute|hour|day)s?$/.exec(s);
-  if (!m) return 0;
-  const n = parseFloat(m[1]);
-  const u = m[2];
-  const mult = { second: 1000, minute: 60000, hour: 3600000, day: 86400000 }[u];
-  return Math.round(n * mult);
-}
-function durationMsFromItemAttrs(item) {
-  const attrs = Array.isArray(item && item.attributes) ? item.attributes : [];
-  const attr = attrs.find((a) => String((a && a.name) || '').toLowerCase() === 'duration');
-  const parsed = attr ? parseDurationStringToMs(attr.value) : 0;
-  return parsed > 0 ? parsed : DEFAULT_LIGHT_DURATION_MS;
-}
-function bridgeClockNow() {
-  return (typeof performance !== 'undefined' && typeof performance.now === 'function')
-    ? performance.now() : Date.now();
-}
-function applyEquipmentLightFromItem(item) {
-  const now = bridgeClockNow();
-  if (!item) {
-    currentLightItemState = null;
-    atmosphereSetEquipmentLight(0, 0, 0);
-    return;
-  }
-  const articleId = Number(item.article_id || item.id || 0);
-  const radius = lightRadiusForLightSourceItem(item);
-  const durationMs = durationMsFromItemAttrs(item);
-  // Burn progress lives on the item instance itself (`_burnElapsedMs`). The
-  // callers that move a torch from slot → bag (unequip or swap) stamp the
-  // current elapsed there first, so re-equipping the SAME physical item
-  // resumes its progress without bleeding onto a different torch that just
-  // happens to share the same article_id (e.g. a fresh one from the market).
-  const initialElapsed = Number((item && item._burnElapsedMs) || 0);
-  currentLightItemState = {
-    articleId,
-    title: String(item.title || '').trim(),
-    radius,
-    duration: durationMs,
-    startTime: now,
-    initialElapsed,
-  };
-  // Pass the real duration/elapsed to the atmosphere so it can hard-cutoff
-  // the light when the torch burns out. The atmosphere keeps the radius
-  // constant until then (no linear fade) — see updateDarkness.
-  atmosphereSetEquipmentLight(radius, durationMs, initialElapsed);
-  updateEquippedLightSlotImage();
-}
-// Slot icon for the equipped light item — changes as the flame burns down.
-// Torch (1396) has a 4-stage progression; every other Light-Sources item
-// follows the generic <title> / Lit <title> / Used <title> pattern.
-//   [0%, 50%)   Lit Torch.gif             (full flame)
-//   [50%, 80%)  Lit Torch (Medium).gif    (half-consumed)
-//   [80%, 100%) Lit Torch (Small).gif     (nearly out)
-//   [100%, ∞)   Torch (Small).gif         (extinguished, no more light)
-// For any other light item:
-//   equipped & lit      → "Lit <title>.gif"  (fallback: "<title>.gif")
-//   equipped & expired  → "Used <title>.gif" (fallback: "<title>.gif")
-function getLightItemImage(articleId, title, elapsed, duration) {
-  if (Number(articleId) === LIGHT_ITEM_ID_TORCH) { // Torch — special 4-stage progression
-    if (!(duration > 0)) return 'item/Lit Torch.gif';
-    if (elapsed >= duration) return 'item/Torch (Small).gif';
-    if (elapsed >= duration * TORCH_BURN_SMALL_THRESHOLD)  return 'item/Lit Torch (Small).gif';
-    if (elapsed >= duration * TORCH_BURN_MEDIUM_THRESHOLD) return 'item/Lit Torch (Medium).gif';
-    return 'item/Lit Torch.gif';
-  }
-  const name = String(title || '').trim();
-  if (!name) return null;
-  const isExpired = duration > 0 && elapsed >= duration;
-  if (isExpired) {
-    return hasItemImage(`Used ${name}.gif`) ? `item/Used ${name}.gif` : `item/${name}.gif`;
-  }
-  return hasItemImage(`Lit ${name}.gif`) ? `item/Lit ${name}.gif` : `item/${name}.gif`;
-}
 
-// Image for a light-source item sitting in the loot bag (i.e. not equipped).
-// Returns null for non-light items so the caller can keep the default image.
-function getLootLightItemImage(item) {
-  if (!item) return null;
-  const itemType = String(item.item_type || '').toLowerCase();
-  if (itemType !== 'light sources') return null;
-  const articleId = Number(item.article_id || item.id || 0);
-  const title = String(item.title || '').trim();
-  const duration = durationMsFromItemAttrs(item);
-  // Per-instance burn progress. A stub value of 0 for fresh items (market
-  // purchases, loot drops) so the bag preview shows a lit icon rather than
-  // inheriting some other torch's burn state.
-  let elapsed = Number((item && item._burnElapsedMs) || 0);
-  const isExpired = duration > 0 && elapsed >= duration;
-  if (articleId === LIGHT_ITEM_ID_TORCH) { // Torch
-    return isExpired ? 'item/Torch (Small).gif' : 'item/Torch.gif';
-  }
-  if (!title) return null;
-  if (isExpired && hasItemImage(`Used ${title}.gif`)) return `item/Used ${title}.gif`;
-  return `item/${title}.gif`;
-}
-function getCurrentLightElapsedMs() {
-  if (!currentLightItemState) return 0;
-  const cur = currentLightItemState;
-  return cur.initialElapsed + (bridgeClockNow() - cur.startTime);
-}
-function updateEquippedLightSlotImage() {
-  const slotImg = document.getElementById('slotLightImg');
-  if (!slotImg || !currentLightItemState) return;
-  const cur = currentLightItemState;
-  const elapsed = getCurrentLightElapsedMs();
-  const img = getLightItemImage(cur.articleId, cur.title, elapsed, cur.duration);
-  if (!img) return;
-  const desiredSrc = imageUrl(img);
-  if (!slotImg.src.endsWith(img)) slotImg.src = desiredSrc;
-}
-function applyCurrentLightStateToAtmosphere() {
-  if (!currentLightItemState) { atmosphereSetEquipmentLight(0, 0, 0); return; }
-  const cur = currentLightItemState;
-  const sessionElapsed = bridgeClockNow() - cur.startTime;
-  const totalElapsed = cur.initialElapsed + sessionElapsed;
-  atmosphereSetEquipmentLight(cur.radius, cur.duration, totalElapsed);
-}
-const CREATURE_DAMAGE_MULTIPLIER_BY_ID = new Map([
-  [37051, 0.5],
-]);
+// Light source state, image resolution, and atmosphere bridge live in
+// systems/lighting/LightItems.js. The scene wires the atmosphere callback
+// via attachAtmosphereLightSink() once floorAtmosphere is ready.
 
-/** Per-spell VFX (shapes/timing modeled after tibia.fandom.com spell descriptions). Keys = spell.title.toLowerCase() */
-const SPELL_FX_OVERRIDES = {
-  // Beams (sequential tile flash along the line)
-  'energy beam': { kind: 'beam', depth: 5, fx: { delayStep: 40, duration: 200, order: 'beam' } },
-  'great energy beam': { kind: 'beam', depth: 8, fx: { delayStep: 36, duration: 210, order: 'beam' } },
-  'great death beam': { kind: 'beam', depth: 8, color: 0x9d7dd9, fx: { delayStep: 34, duration: 220, order: 'beam', glyph: '✢' } },
-  // Waves / cones in facing direction
-  'practise fire wave': { kind: 'cone', depth: 2, fx: { duration: 220, delayStep: 25, order: 'beam' } },
-  scorch: { kind: 'cone', depth: 2, fx: { duration: 230, delayStep: 28, order: 'beam' } },
-  'chill out': { kind: 'cone', depth: 2, fx: { duration: 230, delayStep: 28, order: 'beam' } },
-  'fire wave': { kind: 'cone', depth: 3, fx: { duration: 260, delayStep: 30, order: 'beam' } },
-  'ice wave': { kind: 'cone', depth: 3, fx: { duration: 260, delayStep: 30, order: 'beam' } },
-  'terra wave': { kind: 'cone', depth: 3, fx: { duration: 260, delayStep: 30, order: 'beam' } },
-  'energy wave': { kind: 'cone', depth: 3, fx: { duration: 280, delayStep: 32, order: 'beam' } },
-  'great fire wave': { kind: 'cone', depth: 4, fx: { duration: 300, delayStep: 34, order: 'beam' } },
-  'strong ice wave': { kind: 'cone', depth: 2, fx: { duration: 240, delayStep: 32, order: 'beam' } },
-  // Knight cleaves
-  'lesser front sweep': { kind: 'front_sweep', fx: { duration: 320, glyph: '✦' } },
-  'front sweep': { kind: 'front_sweep', fx: { duration: 360, glyph: '✦' } },
-  // Whirl hits around the caster
-  berserk: { kind: 'nova', radius: 1, fx: { duration: 280, delayStep: 20, order: 'beam' } },
-  groundshaker: { kind: 'nova', radius: 1, fx: { duration: 300, delayStep: 18, order: 'beam' } },
-  'fierce berserk': { kind: 'nova', radius: 1, fx: { duration: 340, delayStep: 16, order: 'beam' } },
-  // Large circular bursts (ultimate-style)
-  thunderstorm: { kind: 'nova', radius: 2, fx: { duration: 320, delayStep: 12, order: 'beam' } },
-  'stone shower': { kind: 'nova', radius: 2, fx: { duration: 340, delayStep: 14, order: 'beam' } },
-  'divine caldera': { kind: 'nova', radius: 2, color: 0xfde68a, fx: { duration: 360, delayStep: 12, glyph: '✦', order: 'beam' } },
-  'spiritual outburst': { kind: 'nova', radius: 2, fx: { duration: 380, delayStep: 10, order: 'beam' } },
-  'rage of the skies': { kind: 'nova', radius: 3, fx: { duration: 400, delayStep: 10, order: 'beam' } },
-  'hell\'s core': { kind: 'nova', radius: 3, fx: { duration: 420, delayStep: 10, order: 'beam' } },
-  'wrath of nature': { kind: 'nova', radius: 3, fx: { duration: 400, delayStep: 10, order: 'beam' } },
-  'eternal winter': { kind: 'nova', radius: 3, fx: { duration: 400, delayStep: 10, order: 'beam' } },
-  // Ring bursts around caster (Ice/Terra Burst)
-  'ice burst': { kind: 'ring', radius: 2, fx: { duration: 350, delayStep: 22, order: 'beam' } },
-  'terra burst': { kind: 'ring', radius: 2, fx: { duration: 350, delayStep: 22, order: 'beam' } },
-  // Cross-shaped explosion (rune-style)
-  explosion: { kind: 'plus', reach: 2, fx: { duration: 300, delayStep: 35, order: 'beam' } },
-  // Frontal boxes (monk / takedown style)
-  'flurry of blows': { kind: 'front_box', width: 3, depth: 1, fx: { duration: 260, delayStep: 24, order: 'beam' } },
-  'greater flurry of blows': { kind: 'front_box', width: 3, depth: 2, fx: { duration: 300, delayStep: 22, order: 'beam' } },
-  'sweeping takedown': { kind: 'front_box', width: 3, depth: 2, fx: { duration: 320, delayStep: 20, order: 'beam' } },
-  'balanced brawl': { kind: 'front_box', width: 3, depth: 2, fx: { duration: 280, delayStep: 22, order: 'beam' } },
-  // Single-target melee spells
-  'double jab': { kind: 'front_box', width: 1, depth: 1, fx: { duration: 220 } },
-  'swift jab': { kind: 'front_box', width: 1, depth: 1, fx: { duration: 220 } },
-  'tiger clash': { kind: 'front_box', width: 1, depth: 1, fx: { duration: 260 } },
-  'greater tiger clash': { kind: 'front_box', width: 1, depth: 1, fx: { duration: 280 } },
-  'forceful uppercut': { kind: 'front_box', width: 1, depth: 1, fx: { duration: 280 } },
-  'mystic repulse': { kind: 'projectile', depth: 7 },
-  'lesser mystic repulse': { kind: 'projectile', depth: 5 },
-  'devastating knockout': { kind: 'front_box', width: 1, depth: 1, fx: { duration: 300 } },
-  // Strike/missile family (single square target / front square)
-  'apprentice\'s strike': { kind: 'projectile', depth: 3 },
-  buzz: { kind: 'projectile', depth: 3 },
-  'mud attack': { kind: 'projectile', depth: 3 },
-  'death strike': { kind: 'projectile', depth: 3 },
-  'flame strike': { kind: 'projectile', depth: 3 },
-  'energy strike': { kind: 'projectile', depth: 3 },
-  'ice strike': { kind: 'projectile', depth: 3 },
-  'terra strike': { kind: 'projectile', depth: 3 },
-  'physical strike': { kind: 'projectile', depth: 3 },
-  'strong flame strike': { kind: 'projectile', depth: 3 },
-  'strong energy strike': { kind: 'projectile', depth: 3 },
-  'strong ice strike': { kind: 'projectile', depth: 3 },
-  'strong terra strike': { kind: 'projectile', depth: 3 },
-  'ultimate flame strike': { kind: 'projectile', depth: 3 },
-  'ultimate energy strike': { kind: 'projectile', depth: 3 },
-  'ultimate ice strike': { kind: 'projectile', depth: 3 },
-  'ultimate terra strike': { kind: 'projectile', depth: 3 },
-  lightning: { kind: 'projectile', depth: 5 },
-  'divine missile': { kind: 'projectile', depth: 4 },
-  'ethereal spear': { kind: 'projectile', depth: 4 },
-  'lesser ethereal spear': { kind: 'projectile', depth: 4 },
-  'strong ethereal spear': { kind: 'projectile', depth: 5 },
-  'whirlwind throw': { kind: 'projectile', depth: 4 },
-  annihilation: { kind: 'front_box', width: 1, depth: 1, fx: { duration: 300 } },
-};
+// Per-spell VFX (shapes/timing modeled after tibia.fandom.com spell
+// descriptions) live in data/spellFxOverrides.js. Per-creature damage
+// multipliers live in data/creatureDamageModifiers.js.
 
 // Dimensiones del mapa actual (se actualizan en cada descendLevel).
 let dungeonW = MAP_W;
@@ -2068,7 +1852,7 @@ function startGame(configPlayer) {
           MAX_DUNGEON_H,
         });
         // Bridge the equipment-light channel now that the atmosphere is ready.
-        atmosphereSetEquipmentLight = (r, d, e) => floorAtmosphere.setEquipmentLight(r, d, e);
+        attachAtmosphereLightSink((r, d, e) => floorAtmosphere.setEquipmentLight(r, d, e));
         applyCurrentLightStateToAtmosphere();
 
         // SpriteFactory handles centering, 0.9-tile fill, and depth 25.
