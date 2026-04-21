@@ -1,7 +1,9 @@
 import {
   getCreatureTypeProgressionGroups,
   getItemByArticleId,
+  getItemShopCatalog,
   getCreatureDropTable,
+  getSpellsCatalogWithPrices,
   getCreatureAbilitiesById,
   getCreatureDamageModifiersById,
   getManifest,
@@ -126,6 +128,7 @@ import {
   setOnUseTool,
 } from '../../playerSession.js';
 import { setupInventoryPanel } from '../../../ui/inventoryPanel.js';
+import { setLoadingProgress } from '../../../ui/loadingScreen.js';
 
 // Expose the bus for debugging / browser console listeners.
 if (typeof window !== 'undefined') window.tdEvents = bus;
@@ -139,7 +142,9 @@ let itemsShopCatalog = [];
 let creatureAbilitiesById = new Map();
 let creatureDamageModifiersById = new Map();
 
-// Spell ID → { itemId, title, count } for arrow/bolt conjure spells
+// Spell ID → { itemId, title, count } for arrow/bolt conjure spells.
+// Used internally by loadEngineData to pre-fetch ammo items missing from
+// the shop catalog (value_buy=0).
 const CONJURE_AMMO_MAP = new Map([
   [68921, { itemId: 68886, title: 'Simple Arrow',  count: 30 }],
   [1805,  { itemId: 1657,  title: 'Arrow',         count: 10 }],
@@ -7309,15 +7314,9 @@ function startGame(configPlayer) {
 // clicks "Enter Dungeon").
 setupInventoryPanel({ startGame });
 
-function setLoadingProgress(pct, label) {
-  const bar = document.getElementById('loadingBar');
-  const lbl = document.getElementById('loadingLabel');
-  const num = document.getElementById('loadingPct');
-  const p = Math.min(100, Math.max(0, Math.round(pct)));
-  if (bar) bar.style.width = `${p}%`;
-  if (num) num.textContent = `${p}%`;
-  if (lbl && label) lbl.textContent = label;
-}
+// setLoadingProgress now lives in game/js/ui/loadingScreen.js so the panel
+// can call it too. Engine still imports + uses it during the Phaser preload
+// (lines ~215-240).
 
 const CLASS_META = {
   knight:   { label: 'Elite Knight',    icon: '⚔️' },
@@ -7698,5 +7697,36 @@ async function loadProgressionDatabase() {
       average_experience: 5,
       creatures: [{ id: 1116, title: 'Rat', type_primary: 'Glires', experience: 5, hitpoints: 20, maxDamage: 8, image: 'creature/Rat.gif' }],
     }];
+  }
+}
+
+// Loads everything the engine's startGame() needs from disk into the
+// engine-scope let bindings (creatureDropTable, spellsCatalog, etc.).
+// The inventory panel calls this from bootGame and runs it in parallel
+// with its own bag/coin loaders. `onProgress(label?)` is invoked once
+// per task so the panel can drive the loading bar.
+export async function loadEngineData(onProgress) {
+  const tick = (label) => { if (typeof onProgress === 'function') onProgress(label); };
+  await Promise.all([
+    loadProgressionDatabase().then(() => tick('Loading creature data...')),
+    (async () => { creatureDropTable = await getCreatureDropTable(); })().then(() => tick('Loading loot tables...')),
+    (async () => { creatureAbilitiesById = await getCreatureAbilitiesById(); })().then(() => tick('Loading abilities...')),
+    (async () => { creatureDamageModifiersById = await getCreatureDamageModifiersById(); })().then(() => tick('Loading damage data...')),
+    (async () => { spellsCatalog = await getSpellsCatalogWithPrices(); })().then(() => tick('Loading spells...')),
+    (async () => { itemsShopCatalog = await getItemShopCatalog(); })().then(() => tick('Loading items...')),
+    loadKnownItemImages(),
+  ]);
+  // Pre-cache ammo items not in shop catalog (value_buy=0). After the
+  // catalog is populated we know which ammo IDs are missing.
+  for (const [, mapping] of CONJURE_AMMO_MAP) {
+    const inShop = (itemsShopCatalog || []).some((it) => Number(it.id) === mapping.itemId);
+    if (inShop) continue;
+    try {
+      const full = await getItemByArticleId(mapping.itemId);
+      if (full) {
+        full.isStackable = true;
+        _conjureAmmoCache.set(mapping.itemId, full);
+      }
+    } catch { /* best effort */ }
   }
 }

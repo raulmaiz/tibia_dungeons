@@ -23,8 +23,6 @@
 
 import {
   getItemByArticleId,
-  getItemShopCatalog,
-  getSpellsCatalogWithPrices,
   imageUrl,
 } from '../dataService.js';
 import { progressionStatsForLevel } from '../mechanics/progression.js';
@@ -54,6 +52,11 @@ import {
   setInventoryClearEquippedSlotVisual,
   setOnPlayerLevelStatsUpdate,
 } from '../runtime/playerSession.js';
+import { setLoadingProgress } from './loadingScreen.js';
+import { bus, EVENTS } from '../core/EventBus.js';
+// loadEngineData mutates engine-scope state (creature/spell/items
+// catalogs + ammo cache) so it has to live in the engine module.
+import { loadEngineData } from '../runtime/core/engine/game.engine.js';
 
 // DOM helper local to this module (previously at module scope in the engine).
 // Rewrites the equipment-panel footer text without disturbing the status
@@ -1534,6 +1537,9 @@ export function setupInventoryPanel(deps) {
     if (loadingOverlay) loadingOverlay.style.display = 'flex';
     setLoadingProgress(0, 'Loading creature data...');
 
+    // Progress bar driver — one tick per finished task. Engine tasks (6)
+    // arrive via loadEngineData's onProgress callback; the panel-internal
+    // tasks (bag + coin templates) tick on completion of their own promise.
     let jsonsDone = 0;
     const JSON_TASKS = 8;
     const jsonLabels = [
@@ -1551,30 +1557,10 @@ export function setupInventoryPanel(deps) {
 
     const bagToEquip = snap && Number(snap.bagArticleId) ? Number(snap.bagArticleId) : START_BAG_ARTICLE_ID;
     await Promise.all([
-      loadProgressionDatabase().then(onJsonDone),
+      loadEngineData(onJsonDone),
       equipBagByArticleId(bagToEquip).then(onJsonDone),
-      (async () => { creatureDropTable = await getCreatureDropTable(); })().then(onJsonDone),
-      (async () => { creatureAbilitiesById = await getCreatureAbilitiesById(); })().then(onJsonDone),
-      (async () => { creatureDamageModifiersById = await getCreatureDamageModifiersById(); })().then(onJsonDone),
       ensureCoinTemplatesLoaded().then(onJsonDone),
-      (async () => { spellsCatalog = await getSpellsCatalogWithPrices(); })().then(onJsonDone),
-      (async () => { itemsShopCatalog = await getItemShopCatalog(); })().then(onJsonDone),
-      loadKnownItemImages(),
     ]);
-
-    // Pre-cache ammo items not in shop catalog (value_buy=0)
-    for (const [, mapping] of CONJURE_AMMO_MAP) {
-      const inShop = (itemsShopCatalog || []).some(it => Number(it.id) === mapping.itemId);
-      if (!inShop) {
-        try {
-          const full = await getItemByArticleId(mapping.itemId);
-          if (full) {
-            full.isStackable = true;
-            _conjureAmmoCache.set(mapping.itemId, full);
-          }
-        } catch { /* best effort */ }
-      }
-    }
 
     setLoadingProgress(45, 'Starting game engine...');
     addCoinsToInventory(0);
