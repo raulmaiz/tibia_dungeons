@@ -90,6 +90,7 @@ import {
   TORCH_BURN_SMALL_THRESHOLD,
 } from '../../../config/visual.config.js';
 import { bus, EVENTS } from '../../../core/EventBus.js';
+import { worldX, worldY } from '../../../world/Projection.js';
 
 // Expose the bus for debugging / browser console listeners.
 if (typeof window !== 'undefined') window.tdEvents = bus;
@@ -2064,8 +2065,8 @@ function startGame(configPlayer) {
           mapTiles[y] = [];
           for (let x = 0; x < MAX_DUNGEON_W; x += 1) {
             const rect = this.add.rectangle(
-              x * tileSize + tileSize / 2,
-              y * tileSize + tileSize / 2,
+              worldX(x),
+              worldY(y),
               tileSize - 1,
               tileSize - 1,
               0x080e18
@@ -2415,8 +2416,11 @@ function startGame(configPlayer) {
         let currentRooms = [];
         let currentStairsTile = { gx: MAP_W - 2, gy: MAP_H - 2 };
         let creaturesTargetCount = 0;
-        const centerX = (gx) => gx * tileSize + tileSize / 2;
-        const centerY = (gy) => gy * tileSize + tileSize / 2;
+        // Local aliases that delegate to the Projection layer. Kept for the
+        // dozens of closure-captured call sites; ISO migration removes these
+        // and rewrites callers to use worldToScreen() directly.
+        const centerX = worldX;
+        const centerY = worldY;
         const xpToNextLevel = (level) => 50 + (level - 1) * 40;
         const weaponUsesToNextLevel = (skillLevel) => {
           const dl = Math.max(10, Math.floor(Number(skillLevel) || 10));
