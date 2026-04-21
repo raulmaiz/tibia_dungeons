@@ -40,6 +40,7 @@ import {
   applyEquipmentLightFromItem,
   getCurrentLightElapsedMs,
   getLootLightItemImage,
+  parseDurationStringToMs,
 } from '../systems/lighting/LightItems.js';
 import {
   onPanelLog,
@@ -150,16 +151,10 @@ export function setupInventoryPanel(deps) {
   // --- Accessory (ring / amulet) duration timers ---
   const accessoryTimerState = { ring: null, amulet: null };
 
-  function parseDurationSeconds(durationStr) {
-    const s = String(durationStr || '').toLowerCase().trim();
-    const m = s.match(/^(\d+)\s*minute/);
-    if (m) return Number(m[1]) * 60;
-    const h = s.match(/^(\d+)\s*hour/);
-    if (h) return Number(h[1]) * 3600;
-    const sc = s.match(/^(\d+)\s*sec/);
-    if (sc) return Number(sc[1]);
-    return 0;
-  }
+  // Canonical duration parser lives in systems/lighting/LightItems.js and
+  // returns milliseconds — convert here since the accessory UI ticks once
+  // a second.
+  const parseDurationSeconds = (raw) => Math.floor(parseDurationStringToMs(raw) / 1000);
 
   function stopAccessoryTimer(slotKey) {
     const t = accessoryTimerState[slotKey];
