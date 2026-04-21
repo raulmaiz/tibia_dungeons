@@ -5,6 +5,14 @@
  */
 export const CHANGELOG = [
   {
+    version: '1.3.0',
+    date: '2026-04-21',
+    entries: [
+      'SEO: meta descriptions (HTML, OG, Twitter, schema.org) no longer claim "20 floors" — replaced with endless procedural floors',
+      'SEO: schema.org image array trimmed to preview.jpg only, so Google picks the intended thumbnail in search results',
+    ],
+  },
+  {
     version: '1.2.0',
     date: '2026-04-20',
     entries: [
