@@ -10,7 +10,7 @@
  * Gameplay is untouched — this module only creates cosmetic objects.
  */
 
-import { getFloorTheme } from '../../../data/floorThemes.js';
+import { getFloorTheme } from '../data/floorThemes.js';
 
 function mulberry32(seed) {
   let t = seed >>> 0;

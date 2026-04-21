@@ -33,5 +33,5 @@ When the visual work lands:
 ## Caveats
 
 - **`vfx.js` is the implementation.** It has all the actual draw routines. `Renderer.js` is just a re-export. Touch `vfx.js` to add a new VFX function, then add it to `Renderer.js`.
-- **The ground-loot marker** is the one entity sprite NOT in `SpriteFactory` — it has a Y offset to look like a "badge" hovering over the tile. Centralising it would hide the offset quirk. Lives inline in [`../runtime/core/engine/game.engine.js`](../runtime/core/engine/game.engine.js).
+- **The ground-loot marker** is the one entity sprite NOT in `SpriteFactory` — it has a Y offset to look like a "badge" hovering over the tile. Centralising it would hide the offset quirk. Lives inline in [`../engine/game.engine.js`](../engine/game.engine.js).
 - **`floorAtmosphere.js`** does its own draw routines (decorative wall/floor motifs). It's NOT routed through here because its arithmetic is tile-relative (`tileSize * 0.55`-style sizing), not world-coordinate. Its iso migration will be separate.

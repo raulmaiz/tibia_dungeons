@@ -23,22 +23,31 @@ game/
 ├── data/                   ← JSON catalogs (creatures, items, spells…) + images
 ├── dist/                   ← esbuild output (gitignored, regenerable)
 └── js/
-    ├── main.js             ← entry point (imports auth + runtime)
-    ├── auth.js             ← login + character-select shell  *(will move to ui/ in Phase 2)*
-    ├── dataService.js      ← JSON catalog loaders + image-URL helpers
+    ├── main.js             ← entry point (2 lines: ui/auth + engine)
+    ├── loading-screen.js   ← separate bundle entry (SW register + changelog scroller)
+    ├── dataService.js      ← JSON catalog loaders + imageUrl()
     ├── offline-api.js      ← localStorage stub for itch.io build
     ├── vfx.js              ← low-level Phaser draw routines (DON'T import directly — use rendering/Renderer.js)
-    ├── loading-screen.js   ← progress-bar render
-    ├── config/             ← game.config.js + visual.config.js (every magic number lives here)
-    ├── core/               ← EventBus.js
-    ├── world/              ← Projection.js (world↔screen seam)
-    ├── rendering/          ← SpriteFactory.js + Renderer.js (entity & VFX seams)
-    ├── systems/lighting/   ← LightItems.js (torch burn + radius)
-    ├── ui/                 ← inventoryPanel.js (1.6k lines!), loadingScreen.js, panelLayout.js
-    ├── data/               ← spellFxOverrides.js, floorSpawnConfig.js, floorThemes.js, changelog.js, version.js, …
-    ├── runtime/            ← playerSession.js + main.runtime.js + bootstrap/ + core/engine/
-    │   └── core/engine/    ← game.engine.js (~7.7k lines, scene + combat + AI + save) + floorAtmosphere.js + creatureSpellVfx.js
-    ├── creatures/, dungeon/, mechanics/, spells/   ← legacy domain helpers (will regroup in Phase 2)
+    │
+    ├── config/             ← every magic number (game.config.js, visual.config.js)
+    ├── core/               ← EventBus.js (pub/sub)
+    ├── world/              ← Projection.js (world↔screen seam, iso migration plug point)
+    ├── rendering/          ← SpriteFactory + Renderer shim (Lights2D + post-FX seams)
+    ├── systems/            ← reusable behaviour modules
+    │   └── lighting/       ← LightItems.js (torch burn + radius)
+    ├── state/              ← playerSession.js (ESM-binding setter pattern)
+    ├── ui/                 ← auth.js, inventoryPanel.js (1.6k!), loadingScreen.js, panelLayout.js
+    ├── data/               ← static tuning tables (floorSpawnConfig, floorThemes, changelog, version)
+    ├── entities/           ← domain grouping by entity
+    │   ├── Creature/       ← abilityPatterns.js + damageModifiers.js
+    │   ├── Spell/          ← filters.js + fxOverrides.js
+    │   ├── Item/           ← placeholder (logic still in ui/inventoryPanel.js)
+    │   └── Player/         ← placeholder (state still in engine closure)
+    ├── engine/             ← game.engine.js (~7.7k, scene + combat + AI + save)
+    │                         + floorAtmosphere.js + creatureSpellVfx.js
+    ├── dungeon/            ← procedural floor generator
+    └── mechanics/          ← progression curves + loot pity tracker
+
 api/                        ← Vercel serverless functions (auth, saves, runs)
 scripts/                    ← build, dev-server, playtest, version-bump, store covers
 docs/                       ← architecture, how-tos, glossary, gameplay notes
@@ -52,7 +61,7 @@ Layer-by-layer detail with reasoning: [`docs/architecture.md`](docs/architecture
 - **Sprites for entities** (player, creature, fire/poison field, ground tile) are built via `rendering/SpriteFactory.js`. Never `this.add.sprite(...)` directly in the engine — it bypasses the future Lights2D/normal-map pipeline.
 - **VFX calls** (shake, flash, beams, projectiles) import from `rendering/Renderer.js`, never from `vfx.js`. The shim exists for future post-FX wrapping.
 - **Coordinates** go through `world/Projection.js`. Inline `gx * tileSize + tileSize/2` is forbidden — it will silently break the iso migration.
-- **Module-shared state** uses `runtime/playerSession.js` setter pattern. Never reassign an imported `let` binding (ESM throws). Always call the matching `set<Name>()`.
+- **Module-shared state** uses `state/playerSession.js` setter pattern. Never reassign an imported `let` binding (ESM throws). Always call the matching `set<Name>()`.
 - **Gameplay events** emit through `core/EventBus.js` (`bus.emit(EVENTS.ENTITY_DIED, {...})`). Future systems (particles, audio) hook in via `bus.on()` without touching combat code.
 
 ## Foot-guns burned into past sessions

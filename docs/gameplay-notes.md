@@ -40,7 +40,7 @@ Useful when wiring tutorials, tooltips, or scraping for telemetry.
 
 ## Engine combat rule
 
-Pressing a direction key (in [`game/js/runtime/core/engine/game.engine.js`](../game/js/runtime/core/engine/game.engine.js), search for `performPlayerAttack`) computes `targetTile = pos + dir` and then:
+Pressing a direction key (in [`game/js/engine/game.engine.js`](../game/js/engine/game.engine.js), search for `performPlayerAttack`) computes `targetTile = pos + dir` and then:
 
 - creature on that tile → `performPlayerAttack()` (bump-attack, no move)
 - tile walkable & empty → move one step

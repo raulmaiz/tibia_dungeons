@@ -17,7 +17,7 @@ Where to look when something is wrong. The runtime has no central logger — mos
 
 - `tdEvents` — the EventBus. Use `tdEvents.on('entity:died', e => console.log(e))` to instrument anything mid-session. Catalog of events: [`game/js/core/EventBus.js`](../game/js/core/EventBus.js).
 - `tdGame` — `{ resume, getCurrentSaveId, setCurrentSaveId, deleteCurrentSave }`. Set up in [`game/js/ui/inventoryPanel.js`](../game/js/ui/inventoryPanel.js).
-- `tdAuth` — auth state from [`game/js/auth.js`](../game/js/auth.js). Useful to check `tdAuth.isLoggedIn()`.
+- `tdAuth` — auth state from [`game/js/ui/auth.js`](../game/js/ui/auth.js). Useful to check `tdAuth.isLoggedIn()`.
 - `debugInventory` — `{ addGold, addLoot }`. Hand-craft inventory state without playing the game.
 - `_resetInventoryForNewRun` — wipe the bag/equipment without restarting.
 
@@ -56,7 +56,7 @@ You probably bypassed the rendering layer. Search for raw `this.add.sprite(` in 
 
 ### "Loot bag is full" but the bag is clearly not full
 
-`lastLootRejectReason` distinguishes `'capacity'` (weight) from `'slots'`. Capacity = item weight × stack count > player capacity. Set in [`game/js/runtime/playerSession.js`](../game/js/runtime/playerSession.js).
+`lastLootRejectReason` distinguishes `'capacity'` (weight) from `'slots'`. Capacity = item weight × stack count > player capacity. Set in [`game/js/state/playerSession.js`](../game/js/state/playerSession.js).
 
 ### Light not turning on after equipping a torch
 
@@ -93,7 +93,7 @@ debugInventory.addLoot({ id: <weapon_id>, title: 'Cheat Sword', /* … */ });
 
 ```bash
 git log --oneline -20
-git diff HEAD~1 -- game/js/runtime/core/engine/game.engine.js
+git diff HEAD~1 -- game/js/engine/game.engine.js
 ```
 
 Most recent regression-prone files: the engine, `inventoryPanel.js`, and anything in `runtime/`.

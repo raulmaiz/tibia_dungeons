@@ -8,19 +8,19 @@ import {
   getCreatureDamageModifiersById,
   getManifest,
   imageUrl,
-} from '../../../dataService.js';
+} from '../dataService.js';
 import {
   parseDamageRangeString,
   averageMagicWeaponHitPreview,
   progressionStatsForLevel,
-} from '../../../mechanics/progression.js';
-import { LootPityTracker } from '../../../mechanics/loot.js';
-import { generateLevelMap as buildDungeonLevelMap, computeDungeonSize } from '../../../dungeon/generator.js';
+} from '../mechanics/progression.js';
+import { LootPityTracker } from '../mechanics/loot.js';
+import { generateLevelMap as buildDungeonLevelMap, computeDungeonSize } from '../dungeon/generator.js';
 import { createFloorAtmosphere } from './floorAtmosphere.js';
 import { castCreatureSpellVfx, castFireballExplosion, isElementalAbility, isFireballAbility } from './creatureSpellVfx.js';
-import { wirePanelLayoutSync } from '../../../ui/panelLayout.js';
-import { isBlockedSpellTitle } from '../../../spells/filters.js';
-import { inferCreatureAbilityPattern } from '../../../creatures/abilityPatterns.js';
+import { wirePanelLayoutSync } from '../ui/panelLayout.js';
+import { isBlockedSpellTitle } from '../entities/Spell/filters.js';
+import { inferCreatureAbilityPattern } from '../entities/Creature/abilityPatterns.js';
 import {
   EARLY_LEVELS,
   FORCED_CREATURE_ID_BY_LEVEL,
@@ -30,7 +30,7 @@ import {
   TROLL_ALLOWED_IDS,
   FLOOR_CREATURE_COUNTS,
   FLOOR_DISPLAY_LABEL,
-} from '../../../data/floorSpawnConfig.js';
+} from '../data/floorSpawnConfig.js';
 import {
   shakeCamera,
   flashCamera,
@@ -43,7 +43,7 @@ import {
   rangedProjectileLine,
   missEffect,
   critBanner,
-} from '../../../rendering/Renderer.js';
+} from '../rendering/Renderer.js';
 import {
   frameTextureName,
   deathTextureName,
@@ -54,7 +54,7 @@ import {
   createGroundTile,
   createFireFieldSprite,
   createPoisonFieldSprite,
-} from '../../../rendering/SpriteFactory.js';
+} from '../rendering/SpriteFactory.js';
 import {
   TILE_SIZE,
   MAP_W,
@@ -81,7 +81,7 @@ import {
   PLAYER_ACTION_DELAY_MIN_MS,
   PLAYER_ACTION_DELAY_MAX_MS,
   MAX_FOOD_SECONDS,
-} from '../../../config/game.config.js';
+} from '../config/game.config.js';
 import {
   SCENE_BACKGROUND_COLOR,
   CREATURE_FILL_TARGET,
@@ -99,9 +99,9 @@ import {
   DEFAULT_LIGHT_DURATION_MS,
   TORCH_BURN_MEDIUM_THRESHOLD,
   TORCH_BURN_SMALL_THRESHOLD,
-} from '../../../config/visual.config.js';
-import { bus, EVENTS } from '../../../core/EventBus.js';
-import { worldX, worldY } from '../../../world/Projection.js';
+} from '../config/visual.config.js';
+import { bus, EVENTS } from '../core/EventBus.js';
+import { worldX, worldY } from '../world/Projection.js';
 import {
   attachAtmosphereLightSink,
   loadKnownItemImages,
@@ -110,9 +110,9 @@ import {
   getLootLightItemImage,
   updateEquippedLightSlotImage,
   applyCurrentLightStateToAtmosphere,
-} from '../../../systems/lighting/LightItems.js';
-import { SPELL_FX_OVERRIDES } from '../../../data/spellFxOverrides.js';
-import { CREATURE_DAMAGE_MULTIPLIER_BY_ID } from '../../../data/creatureDamageModifiers.js';
+} from '../systems/lighting/LightItems.js';
+import { SPELL_FX_OVERRIDES } from '../entities/Spell/fxOverrides.js';
+import { CREATURE_DAMAGE_MULTIPLIER_BY_ID } from '../entities/Creature/damageModifiers.js';
 import {
   onPanelLog,
   onConsumeFood,
@@ -126,9 +126,9 @@ import {
   setOnConsumeFood,
   setOnUseLiquid,
   setOnUseTool,
-} from '../../playerSession.js';
-import { setupInventoryPanel } from '../../../ui/inventoryPanel.js';
-import { setLoadingProgress } from '../../../ui/loadingScreen.js';
+} from '../state/playerSession.js';
+import { setupInventoryPanel } from '../ui/inventoryPanel.js';
+import { setLoadingProgress } from '../ui/loadingScreen.js';
 
 // Expose the bus for debugging / browser console listeners.
 if (typeof window !== 'undefined') window.tdEvents = bus;

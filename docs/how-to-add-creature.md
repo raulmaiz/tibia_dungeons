@@ -64,11 +64,11 @@ Edit `FLOOR_CREATURE_COUNTS` at the bottom of the same file. Example:
 
 ## 3. (Optional) Special abilities
 
-If the creature should cast spells or use ranged attacks beyond plain melee, add an entry to [`game/data/creature_ability.json`](../game/data/creature_ability.json) keyed by `article_id`. The pattern (beam, cone, nova, …) is auto-inferred by [`game/js/creatures/abilityPatterns.js`](../game/js/creatures/abilityPatterns.js); per-ability VFX overrides can be wired through [`game/js/data/spellFxOverrides.js`](../game/js/data/spellFxOverrides.js) (keyed by ability title lowercase).
+If the creature should cast spells or use ranged attacks beyond plain melee, add an entry to [`game/data/creature_ability.json`](../game/data/creature_ability.json) keyed by `article_id`. The pattern (beam, cone, nova, …) is auto-inferred by [`game/js/entities/Creature/abilityPatterns.js`](../game/js/entities/Creature/abilityPatterns.js); per-ability VFX overrides can be wired through [`game/js/entities/Spell/fxOverrides.js`](../game/js/entities/Spell/fxOverrides.js) (keyed by ability title lowercase).
 
 ## 4. (Optional) Damage tuning per id
 
-If a specific creature feels too strong / too weak after spawning, add a multiplier to [`game/js/data/creatureDamageModifiers.js`](../game/js/data/creatureDamageModifiers.js):
+If a specific creature feels too strong / too weak after spawning, add a multiplier to [`game/js/entities/Creature/damageModifiers.js`](../game/js/entities/Creature/damageModifiers.js):
 
 ```js
 export const CREATURE_DAMAGE_MULTIPLIER_BY_ID = new Map([
@@ -92,4 +92,4 @@ Bot smoke check: `TD_MODE=guest node scripts/playtest.js` will boot, pick a clas
 
 ## Where the spawn actually happens
 
-For reference, the runtime spawn loop lives inside `startGame()` in [`game/js/runtime/core/engine/game.engine.js`](../game/js/runtime/core/engine/game.engine.js). Search for `pickRandomCreatures(` and `createCreatureSprite(`. Don't usually need to touch this code — adding a creature is a JSON + spawn-config change.
+For reference, the runtime spawn loop lives inside `startGame()` in [`game/js/engine/game.engine.js`](../game/js/engine/game.engine.js). Search for `pickRandomCreatures(` and `createCreatureSprite(`. Don't usually need to touch this code — adding a creature is a JSON + spawn-config change.

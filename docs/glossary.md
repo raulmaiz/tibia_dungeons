@@ -6,7 +6,7 @@ Tibia-native terms are marked **(Tibia)** — they come from the original MMORPG
 
 ## Player & character
 
-- **Vocation (Tibia)** — character class. The four supported are `knight`, `paladin`, `sorcerer`, `druid`. In code these are lowercase string keys; UI labels live in `CLASS_META` near the bottom of [`game/js/runtime/core/engine/game.engine.js`](../game/js/runtime/core/engine/game.engine.js). Used throughout for stat lookup, sprite frames, learned-spell lists.
+- **Vocation (Tibia)** — character class. The four supported are `knight`, `paladin`, `sorcerer`, `druid`. In code these are lowercase string keys; UI labels live in `CLASS_META` near the bottom of [`game/js/engine/game.engine.js`](../game/js/engine/game.engine.js). Used throughout for stat lookup, sprite frames, learned-spell lists.
 - **Sex** — `'male'` or `'female'`. Determines outfit sprite frame (e.g. `player_male_0`).
 - **Magic Level (ML, Tibia)** — caster scaling stat. Increases spell damage / heal amounts. Bot-accessible at `#sbML`.
 - **Fist** / **Fist Fighting (Tibia)** — bare-hand weapon skill. Levels mid-combat (`Fist Fighting advanced to 12.`). Internally `playerFistLevel` in the engine.
@@ -32,7 +32,7 @@ Tibia-native terms are marked **(Tibia)** — they come from the original MMORPG
 
 - **Article ID** — the canonical numeric ID from the tibiawiki-sql dump. Used as the primary key for items, spells, and creatures in the JSONs. Shows up as `article_id` or sometimes just `id`.
 - **Spell hotkey slots** — 10 slots (`1`–`9`, `0` = slot 10). The spell `articleId` in each slot lives in `learnedSpellOrder` (per-run). Numpad equivalents work too.
-- **Spell FX override** — per-spell visual/timing recipe ([`game/js/data/spellFxOverrides.js`](../game/js/data/spellFxOverrides.js)). Keyed by `spell.title.toLowerCase()`. Missing entries fall back to inferred patterns from [`game/js/creatures/abilityPatterns.js`](../game/js/creatures/abilityPatterns.js).
+- **Spell FX override** — per-spell visual/timing recipe ([`game/js/entities/Spell/fxOverrides.js`](../game/js/entities/Spell/fxOverrides.js)). Keyed by `spell.title.toLowerCase()`. Missing entries fall back to inferred patterns from [`game/js/entities/Creature/abilityPatterns.js`](../game/js/entities/Creature/abilityPatterns.js).
 - **Cooldown** — `spellCooldownUntil` Map (per-spell wall-clock ms) inside the engine. UI overlay reads from `spellCdDurations`.
 
 ## World
@@ -41,7 +41,7 @@ Tibia-native terms are marked **(Tibia)** — they come from the original MMORPG
 - **Floor theme** — the named tier of a floor (e.g. `Glires` for floor 1 = rats). Configured in [`game/js/data/floorSpawnConfig.js`](../game/js/data/floorSpawnConfig.js) and [`game/js/data/floorThemes.js`](../game/js/data/floorThemes.js). Drives creature pool, ambient color, base damage.
 - **Tile** — a 40×40 px grid cell. Tile coordinates are `(gx, gy)`; pixel coordinates are `(x, y)`. Convert with `worldToScreen(gx, gy)` from [`game/js/world/Projection.js`](../game/js/world/Projection.js).
 - **Stairs tile** — the exit tile of the current floor. Walking onto it descends only if all creatures are dead.
-- **Atmosphere** — the darkness overlay + decorative wall/floor motifs ([`game/js/runtime/core/engine/floorAtmosphere.js`](../game/js/runtime/core/engine/floorAtmosphere.js)). Per-floor color palette comes from `floorThemes.js`.
+- **Atmosphere** — the darkness overlay + decorative wall/floor motifs ([`game/js/engine/floorAtmosphere.js`](../game/js/engine/floorAtmosphere.js)). Per-floor color palette comes from `floorThemes.js`.
 - **Hazard fields** — fire / poison tiles created by spells. Sprite + light source + DoT. Implementation in the engine, search for `addFireFieldTile` / `addPoisonFieldTile`.
 
 ## Persistence
@@ -52,10 +52,10 @@ Tibia-native terms are marked **(Tibia)** — they come from the original MMORPG
 
 ## Engine internals
 
-- **`startGame(configPlayer)`** — the giant scene boot function in [`game/js/runtime/core/engine/game.engine.js`](../game/js/runtime/core/engine/game.engine.js). Captures all run state in its closure (`gridX`, `playerHp`, `creatures[]`, …). Phase 4 of the in-progress refactor will tear it apart.
+- **`startGame(configPlayer)`** — the giant scene boot function in [`game/js/engine/game.engine.js`](../game/js/engine/game.engine.js). Captures all run state in its closure (`gridX`, `playerHp`, `creatures[]`, …). Phase 4 of the in-progress refactor will tear it apart.
 - **`bootGame(cfg)`** — defined inside `setupInventoryPanel()`. Loads engine data + initial inventory, then calls `startGame()`. Triggered by the "Enter Dungeon" button.
 - **`loadEngineData(onProgress)`** — engine-side data load (creature/spell/items catalogs). Mutates module-scope state. Called from `bootGame` in parallel with panel-side bag/coin loaders.
-- **`playerSession`** — [`game/js/runtime/playerSession.js`](../game/js/runtime/playerSession.js). Mutable bindings shared between engine and inventoryPanel via setter functions. Engine reads `onPanelLog`, panel writes via `setOnPanelLog(fn)`.
+- **`playerSession`** — [`game/js/state/playerSession.js`](../game/js/state/playerSession.js). Mutable bindings shared between engine and inventoryPanel via setter functions. Engine reads `onPanelLog`, panel writes via `setOnPanelLog(fn)`.
 - **`floorAtmosphere`** — instance returned by `createFloorAtmosphere(scene, opts)`. Owns the darkness overlay, area lights, decorative motifs. Engine wires the equipped-light callback into it via `attachAtmosphereLightSink()`.
 
 ## Build & deploy

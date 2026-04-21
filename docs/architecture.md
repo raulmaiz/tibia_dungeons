@@ -10,6 +10,12 @@ If you only want a one-line takeaway: **the engine is no longer a 9 500-line mon
 
 ```
 game/js/
+├── main.js                 ← entry point (imports ui/auth.js + engine/game.engine.js)
+├── loading-screen.js       ← separate bundle entry (SW register + changelog scroller)
+├── dataService.js          ← JSON catalog loaders + imageUrl()
+├── offline-api.js          ← localStorage stubs for the itch.io build
+├── vfx.js                  ← low-level Phaser draw routines (import through rendering/Renderer.js)
+│
 ├── config/                 ← all magic numbers (gameplay + visual)
 │   ├── game.config.js          tile size, dungeon dims, action timings, coin economy
 │   └── visual.config.js        HUD pixel dims, light radii, torch-burn thresholds
@@ -28,36 +34,38 @@ game/js/
 │   └── lighting/
 │       └── LightItems.js       equipped-light state, burn schedule, slot-icon resolution
 │
+├── state/                  ← shared mutable state across modules
+│   └── playerSession.js        callbacks bridging panel ↔ engine via setters
+│
 ├── ui/                     ← DOM panels and screens
+│   ├── auth.js                 login + character-select shell
 │   ├── inventoryPanel.js       1.6k-line panel: character select, equip, loot bag, shops
 │   ├── loadingScreen.js        progress-bar driver
 │   └── panelLayout.js          existing — pre-refactor
 │
 ├── data/                   ← static data tables (no logic)
-│   ├── spellFxOverrides.js     75 per-spell VFX patterns
-│   ├── creatureDamageModifiers.js
-│   ├── floorSpawnConfig.js     existing
-│   ├── floorThemes.js          existing
-│   ├── changelog.js            existing
-│   └── version.js              existing
+│   ├── floorSpawnConfig.js     per-floor creature pool + counts + labels
+│   ├── floorThemes.js          per-floor visual theme (palette, decor)
+│   ├── changelog.js            loading-screen "what's new"
+│   └── version.js              auto-managed VERSION + RELEASE_DATE
 │
-├── runtime/                ← boot wiring + shared mutable state
-│   ├── playerSession.js        callbacks bridging panel ↔ engine via setters
-│   ├── main.runtime.js         existing entry hop
-│   ├── bootstrap/              existing
-│   └── core/
-│       └── engine/
-│           ├── game.engine.js          ← the (former) monolith. Now ~7 700 lines:
-│           │                              scene lifecycle, combat, movement, AI, save/load
-│           ├── floorAtmosphere.js      existing — darkness overlay + floor decorations
-│           └── creatureSpellVfx.js     existing — creature ability VFX
+├── entities/               ← domain grouping by entity type
+│   ├── Creature/
+│   │   ├── abilityPatterns.js      ability-VFX inference
+│   │   └── damageModifiers.js      per-id damage multipliers
+│   ├── Spell/
+│   │   ├── filters.js              spell-title blacklist
+│   │   └── fxOverrides.js          75 per-spell VFX recipes
+│   ├── Item/                       (placeholder — logic still in ui/inventoryPanel.js)
+│   └── Player/                     (placeholder — state still in engine closure)
 │
-├── creatures/, dungeon/, mechanics/, spells/   ← existing pre-refactor helpers
-├── auth.js                 ← pre-game flow (login + character select shell)
-├── dataService.js          ← JSON catalog + image-URL helpers
-├── offline-api.js          ← localStorage stubs for the itch.io build
-├── vfx.js                  ← low-level Phaser draw routines (do not import directly — go through Renderer.js)
-└── main.js                 ← entry point
+├── engine/                 ← scene + all in-run logic
+│   ├── game.engine.js              ← ~7 700 lines: scene lifecycle, combat, movement, AI, save/load
+│   ├── floorAtmosphere.js          darkness overlay + floor decorations
+│   └── creatureSpellVfx.js         creature ability VFX
+│
+├── dungeon/                ← procedural floor generator
+└── mechanics/              ← progression curves + loot pity tracker
 ```
 
 ---
@@ -100,7 +108,7 @@ Pass-through over `vfx.js` today. When a post-processing pipeline lands (bloom, 
 
 ## What the engine still owns (and why it was not extracted)
 
-`game/js/runtime/core/engine/game.engine.js` is still ~7 700 lines after the refactor. Most of that mass is the body of `startGame(configPlayer)`, a single function whose closure captures the live game state: `gridX`, `gridY`, `playerHp`, `playerMana`, `creatures[]`, `learnedSpellIds`, `currentLevel`, dozens more. Inside that closure live:
+`game/js/engine/game.engine.js` is still ~7 700 lines after the refactor. Most of that mass is the body of `startGame(configPlayer)`, a single function whose closure captures the live game state: `gridX`, `gridY`, `playerHp`, `playerMana`, `creatures[]`, `learnedSpellIds`, `currentLevel`, dozens more. Inside that closure live:
 
 - `performPlayerAttack`, projectile/spell hit resolution, damage rolls, ammo consumption
 - Player input handling, action throttling, movement, facing
@@ -113,7 +121,7 @@ If you are touching combat/movement/AI today, you are working inside `startGame`
 
 ---
 
-## Module-shared state via `runtime/playerSession.js`
+## Module-shared state via `state/playerSession.js`
 
 JavaScript ES modules export *bindings*, not values. We exploited this so the inventory panel and the engine can share mutable state without circular imports:
 
@@ -161,7 +169,7 @@ This pattern is used for eight callbacks (`onPanelLog`, `onConsumeFood`, `onUseL
 | 3 | `8865b12` | Projection layer (`worldX`/`worldY`/`worldToScreen`) | medium |
 | 4 | `0da5d1f` | SpriteFactory + Renderer shim | medium |
 | 5a | `496de80` | Light subsystem + data tables → modules | low |
-| 5b | `7b80f3f` | `setupSelectorUI` → `ui/inventoryPanel.js` + `runtime/playerSession.js` | high |
+| 5b | `7b80f3f` | `setupSelectorUI` → `ui/inventoryPanel.js` + `state/playerSession.js` | high |
 | 5b fix | `7bc6b6c` | Re-wire missing engine deps surfaced after 5b | — |
 | 6 | this commit | Dedup `parseDuration*`, SW cache bump, this doc | low |
 
@@ -173,5 +181,5 @@ Engine line count: **9 491 → ~7 700** (-19 %).
 
 - Game balance / progression formulas → see [`game/js/mechanics/progression.js`](../game/js/mechanics/progression.js).
 - Floor themes & creature pools → see [`game/js/data/floorSpawnConfig.js`](../game/js/data/floorSpawnConfig.js) and [`game/js/data/floorThemes.js`](../game/js/data/floorThemes.js).
-- Spell VFX shapes → see [`game/js/data/spellFxOverrides.js`](../game/js/data/spellFxOverrides.js) and [`game/js/creatures/abilityPatterns.js`](../game/js/creatures/abilityPatterns.js).
+- Spell VFX shapes → see [`game/js/entities/Spell/fxOverrides.js`](../game/js/entities/Spell/fxOverrides.js) and [`game/js/entities/Creature/abilityPatterns.js`](../game/js/entities/Creature/abilityPatterns.js).
 - Combat rules, gameplay quirks, controls → see the project root [`CLAUDE.md`](../CLAUDE.md).

@@ -14,7 +14,7 @@
  * select with a persisted guest name.
  */
 
-import { offlineFetch, offlineCurrentName, offlineSetName } from './offline-api.js';
+import { offlineFetch, offlineCurrentName, offlineSetName } from '../offline-api.js';
 
 const AUTH_NAME_KEY = 'td.authName';
 const CSRF_COOKIE   = 'td_csrf';

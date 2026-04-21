@@ -23,7 +23,7 @@ If the spell already exists in the tibiawiki dump (most do), skip ahead. Otherwi
 
 ## 2. Add the FX recipe
 
-Open [`game/js/data/spellFxOverrides.js`](../game/js/data/spellFxOverrides.js). Each entry is keyed by `spell.title.toLowerCase()` and describes the *shape* (beam, cone, nova, …) and *timing* (per-tile delay, total duration). Pick the right `kind` from existing entries:
+Open [`game/js/entities/Spell/fxOverrides.js`](../game/js/entities/Spell/fxOverrides.js). Each entry is keyed by `spell.title.toLowerCase()` and describes the *shape* (beam, cone, nova, …) and *timing* (per-tile delay, total duration). Pick the right `kind` from existing entries:
 
 | `kind` | Shape | Notes |
 |---|---|---|
@@ -48,7 +48,7 @@ Example:
 
 `fx.order: 'beam'` makes the per-tile flashes propagate outward instead of all at once. `glyph: '✦'` adds an ASCII overlay glyph. `color: 0x9d7dd9` overrides the default tint.
 
-If you don't add an override, the runtime falls back to inferred patterns from [`game/js/creatures/abilityPatterns.js`](../game/js/creatures/abilityPatterns.js), which usually picks something reasonable but not always pretty.
+If you don't add an override, the runtime falls back to inferred patterns from [`game/js/entities/Creature/abilityPatterns.js`](../game/js/entities/Creature/abilityPatterns.js), which usually picks something reasonable but not always pretty.
 
 ## 3. (Optional) Set the shop price
 
@@ -60,7 +60,7 @@ The Spells Shop only shows spells matching the player's `vocation` field. If you
 
 ## 5. (Optional) Conjure-ammo spells
 
-Spells that summon arrows/bolts (e.g. *Conjure Arrow*) need an entry in `CONJURE_AMMO_MAP` near the top of [`game/js/runtime/core/engine/game.engine.js`](../game/js/runtime/core/engine/game.engine.js):
+Spells that summon arrows/bolts (e.g. *Conjure Arrow*) need an entry in `CONJURE_AMMO_MAP` near the top of [`game/js/engine/game.engine.js`](../game/js/engine/game.engine.js):
 
 ```js
 [<spellArticleId>, { itemId: <ammoItemId>, title: 'Arrow', count: 10 }],
@@ -78,4 +78,4 @@ In the browser, buy the spell at the Spells Shop and hotkey it. Cast and confirm
 
 ## Where the spell-cast actually happens
 
-`castLearnedSpell(slotNumber, now)` inside `startGame()` in [`game/js/runtime/core/engine/game.engine.js`](../game/js/runtime/core/engine/game.engine.js). Search for `bus.emit(EVENTS.SPELL_CAST` to find the emission point.
+`castLearnedSpell(slotNumber, now)` inside `startGame()` in [`game/js/engine/game.engine.js`](../game/js/engine/game.engine.js). Search for `bus.emit(EVENTS.SPELL_CAST` to find the emission point.

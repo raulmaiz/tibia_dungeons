@@ -19,7 +19,7 @@ setupInventoryPanel({ startGame });
 Internally `inventoryPanel.js`:
 
 1. Owns `selectedSex` / `selectedClass` / `playerConfig` as private locals (only it reads/writes them).
-2. Reads live bindings from [`../runtime/playerSession.js`](../runtime/playerSession.js) for the cross-module callbacks (`onPanelLog`, `onConsumeFood`, `onUseLiquid`, `onUseTool`, `lastLootRejectReason`).
+2. Reads live bindings from [`../state/playerSession.js`](../state/playerSession.js) for the cross-module callbacks (`onPanelLog`, `onConsumeFood`, `onUseLiquid`, `onUseTool`, `lastLootRejectReason`).
 3. Calls setters from playerSession to publish its own callbacks to the engine (`setOnPlayerLevelStatsUpdate`, `setInventorySetEquippedSlotVisual`, etc.).
 4. On `startBtn` click → `bootGame(cfg)` → `loadEngineData()` (engine-side) + `equipBagByArticleId()` + `ensureCoinTemplatesLoaded()` (panel-side) → `startGame(playerConfig)`.
 5. Exposes `window.tdGame = { resume, getCurrentSaveId, setCurrentSaveId, deleteCurrentSave }` for the saves screen.

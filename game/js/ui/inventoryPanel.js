@@ -52,12 +52,12 @@ import {
   setInventorySetEquippedSlotVisual,
   setInventoryClearEquippedSlotVisual,
   setOnPlayerLevelStatsUpdate,
-} from '../runtime/playerSession.js';
+} from '../state/playerSession.js';
 import { setLoadingProgress } from './loadingScreen.js';
 import { bus, EVENTS } from '../core/EventBus.js';
 // loadEngineData mutates engine-scope state (creature/spell/items
 // catalogs + ammo cache) so it has to live in the engine module.
-import { loadEngineData } from '../runtime/core/engine/game.engine.js';
+import { loadEngineData } from '../engine/game.engine.js';
 
 // DOM helper local to this module (previously at module scope in the engine).
 // Rewrites the equipment-panel footer text without disturbing the status

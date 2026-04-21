@@ -1,11 +1,11 @@
-# `runtime/core/engine/` — the game engine
+# `engine/` — the game engine
 
 The biggest folder in the project. Treat with care.
 
 ## Files
 
 - [`game.engine.js`](game.engine.js) — **~7 700 lines.** The game scene + all in-run logic.
-- [`floorAtmosphere.js`](floorAtmosphere.js) — the darkness overlay, area lights, decorative wall/floor motifs (~2 100 lines). Per-floor color palette comes from [`../../../data/floorThemes.js`](../../../data/floorThemes.js).
+- [`floorAtmosphere.js`](floorAtmosphere.js) — the darkness overlay, area lights, decorative wall/floor motifs (~2 100 lines). Per-floor color palette comes from [`../data/floorThemes.js`](../data/floorThemes.js).
 - [`creatureSpellVfx.js`](creatureSpellVfx.js) — creature ability VFX dispatch (`castCreatureSpellVfx`, `castFireballExplosion`, etc.).
 
 ## Anatomy of `game.engine.js`
@@ -37,7 +37,7 @@ Three concentric scopes:
 ### Module scope (bottom of file, ~7700 – ~7770)
 
 - `setupInventoryPanel({ startGame })` call site (mounts the UI panel).
-- `setLoadingProgress` import (re-exported via [`../../../ui/loadingScreen.js`](../../../ui/loadingScreen.js)).
+- `setLoadingProgress` import (re-exported via [`../ui/loadingScreen.js`](../ui/loadingScreen.js)).
 - `loadEngineData()` definition.
 
 ## Where to look for X (cheat sheet)
@@ -54,14 +54,14 @@ Three concentric scopes:
 | Death handling | `playerDead = true`, `showDeathSummary` |
 | Magic weapon / ranged attack | `nextMagicWeaponShotAt`, `rangedProjectileLine` |
 | Fire / poison fields | `addFireFieldTile`, `addPoisonFieldTile` |
-| Dungeon generation | imported from [`../../../dungeon/generator.js`](../../../dungeon/generator.js) |
+| Dungeon generation | imported from [`../dungeon/generator.js`](../dungeon/generator.js) |
 
 ## Conventions inside the engine
 
-- **All sprite construction goes through [`../../../rendering/SpriteFactory.js`](../../../rendering/SpriteFactory.js).** Never raw `this.add.sprite(...)`.
-- **All VFX calls import from [`../../../rendering/Renderer.js`](../../../rendering/Renderer.js).** Never from `vfx.js` directly.
-- **All coordinate math goes through [`../../../world/Projection.js`](../../../world/Projection.js).** Never inline `gx * tileSize + tileSize/2`.
-- **Combat / movement / AI events emit through [`../../../core/EventBus.js`](../../../core/EventBus.js)** so future systems can listen.
+- **All sprite construction goes through [`../rendering/SpriteFactory.js`](../rendering/SpriteFactory.js).** Never raw `this.add.sprite(...)`.
+- **All VFX calls import from [`../rendering/Renderer.js`](../rendering/Renderer.js).** Never from `vfx.js` directly.
+- **All coordinate math goes through [`../world/Projection.js`](../world/Projection.js).** Never inline `gx * tileSize + tileSize/2`.
+- **Combat / movement / AI events emit through [`../core/EventBus.js`](../core/EventBus.js)** so future systems can listen.
 - **Closure-shadowed reads** (e.g. `centerX`, `centerY`) are local aliases for Projection helpers. They exist for the dozens of capture sites — do not introduce new ones.
 
 ## Risk zones

@@ -37,7 +37,7 @@ If you only want to lock a creature id without overriding stats, use `FORCED_CRE
 
 ## 3. Add a visual theme
 
-Edit [`game/js/data/floorThemes.js`](../game/js/data/floorThemes.js). Each theme drives [`game/js/runtime/core/engine/floorAtmosphere.js`](../game/js/runtime/core/engine/floorAtmosphere.js): tile palette, wall accents, decorations, particles, vignette, pit (stairs) styling.
+Edit [`game/js/data/floorThemes.js`](../game/js/data/floorThemes.js). Each theme drives [`game/js/engine/floorAtmosphere.js`](../game/js/engine/floorAtmosphere.js): tile palette, wall accents, decorations, particles, vignette, pit (stairs) styling.
 
 ```js
 export const FLOOR_THEMES = {

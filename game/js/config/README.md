@@ -13,6 +13,7 @@ Single source of truth for every tunable value. If you find a hardcoded number a
 
 ## What does NOT belong here
 
-- Per-creature/spell/item data → [`../data/`](../data/) (e.g. `spellFxOverrides.js`, `creatureDamageModifiers.js`).
-- Run-time mutable state (player HP, current floor, …) → engine closure or [`../runtime/playerSession.js`](../runtime/playerSession.js).
+- Per-creature/spell/item data → [`../entities/`](../entities/) (e.g. `entities/Spell/fxOverrides.js`, `entities/Creature/damageModifiers.js`).
+- World-scoped tuning (floor pools, themes) → [`../data/`](../data/).
+- Run-time mutable state (player HP, current floor, …) → engine closure or [`../state/playerSession.js`](../state/playerSession.js).
 - DOM ids / selectors → either inline in the consumer or in a future `ui/selectors.js`.
