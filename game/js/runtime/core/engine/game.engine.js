@@ -89,6 +89,10 @@ import {
   TORCH_BURN_MEDIUM_THRESHOLD,
   TORCH_BURN_SMALL_THRESHOLD,
 } from '../../../config/visual.config.js';
+import { bus, EVENTS } from '../../../core/EventBus.js';
+
+// Expose the bus for debugging / browser console listeners.
+if (typeof window !== 'undefined') window.tdEvents = bus;
 
 let game;
 let selectedSex = 'male';
@@ -1307,6 +1311,7 @@ function setupSelectorUI() {
     putCoin(PLATINUM_COIN_ID, platinum);
     putCoin(GOLD_COIN_ID, gold);
     window.dispatchEvent(new CustomEvent('coins-changed'));
+    bus.emit(EVENTS.COINS_CHANGED);
   }
 
   function addCoinsToInventory(goldAmount) {
@@ -1364,6 +1369,7 @@ function setupSelectorUI() {
     putCoin(PLATINUM_COIN_ID, platinum);
     putCoin(GOLD_COIN_ID, gold);
     window.dispatchEvent(new CustomEvent('coins-changed'));
+    bus.emit(EVENTS.COINS_CHANGED);
   }
 
   function spendGoldFromInventory(goldAmount) {
@@ -3685,7 +3691,9 @@ function startGame(configPlayer) {
           }
           groundLootByTile.clear();
           clearAllFireFields();
+          const prevLevel = currentLevel;
           if (toNext) currentLevel += 1;
+          if (toNext) bus.emit(EVENTS.FLOOR_DESCENDED, { from: prevLevel, to: currentLevel });
           currentLevelGroup = pickGroupForLevel(currentLevel);
           // Calcular tamaño del mapa según las criaturas de este floor
           const floorCountCfg = FLOOR_CREATURE_COUNTS[Number(currentLevel)];
@@ -6283,6 +6291,13 @@ function startGame(configPlayer) {
           playerMana = Math.max(0, playerMana - manaCost);
           spellCooldownUntil.set(articleId, now + (cdSec * 1000));
           if (cdSec > 0) spellCdDurations.set(articleId, cdSec);
+          bus.emit(EVENTS.SPELL_CAST, {
+            articleId,
+            title: spell.title,
+            slot: slotNumber,
+            manaCost,
+            by: 'player',
+          });
           // Cast flash animation on the spell slot
           const castSlotEl = document.querySelector(`.spell-slot[data-spell-id="${articleId}"] .spell-slot-img-wrap`);
           if (castSlotEl) {
@@ -6902,6 +6917,11 @@ function startGame(configPlayer) {
               const rolledDrops = rollCreatureDrops(targetCreature.id);
               if (rolledDrops.length > 0) {
                 addCombatLog(`${targetCreature.title} dropped: ${rolledDrops.map((d) => d.itemTitle).join(', ')}.`);
+                bus.emit(EVENTS.LOOT_DROPPED, {
+                  sourceId: targetCreature.id,
+                  sourceTitle: targetCreature.title,
+                  drops: rolledDrops.map((d) => ({ itemId: d.itemId, itemTitle: d.itemTitle })),
+                });
               } else {
                 const fallbackGold = fallbackGoldFromLevel();
                 if (window.debugInventory && typeof window.debugInventory.addGold === 'function') {
@@ -7183,6 +7203,15 @@ function startGame(configPlayer) {
           }
         };
         const playCreatureDeathEffect = (creature) => {
+          if (creature) {
+            bus.emit(EVENTS.ENTITY_DIED, {
+              id: creature.id,
+              title: creature.title,
+              gx: creature.gx,
+              gy: creature.gy,
+              sprite: creature.sprite || null,
+            });
+          }
           if (!creature || !creature.sprite || !creature.sprite.scene) {
             if (creature && creature.sprite) creature.sprite.setVisible(false);
             return;
