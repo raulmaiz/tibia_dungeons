@@ -9,7 +9,7 @@
 //   • panelState.playerConfig                — boot payload fed to startGame()
 //   • bootGame / _starting        — one-shot guard + game boot
 //   • currentSaveId               — backing store for window.tdGame API
-//   • equippedSlots / bagLootItems / panelState.currentBagCapacity — inventory state
+//   • panelState.equippedSlots / panelState.bagLootItems / panelState.currentBagCapacity — inventory state
 //
 // Reads live bindings from runtime/playerSession.js:
 //   • onPanelLog (combat-log sink), onConsumeFood, onUseLiquid, onUseTool
@@ -104,11 +104,12 @@ export function setupInventoryPanel(deps) {
   panelState.helpers.clearEquippedSlotVisual = clearEquippedSlotVisual;
   panelState.helpers.renderLootSlots         = renderLootSlots;
 
-  // currentBagCapacity lives on panelState (initialized to 0 in state.js).
-  let currentBagItem = null;
-  let currentPlayerCapacity = progressionStatsForLevel(1, panelState.selectedClass).capacity;
+  // All inventory state lives on panelState (declared in panels/state.js).
+  // Initialize the per-run mutable bits here at boot time.
+  panelState.currentBagItem = null;
+  panelState.currentPlayerCapacity = progressionStatsForLevel(1, panelState.selectedClass).capacity;
   setLastLootRejectReason('');
-  const equippedSlots = {
+  panelState.equippedSlots = {
     armor: null,
     shield: null,
     legs: null,
@@ -119,12 +120,8 @@ export function setupInventoryPanel(deps) {
     amulet: null,
     hand: null,
   };
-  // Sub-modules (accessoryTimers, itemTooltip) read equippedSlots via
-  // panelState.equippedSlots. Share the reference so local reads and
-  // sub-module reads stay in sync.
-  panelState.equippedSlots = equippedSlots;
-  let bagLootItems = [];
-  const coinTemplateById = new Map([
+  panelState.bagLootItems = [];
+  panelState.coinTemplateById = new Map([
     [GOLD_COIN_ID, { id: GOLD_COIN_ID, title: 'Gold Coin', isStackable: true, raw: { article_id: GOLD_COIN_ID, value_sell: 1, value_buy: 1, weight: 0.1 }, item_type: 'Valuables', item_class: 'Currency' }],
     [PLATINUM_COIN_ID, { id: PLATINUM_COIN_ID, title: 'Platinum Coin', isStackable: true, raw: { article_id: PLATINUM_COIN_ID, value_sell: 100, value_buy: 100, weight: 0.1 }, item_type: 'Valuables', item_class: 'Currency' }],
     [CRYSTAL_COIN_ID, { id: CRYSTAL_COIN_ID, title: 'Crystal Coin', isStackable: true, raw: { article_id: CRYSTAL_COIN_ID, value_sell: 10000, value_buy: 10000, weight: 0.1 }, item_type: 'Valuables', item_class: 'Currency' }],
@@ -138,7 +135,8 @@ export function setupInventoryPanel(deps) {
   document.addEventListener('keydown', hideItemTooltip);
   document.addEventListener('click', (ev) => {
     // Don't dismiss touch-mode tooltip when clicking inside it (action buttons)
-    if (itemTooltip && itemTooltip.classList.contains('touch-mode') && itemTooltip.contains(ev.target)) return;
+    const tt = document.getElementById('itemTooltip');
+    if (tt && tt.classList.contains('touch-mode') && tt.contains(ev.target)) return;
     hideItemTooltip();
   });
   const hideLootContextMenu = () => {
@@ -162,12 +160,12 @@ export function setupInventoryPanel(deps) {
     discardLootBtn.addEventListener('click', (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
-      if (lootContextIndex < 0 || lootContextIndex >= bagLootItems.length) {
+      if (lootContextIndex < 0 || lootContextIndex >= panelState.bagLootItems.length) {
         hideLootContextMenu();
         return;
       }
-      const removed = bagLootItems[lootContextIndex];
-      bagLootItems.splice(lootContextIndex, 1);
+      const removed = panelState.bagLootItems[lootContextIndex];
+      panelState.bagLootItems.splice(lootContextIndex, 1);
       hideLootContextMenu();
       renderLootSlots(panelState.currentBagCapacity);
       if (removed) {
@@ -182,7 +180,7 @@ export function setupInventoryPanel(deps) {
       try {
         const item = await getItemByArticleId(id);
         if (item) {
-          coinTemplateById.set(id, {
+          panelState.coinTemplateById.set(id, {
             ...item,
             isStackable: true,
             count: 1,
@@ -210,7 +208,7 @@ export function setupInventoryPanel(deps) {
         && String(a.name || '').toLowerCase() === 'hands'
         && String(a.value || '').toLowerCase() === 'two'
       ));
-      if (isTwoHanded && equippedSlots.shield) {
+      if (isTwoHanded && panelState.equippedSlots.shield) {
         const shieldToBag = { ...equippedSlots.shield };
         const excludeBagIndex = Number.isInteger(options && options.excludeBagIndex)
           ? Number(options.excludeBagIndex)
@@ -227,7 +225,7 @@ export function setupInventoryPanel(deps) {
       }
     }
     if (slotKey === 'shield') {
-      const hand = equippedSlots.hand;
+      const hand = panelState.equippedSlots.hand;
       const handAttrs = Array.isArray(hand && hand.attributes) ? hand.attributes : [];
       const handIsTwoHanded = handAttrs.some((a) => (
         a
@@ -250,7 +248,7 @@ export function setupInventoryPanel(deps) {
         clearEquippedSlotVisual('hand');
       }
     }
-    equippedSlots[slotKey] = item;
+    panelState.equippedSlots[slotKey] = item;
     if (item.image) {
       slotImg.src = imageUrl(item.image);
       slotImg.style.display = 'block';
@@ -302,7 +300,7 @@ export function setupInventoryPanel(deps) {
     const slotLabel = document.getElementById(`slot${rule.id}Label`);
     const equipmentFoot = document.getElementById('equipmentFoot');
     if (!slotRoot || !slotImg || !slotIcon || !slotLabel || !equipmentFoot) return false;
-    equippedSlots[slotKey] = null;
+    panelState.equippedSlots[slotKey] = null;
     if (slotKey === 'ring' || slotKey === 'amulet') stopAccessoryTimer(slotKey);
     if (slotKey === 'light') applyEquipmentLightFromItem(null);
     slotImg.style.display = 'none';
@@ -322,7 +320,7 @@ export function setupInventoryPanel(deps) {
     if (!slotKey) return false;
     const nextArmor = Number(item.armor_value || 0);
     if (!Number.isFinite(nextArmor) || nextArmor <= 0) return false;
-    const equippedArmor = Number((equippedSlots[slotKey] && equippedSlots[slotKey].armor_value) || 0);
+    const equippedArmor = Number((panelState.equippedSlots[slotKey] && panelState.equippedSlots[slotKey].armor_value) || 0);
     if (nextArmor <= equippedArmor) return false;
     return setEquippedSlotVisual(
       slotKey,
@@ -342,7 +340,7 @@ export function setupInventoryPanel(deps) {
       const n = Number(row && row.value);
       return Number.isFinite(n) ? n : 0;
     };
-    const hand = equippedSlots.hand;
+    const hand = panelState.equippedSlots.hand;
     const handAttrs = Array.isArray(hand && hand.attributes) ? hand.attributes : [];
     const isTwoHandedEquipped = handAttrs.some((a) => (
       a
@@ -353,10 +351,10 @@ export function setupInventoryPanel(deps) {
     if (isTwoHandedEquipped) return false;
     const nextDefense = readDefenseAttr(item);
     if (!Number.isFinite(nextDefense) || nextDefense <= 0) return false;
-    const equippedDefense = readDefenseAttr(equippedSlots.shield);
+    const equippedDefense = readDefenseAttr(panelState.equippedSlots.shield);
     // Requirement: only if incoming shield has higher defense than current shield.
     if (nextDefense <= equippedDefense) return false;
-    const previousShield = equippedSlots.shield ? { ...equippedSlots.shield } : null;
+    const previousShield = panelState.equippedSlots.shield ? { ...equippedSlots.shield } : null;
     if (previousShield) {
       const storedPreviousShield = addLootItemToBag(previousShield, {
         disableAutoEquip: true,
@@ -378,7 +376,7 @@ export function setupInventoryPanel(deps) {
     if (String(item.item_type || '').toLowerCase() === 'ammunition') return false;
     if ((item.item_class || '').toLowerCase() !== 'weapons') return false;
     // Only auto-equip looted weapons when hand slot is empty.
-    if (equippedSlots.hand) return false;
+    if (panelState.equippedSlots.hand) return false;
     const nextAttack = Number(item.attack_value || 0);
     if (!Number.isFinite(nextAttack) || nextAttack <= 0) return false;
     return setEquippedSlotVisual(
@@ -391,11 +389,11 @@ export function setupInventoryPanel(deps) {
   function tryAutoEquipAccessory(item) {
     const type = String(item.item_type || '').toLowerCase();
     if (type === 'rings') {
-      if (equippedSlots.ring) return false;
+      if (panelState.equippedSlots.ring) return false;
       return setEquippedSlotVisual('ring', item, `Auto-equipped ring: ${item.title}.`);
     }
     if (type === 'amulets and necklaces') {
-      if (equippedSlots.amulet) return false;
+      if (panelState.equippedSlots.amulet) return false;
       return setEquippedSlotVisual('amulet', item, `Auto-equipped amulet: ${item.title}.`);
     }
     return false;
@@ -417,7 +415,7 @@ export function setupInventoryPanel(deps) {
     const count = Math.max(0, Math.floor(Number(slotCount) || 0));
     for (let i = 1; i <= count; i += 1) {
       const cell = document.createElement('div');
-      const lootItem = bagLootItems[i - 1] || null;
+      const lootItem = panelState.bagLootItems[i - 1] || null;
       if (lootItem) {
         cell.className = 'loot-slot';
         cell.title = '';
@@ -472,12 +470,12 @@ export function setupInventoryPanel(deps) {
           ev.preventDefault();
           ev.stopPropagation();
           const idx = i - 1;
-          const current = bagLootItems[idx];
+          const current = panelState.bagLootItems[idx];
           if (!current) return;
           const unitPrice = resolveSellUnitPrice(current);
           const amount = Math.max(1, Number(current.count || 1));
           const totalGold = Math.max(0, Math.floor(unitPrice * amount));
-          bagLootItems.splice(idx, 1);
+          panelState.bagLootItems.splice(idx, 1);
           addCoinsToInventory(totalGold);
           renderLootSlots(panelState.currentBagCapacity);
           if (typeof onPanelLog === 'function') {
@@ -487,7 +485,7 @@ export function setupInventoryPanel(deps) {
         cell.addEventListener('mousedown', async (ev) => {
           if (ev.button !== 0) return; // left click only
           const idx = i - 1;
-          const current = bagLootItems[idx];
+          const current = panelState.bagLootItems[idx];
           if (!current) return;
 
           if ((current.item_type || '').toLowerCase() === 'tools' && typeof onUseTool === 'function') {
@@ -504,7 +502,7 @@ export function setupInventoryPanel(deps) {
             if (current.count > 1) {
               current.count -= 1;
             } else {
-              bagLootItems.splice(idx, 1);
+              panelState.bagLootItems.splice(idx, 1);
             }
             renderLootSlots(panelState.currentBagCapacity);
             return;
@@ -516,7 +514,7 @@ export function setupInventoryPanel(deps) {
             if (current.count > 1) {
               current.count -= 1;
             } else {
-              bagLootItems.splice(idx, 1);
+              panelState.bagLootItems.splice(idx, 1);
             }
             renderLootSlots(panelState.currentBagCapacity);
             return;
@@ -530,13 +528,13 @@ export function setupInventoryPanel(deps) {
               || (current && current.raw && current.raw.article_id)
             );
             if (!Number.isFinite(bagArticleId) || bagArticleId <= 0) return;
-            const equippedBagCopy = currentBagItem ? { ...currentBagItem } : null;
+            const equippedBagCopy = panelState.currentBagItem ? { ...currentBagItem } : null;
             const equippedOk = await equipBagByArticleId(bagArticleId);
             if (!equippedOk) return;
             if (equippedBagCopy) {
-              bagLootItems[idx] = equippedBagCopy;
+              panelState.bagLootItems[idx] = equippedBagCopy;
             } else {
-              bagLootItems.splice(idx, 1);
+              panelState.bagLootItems.splice(idx, 1);
             }
             renderLootSlots(panelState.currentBagCapacity);
             return;
@@ -544,7 +542,7 @@ export function setupInventoryPanel(deps) {
 
           const slotKey = resolveEquipSlotForItem(current);
           if (!slotKey) return;
-          const equipped = equippedSlots[slotKey];
+          const equipped = panelState.equippedSlots[slotKey];
           const equippedCopy = equipped ? { ...equipped } : null;
           // Torch being swapped out: freeze its burn progress onto the bag
           // copy so re-equipping resumes where we left off (and so a second
@@ -561,9 +559,9 @@ export function setupInventoryPanel(deps) {
           );
           if (!equipOk) return;
           if (equippedCopy) {
-            bagLootItems[idx] = equippedCopy;
+            panelState.bagLootItems[idx] = equippedCopy;
           } else {
-            bagLootItems.splice(idx, 1);
+            panelState.bagLootItems.splice(idx, 1);
           }
           renderLootSlots(panelState.currentBagCapacity);
         });
@@ -578,7 +576,7 @@ export function setupInventoryPanel(deps) {
 
   function applyCapacityForLevel(level) {
     const stats = progressionStatsForLevel(level, panelState.selectedClass);
-    currentPlayerCapacity = stats.capacity;
+    panelState.currentPlayerCapacity = stats.capacity;
     renderLootSlots(panelState.currentBagCapacity);
   }
   applyCapacityForLevel(1);
@@ -586,7 +584,7 @@ export function setupInventoryPanel(deps) {
 
   function normalizeCoinStacks() {
     const getCount = (id) => {
-      const stack = bagLootItems.find((it) => Number(it.id) === id);
+      const stack = panelState.bagLootItems.find((it) => Number(it.id) === id);
       return stack ? Math.max(1, Number(stack.count || 1)) : 0;
     };
     let gold = getCount(GOLD_COIN_ID);
@@ -596,12 +594,12 @@ export function setupInventoryPanel(deps) {
     gold %= GOLD_PER_PLATINUM;
     crystal += Math.floor(platinum / PLATINUM_PER_CRYSTAL);
     platinum %= PLATINUM_PER_CRYSTAL;
-    bagLootItems = bagLootItems.filter((it) => ![GOLD_COIN_ID, PLATINUM_COIN_ID, CRYSTAL_COIN_ID].includes(Number(it.id)));
+    panelState.bagLootItems = panelState.bagLootItems.filter((it) => ![GOLD_COIN_ID, PLATINUM_COIN_ID, CRYSTAL_COIN_ID].includes(Number(it.id)));
     const putCoin = (id, count) => {
       if (count <= 0) return;
-      const tpl = coinTemplateById.get(id);
+      const tpl = panelState.coinTemplateById.get(id);
       if (!tpl) return;
-      bagLootItems.unshift({
+      panelState.bagLootItems.unshift({
         ...tpl,
         count,
       });
@@ -616,20 +614,20 @@ export function setupInventoryPanel(deps) {
   function addCoinsToInventory(goldAmount) {
     const amount = Math.max(0, Math.floor(Number(goldAmount) || 0));
     if (amount <= 0) return;
-    const goldTpl = coinTemplateById.get(GOLD_COIN_ID);
+    const goldTpl = panelState.coinTemplateById.get(GOLD_COIN_ID);
     if (!goldTpl) return;
     const incoming = {
       ...goldTpl,
       count: amount,
     };
-    const stackIdx = bagLootItems.findIndex((it) => Number(it.id) === GOLD_COIN_ID);
+    const stackIdx = panelState.bagLootItems.findIndex((it) => Number(it.id) === GOLD_COIN_ID);
     if (stackIdx >= 0) {
-      bagLootItems[stackIdx].count = Math.max(1, Number(bagLootItems[stackIdx].count || 1)) + amount;
-    } else if (bagLootItems.length < panelState.currentBagCapacity) {
-      bagLootItems.push(incoming);
+      panelState.bagLootItems[stackIdx].count = Math.max(1, Number(panelState.bagLootItems[stackIdx].count || 1)) + amount;
+    } else if (panelState.bagLootItems.length < panelState.currentBagCapacity) {
+      panelState.bagLootItems.push(incoming);
     } else {
       // If there is no slot, try to force conversion by replacing lower-value coin stacks if present.
-      bagLootItems.push(incoming);
+      panelState.bagLootItems.push(incoming);
     }
     normalizeCoinStacks();
   }
@@ -638,7 +636,7 @@ export function setupInventoryPanel(deps) {
     let gold = 0;
     let platinum = 0;
     let crystal = 0;
-    for (const it of bagLootItems) {
+    for (const it of panelState.bagLootItems) {
       const id = Number(it && it.id);
       const count = Math.max(1, Number((it && it.count) || 1));
       if (id === GOLD_COIN_ID) gold += count;
@@ -654,12 +652,12 @@ export function setupInventoryPanel(deps) {
     value %= (GOLD_PER_PLATINUM * PLATINUM_PER_CRYSTAL);
     const platinum = Math.floor(value / GOLD_PER_PLATINUM);
     const gold = value % GOLD_PER_PLATINUM;
-    bagLootItems = bagLootItems.filter((it) => ![GOLD_COIN_ID, PLATINUM_COIN_ID, CRYSTAL_COIN_ID].includes(Number(it.id)));
+    panelState.bagLootItems = panelState.bagLootItems.filter((it) => ![GOLD_COIN_ID, PLATINUM_COIN_ID, CRYSTAL_COIN_ID].includes(Number(it.id)));
     const putCoin = (id, count) => {
       if (count <= 0) return;
-      const tpl = coinTemplateById.get(id);
+      const tpl = panelState.coinTemplateById.get(id);
       if (!tpl) return;
-      bagLootItems.unshift({
+      panelState.bagLootItems.unshift({
         ...tpl,
         count,
       });
@@ -715,21 +713,21 @@ export function setupInventoryPanel(deps) {
     };
     const totalCarriedWeight = () => {
       let total = 0;
-      if (currentBagItem) total += itemUnitWeight(currentBagItem);
-      for (const [slotKey, eq] of Object.entries(equippedSlots)) {
+      if (panelState.currentBagItem) total += itemUnitWeight(panelState.currentBagItem);
+      for (const [slotKey, eq] of Object.entries(panelState.equippedSlots)) {
         if (excludeEquippedSlotKey && slotKey === excludeEquippedSlotKey) continue;
         if (!eq) continue;
         total += itemUnitWeight(eq) * Math.max(1, Number(eq.count || 1));
       }
-      for (let i = 0; i < bagLootItems.length; i += 1) {
+      for (let i = 0; i < panelState.bagLootItems.length; i += 1) {
         if (excludeBagIndex != null && i === excludeBagIndex) continue;
-        const it = bagLootItems[i];
+        const it = panelState.bagLootItems[i];
         total += itemUnitWeight(it) * Math.max(1, Number(it.count || 1));
       }
       return total;
     };
     const incomingWeight = itemUnitWeight(incoming) * Math.max(1, Number(incoming.count || 1));
-    if (totalCarriedWeight() + incomingWeight > currentPlayerCapacity) {
+    if (totalCarriedWeight() + incomingWeight > panelState.currentPlayerCapacity) {
       setLastLootRejectReason('capacity');
       return false;
     }
@@ -739,8 +737,8 @@ export function setupInventoryPanel(deps) {
       return String(a.title || '').trim().toLowerCase() === String(b.title || '').trim().toLowerCase();
     };
     if (!disableAutoEquip) {
-      const equippedHand = equippedSlots.hand;
-      const equippedAmmo = equippedSlots.ammunition;
+      const equippedHand = panelState.equippedSlots.hand;
+      const equippedAmmo = panelState.equippedSlots.ammunition;
       const equippedThrowable = Boolean(
         equippedHand
         && (equippedHand.throwable || String(equippedHand.type_secondary || '').toLowerCase() === 'throwing weapons')
@@ -806,7 +804,7 @@ export function setupInventoryPanel(deps) {
       if (equippedNow) return true;
     }
     if (incoming.isStackable) {
-      const stackIdx = bagLootItems.findIndex((it) => (
+      const stackIdx = panelState.bagLootItems.findIndex((it) => (
         Boolean(it && it.isStackable)
         && (
           (incoming.id != null && it.id === incoming.id)
@@ -814,18 +812,18 @@ export function setupInventoryPanel(deps) {
         )
       ));
       if (stackIdx >= 0) {
-        bagLootItems[stackIdx].count = Math.max(1, Number(bagLootItems[stackIdx].count || 1)) + incoming.count;
+        panelState.bagLootItems[stackIdx].count = Math.max(1, Number(panelState.bagLootItems[stackIdx].count || 1)) + incoming.count;
         normalizeCoinStacks();
         renderLootSlots(panelState.currentBagCapacity);
         return true;
       }
     }
-    const occupiedSlots = bagLootItems.length - (excludeBagIndex != null ? 1 : 0);
+    const occupiedSlots = panelState.bagLootItems.length - (excludeBagIndex != null ? 1 : 0);
     if (occupiedSlots >= panelState.currentBagCapacity) {
       setLastLootRejectReason('slots');
       return false;
     }
-    bagLootItems.push(incoming);
+    panelState.bagLootItems.push(incoming);
     normalizeCoinStacks();
     renderLootSlots(panelState.currentBagCapacity);
     return true;
@@ -846,8 +844,8 @@ export function setupInventoryPanel(deps) {
         bagLabel.textContent = 'Empty';
         writeEquipmentFootText('No item equipped');
         panelState.currentBagCapacity = 0;
-        currentBagItem = null;
-        bagLootItems = [];
+        panelState.currentBagItem = null;
+        panelState.bagLootItems = [];
         renderLootSlots(0);
         return false;
       }
@@ -857,8 +855,8 @@ export function setupInventoryPanel(deps) {
         bagLabel.textContent = 'Invalid';
         writeEquipmentFootText('BAG slot only supports Containers');
         panelState.currentBagCapacity = 0;
-        currentBagItem = null;
-        bagLootItems = [];
+        panelState.currentBagItem = null;
+        panelState.bagLootItems = [];
         renderLootSlots(0);
         return false;
       }
@@ -900,12 +898,12 @@ export function setupInventoryPanel(deps) {
         bagIcon.textContent = 'BAG';
       }
       const nextCapacity = Math.max(0, Math.floor(Number(bag.weight) || 0));
-      if (bagLootItems.length > nextCapacity) {
-        writeEquipmentFootText(`Cannot equip ${bag.title}: requires ${nextCapacity} slots, carrying ${bagLootItems.length}.`);
+      if (panelState.bagLootItems.length > nextCapacity) {
+        writeEquipmentFootText(`Cannot equip ${bag.title}: requires ${nextCapacity} slots, carrying ${panelState.bagLootItems.length}.`);
         return false;
       }
       panelState.currentBagCapacity = nextCapacity;
-      currentBagItem = bag;
+      panelState.currentBagItem = bag;
       bagLabel.textContent = bag.title;
       bindTooltip(bagRoot, bag);
       writeEquipmentFootText(`Equipped: ${bag.title}`);
@@ -917,8 +915,8 @@ export function setupInventoryPanel(deps) {
       bagLabel.textContent = 'Empty';
       writeEquipmentFootText('No item equipped');
       panelState.currentBagCapacity = 0;
-      currentBagItem = null;
-      bagLootItems = [];
+      panelState.currentBagItem = null;
+      panelState.bagLootItems = [];
       renderLootSlots(0);
       return false;
     }
@@ -938,7 +936,7 @@ export function setupInventoryPanel(deps) {
         slotImg.style.display = 'none';
         slotIcon.textContent = rule.iconDefault;
         slotLabel.textContent = 'Empty';
-        equippedSlots[slotKey] = null;
+        panelState.equippedSlots[slotKey] = null;
         return false;
       }
       const matchesType = !rule.requireType || (item.item_type || '').toLowerCase() === rule.requireType.toLowerCase();
@@ -1030,21 +1028,21 @@ export function setupInventoryPanel(deps) {
         return Number.isFinite(rawW) && rawW > 0 ? rawW : 0;
       };
       let carriedWeight = 0;
-      if (currentBagItem) carriedWeight += itemUnitWeight(currentBagItem);
-      for (const eq of Object.values(equippedSlots)) {
+      if (panelState.currentBagItem) carriedWeight += itemUnitWeight(panelState.currentBagItem);
+      for (const eq of Object.values(panelState.equippedSlots)) {
         if (!eq) continue;
         carriedWeight += itemUnitWeight(eq) * Math.max(1, Number(eq.count || 1));
       }
-      for (const it of bagLootItems) {
+      for (const it of panelState.bagLootItems) {
         carriedWeight += itemUnitWeight(it) * Math.max(1, Number(it.count || 1));
       }
       return {
-        bag: currentBagItem,
+        bag: panelState.currentBagItem,
         equipped: { ...equippedSlots },
         bagSlots: panelState.currentBagCapacity,
-        capacity: currentPlayerCapacity,
+        capacity: panelState.currentPlayerCapacity,
         carriedWeight,
-        used: bagLootItems.length,
+        used: panelState.bagLootItems.length,
         items: [...bagLootItems],
       };
     },
@@ -1059,8 +1057,8 @@ export function setupInventoryPanel(deps) {
       renderLootSlots(panelState.currentBagCapacity);
     },
     findConsumable(type) {
-      for (let i = 0; i < bagLootItems.length; i++) {
-        const it = bagLootItems[i];
+      for (let i = 0; i < panelState.bagLootItems.length; i++) {
+        const it = panelState.bagLootItems[i];
         if (!it) continue;
         if (type === 'food') {
           if ((it.item_type || '').toLowerCase() === 'food') return { item: it, idx: i };
@@ -1092,7 +1090,7 @@ export function setupInventoryPanel(deps) {
       if (item.count > 1) {
         item.count -= 1;
       } else {
-        bagLootItems.splice(idx, 1);
+        panelState.bagLootItems.splice(idx, 1);
       }
       renderLootSlots(panelState.currentBagCapacity);
       return true;
@@ -1107,7 +1105,7 @@ export function setupInventoryPanel(deps) {
     slotRoot.addEventListener('contextmenu', (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
-      const equipped = equippedSlots[slotKey];
+      const equipped = panelState.equippedSlots[slotKey];
       if (!equipped) return;
       const unitPrice = resolveSellUnitPrice(equipped);
       const amount = Math.max(1, Number(equipped.count || 1));
@@ -1121,7 +1119,7 @@ export function setupInventoryPanel(deps) {
     });
     slotRoot.addEventListener('mousedown', (ev) => {
       if (ev.button !== 0) return;
-      const equipped = equippedSlots[slotKey];
+      const equipped = panelState.equippedSlots[slotKey];
       if (!equipped) return;
       // Before shallow-copying the torch into the bag, freeze its current
       // burn progress on the object so re-equipping resumes correctly.
@@ -1140,13 +1138,13 @@ export function setupInventoryPanel(deps) {
   }
 
   window._resetInventoryForNewRun = () => {
-    bagLootItems = [];
-    for (const slotKey of Object.keys(equippedSlots)) {
-      equippedSlots[slotKey] = null;
+    panelState.bagLootItems = [];
+    for (const slotKey of Object.keys(panelState.equippedSlots)) {
+      panelState.equippedSlots[slotKey] = null;
       clearEquippedSlotVisual(slotKey);
     }
     panelState.currentBagCapacity = 0;
-    currentBagItem = null;
+    panelState.currentBagItem = null;
     setLastLootRejectReason('');
     renderLootSlots(0);
     startBtn.disabled = false;
@@ -1172,7 +1170,7 @@ export function setupInventoryPanel(deps) {
     const playerName = String((cfg && cfg.name) || 'Adventurer').trim() || 'Adventurer';
     const sex = (cfg && cfg.sex) || 'male';
     const classKey = (cfg && cfg.classKey) || 'knight';
-    currentPlayerCapacity = progressionStatsForLevel(1, classKey).capacity;
+    panelState.currentPlayerCapacity = progressionStatsForLevel(1, classKey).capacity;
     panelState.playerConfig = { name: playerName, sex, classKey, resumeSnapshot: snap };
 
     const loadingOverlay = document.getElementById('loadingOverlay');
