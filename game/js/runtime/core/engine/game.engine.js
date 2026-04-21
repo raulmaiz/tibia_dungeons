@@ -44,6 +44,51 @@ import {
   missEffect,
   critBanner,
 } from '../../../vfx.js';
+import {
+  TILE_SIZE,
+  MAP_W,
+  MAP_H,
+  MAX_DUNGEON_W,
+  MAX_DUNGEON_H,
+  START_TILE,
+  START_BAG_ARTICLE_ID,
+  GOLD_COIN_ID,
+  PLATINUM_COIN_ID,
+  CRYSTAL_COIN_ID,
+  GOLD_PER_PLATINUM,
+  PLATINUM_PER_CRYSTAL,
+  CREATURE_POOL_PER_LEVEL,
+  MIN_CREATURES_PER_LEVEL,
+  MAX_CREATURES_PER_LEVEL,
+  PLAYER_BASE_DAMAGE,
+  PLAYER_INITIAL_FIST_LEVEL,
+  PLAYER_INITIAL_SHIELDING_LEVEL,
+  PLAYER_MOVE_DURATION_BASE_MS,
+  PLAYER_MOVE_DURATION_MIN_MS,
+  PLAYER_MOVE_DURATION_MAX_MS,
+  PLAYER_ACTION_DELAY_BASE_MS,
+  PLAYER_ACTION_DELAY_MIN_MS,
+  PLAYER_ACTION_DELAY_MAX_MS,
+  MAX_FOOD_SECONDS,
+} from '../../../config/game.config.js';
+import {
+  SCENE_BACKGROUND_COLOR,
+  CREATURE_FILL_TARGET,
+  LEFT_SIDEBAR_W,
+  RIGHT_SIDEBAR_W,
+  TOP_PANELS_H,
+  BOTTOM_BAR_H,
+  UI_BOTTOM_SPACE,
+  UI_OVERLAP_ROWS,
+  LIGHT_ITEM_ID_TORCH,
+  LIGHT_ITEM_ID_LIGHT_WAND,
+  LIGHT_RADIUS_TORCH,
+  LIGHT_RADIUS_LIGHT_WAND,
+  LIGHT_RADIUS_DEFAULT,
+  DEFAULT_LIGHT_DURATION_MS,
+  TORCH_BURN_MEDIUM_THRESHOLD,
+  TORCH_BURN_SMALL_THRESHOLD,
+} from '../../../config/visual.config.js';
 
 let game;
 let selectedSex = 'male';
@@ -116,9 +161,9 @@ function hasItemImage(filename) {
 }
 function lightRadiusForLightSourceItem(item) {
   const id = Number((item && (item.article_id || item.id)) || 0);
-  if (id === 1396) return 3; // Torch → utevo lux
-  if (id === 1671) return 6; // Magic Light Wand → utevo vis lux
-  return 4;                  // any other Light Sources → utevo gran lux
+  if (id === LIGHT_ITEM_ID_TORCH)      return LIGHT_RADIUS_TORCH;
+  if (id === LIGHT_ITEM_ID_LIGHT_WAND) return LIGHT_RADIUS_LIGHT_WAND;
+  return LIGHT_RADIUS_DEFAULT;         // any other Light Sources → utevo gran lux
 }
 function parseDurationStringToMs(raw) {
   if (!raw) return 0;
@@ -130,7 +175,6 @@ function parseDurationStringToMs(raw) {
   const mult = { second: 1000, minute: 60000, hour: 3600000, day: 86400000 }[u];
   return Math.round(n * mult);
 }
-const DEFAULT_LIGHT_DURATION_MS = 5 * 60 * 1000; // 5 min fallback when item has no duration attribute
 function durationMsFromItemAttrs(item) {
   const attrs = Array.isArray(item && item.attributes) ? item.attributes : [];
   const attr = attrs.find((a) => String((a && a.name) || '').toLowerCase() === 'duration');
@@ -182,11 +226,11 @@ function applyEquipmentLightFromItem(item) {
 //   equipped & lit      → "Lit <title>.gif"  (fallback: "<title>.gif")
 //   equipped & expired  → "Used <title>.gif" (fallback: "<title>.gif")
 function getLightItemImage(articleId, title, elapsed, duration) {
-  if (Number(articleId) === 1396) { // Torch — special 4-stage progression
+  if (Number(articleId) === LIGHT_ITEM_ID_TORCH) { // Torch — special 4-stage progression
     if (!(duration > 0)) return 'item/Lit Torch.gif';
-    if (elapsed >= duration)      return 'item/Torch (Small).gif';
-    if (elapsed >= duration * 0.8) return 'item/Lit Torch (Small).gif';
-    if (elapsed >= duration * 0.5) return 'item/Lit Torch (Medium).gif';
+    if (elapsed >= duration) return 'item/Torch (Small).gif';
+    if (elapsed >= duration * TORCH_BURN_SMALL_THRESHOLD)  return 'item/Lit Torch (Small).gif';
+    if (elapsed >= duration * TORCH_BURN_MEDIUM_THRESHOLD) return 'item/Lit Torch (Medium).gif';
     return 'item/Lit Torch.gif';
   }
   const name = String(title || '').trim();
@@ -212,7 +256,7 @@ function getLootLightItemImage(item) {
   // inheriting some other torch's burn state.
   let elapsed = Number((item && item._burnElapsedMs) || 0);
   const isExpired = duration > 0 && elapsed >= duration;
-  if (articleId === 1396) { // Torch
+  if (articleId === LIGHT_ITEM_ID_TORCH) { // Torch
     return isExpired ? 'item/Torch (Small).gif' : 'item/Torch.gif';
   }
   if (!title) return null;
@@ -323,29 +367,9 @@ const SPELL_FX_OVERRIDES = {
   annihilation: { kind: 'front_box', width: 1, depth: 1, fx: { duration: 300 } },
 };
 
-const MAX_FOOD_SECONDS = 900;
-
-const MAP_W = 20;
-const MAP_H = 15;
-// Dimensiones máximas posibles (50 criaturas → ~44x27). El grid de tiles se crea
-// con este tamaño y la cámara se acota a las dimensiones reales de cada floor.
-const MAX_DUNGEON_W = 60;
-const MAX_DUNGEON_H = 40;
 // Dimensiones del mapa actual (se actualizan en cada descendLevel).
 let dungeonW = MAP_W;
 let dungeonH = MAP_H;
-const UI_BOTTOM_SPACE = 88;
-const UI_OVERLAP_ROWS = 1.5;
-const CREATURE_POOL_PER_LEVEL = 12;
-const MIN_CREATURES_PER_LEVEL = 10;
-const MAX_CREATURES_PER_LEVEL = 15;
-const START_TILE = { gx: 1, gy: 1 };
-const START_BAG_ARTICLE_ID = 1589;
-const GOLD_COIN_ID = 2119;
-const PLATINUM_COIN_ID = 2828;
-const CRYSTAL_COIN_ID = 2948;
-const GOLD_PER_PLATINUM = 100;
-const PLATINUM_PER_CRYSTAL = 100;
 
 function frameTextureName(sex, frame) {
   return `player_${sex}_${frame}`;
@@ -358,12 +382,6 @@ function deathTextureName(sex) {
 function creatureKey(template) {
   return `creature_${template.id}`;
 }
-
-/**
- * Todas las criaturas usan el mismo escalado cuadrado (como los Dwarf con fallback anterior).
- * Escalar por bbox opaco (fw×k, fh×k) desplazaba el dibujo respecto al ancla en GIF/Phaser.
- */
-const CREATURE_FILL_TARGET = 0.96;
 
 function applyCreatureNormalizedDisplaySize(sprite, scene, tileSize) {
   void scene;
@@ -1921,7 +1939,7 @@ function setupSelectorUI() {
       }
     } else {
       // Default starting inventory: torch equipped and lit (3-tile radius).
-      await equipItemInSlot('light', 1396);
+      await equipItemInSlot('light', LIGHT_ITEM_ID_TORCH);
     }
     document.getElementById('startOverlay').style.display = 'none';
     const savesOv = document.getElementById('savesOverlay');
@@ -1985,21 +2003,16 @@ function isWalkableTile(gx, gy) {
 function startGame(configPlayer) {
   if (game) return;
 
-  const tileSize = 40;
+  const tileSize = TILE_SIZE;
   const mapWidth = MAP_W * tileSize;
   const mapHeight = MAP_H * tileSize;
-  const LEFT_SIDEBAR_W = 0;
-  const RIGHT_SIDEBAR_W = 268;
-  // Reserve space for: statsBar (~30px) + spellBar (~58px) + gameUiBar (~72px)
-  const TOP_PANELS_H = 88;
-  const BOTTOM_BAR_H = 72;
   const width = Math.min(window.innerWidth - LEFT_SIDEBAR_W - RIGHT_SIDEBAR_W, mapWidth);
   const height = Math.min(window.innerHeight - TOP_PANELS_H - BOTTOM_BAR_H, mapHeight);
 
   game = new Phaser.Game({
     type: Phaser.AUTO,
     parent: 'phaser',
-    backgroundColor: '#0a1220',
+    backgroundColor: SCENE_BACKGROUND_COLOR,
     width,
     height,
     resolution: 1,
@@ -2350,8 +2363,8 @@ function startGame(configPlayer) {
         let gridY = START_TILE.gy;
         let playerFacingFrame = 0; // 0 S, 1 E, 2 N, 3 W
         let moving = false;
-        let playerMoveDurationMs = 190;
-        let playerActionDelayMs = 320;
+        let playerMoveDurationMs = PLAYER_MOVE_DURATION_BASE_MS;
+        let playerActionDelayMs = PLAYER_ACTION_DELAY_BASE_MS;
         let nextPlayerActionAt = 0;
         let nextMagicWeaponShotAt = 0;
         let playerHp = lvl1Stats.maxHp;
@@ -2360,14 +2373,14 @@ function startGame(configPlayer) {
         let playerMaxMana = lvl1Stats.maxMana;
         let hungerSecondsLeft = 0;
         let isHungry = true;
-        const playerBaseDamage = 12;
+        const playerBaseDamage = PLAYER_BASE_DAMAGE;
         let playerLevel = 1;
         let playerMagicLevel = Math.max(0, Number(lvl1Stats.magicLevel || 0));
         const weaponSkillLevelByType = new Map();
         const weaponSkillUsesByType = new Map();
-        let playerFistLevel = 10;
+        let playerFistLevel = PLAYER_INITIAL_FIST_LEVEL;
         let playerFistUses = 0;
-        let playerShieldingLevel = 10;
+        let playerShieldingLevel = PLAYER_INITIAL_SHIELDING_LEVEL;
         let playerShieldingUses = 0;
         let playerXp = 0;
         const learnedSpellIds = new Set();
@@ -2517,8 +2530,16 @@ function startGame(configPlayer) {
         };
         const updatePlayerTimingsByLevel = () => {
           // Progresion gradual por nivel del personaje (arranque mas lento).
-          playerMoveDurationMs = Phaser.Math.Clamp(190 - (playerLevel - 1) * 2, 130, 190);
-          playerActionDelayMs = Phaser.Math.Clamp(320 - (playerLevel - 1) * 5, 220, 320);
+          playerMoveDurationMs = Phaser.Math.Clamp(
+            PLAYER_MOVE_DURATION_BASE_MS - (playerLevel - 1) * 2,
+            PLAYER_MOVE_DURATION_MIN_MS,
+            PLAYER_MOVE_DURATION_MAX_MS,
+          );
+          playerActionDelayMs = Phaser.Math.Clamp(
+            PLAYER_ACTION_DELAY_BASE_MS - (playerLevel - 1) * 5,
+            PLAYER_ACTION_DELAY_MIN_MS,
+            PLAYER_ACTION_DELAY_MAX_MS,
+          );
         };
         const showLevelUpText = () => {
           const cx = this.scale.width / 2;
