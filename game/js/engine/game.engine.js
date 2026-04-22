@@ -214,6 +214,16 @@ import {
   effectiveWeaponRange,
 } from './systems/Weapons.js';
 import {
+  pickCreatureDamage as _pickCreatureDamage,
+  maxIncomingHitByFloor as _maxIncomingHitByFloor,
+  clampIncomingCreatureDamage as _clampIncomingCreatureDamage,
+  didAttackMiss,
+  didAttackCrit,
+  applyCriticalDamage,
+  applyShieldingReduction as _applyShieldingReduction,
+  applyMultiAttackerPressure as _applyMultiAttackerPressure,
+} from './systems/CombatMath.js';
+import {
   setupLearnedSpells,
   renderLearnedSpells,
 } from './systems/LearnedSpells.js';
@@ -1891,82 +1901,15 @@ function startGame(configPlayer) {
           renderItemsShop();
           renderTopStatsPanel();
         };
-        const pickCreatureDamage = () => {
-          const max = Math.max(1, Number(this._activeAttackerMaxDamage || 1));
-          const floorMultiplier = Phaser.Math.Clamp(1 + ((currentLevel - 1) * 0.12), 1, 3.5);
-          const rolled = Phaser.Math.Between(1, max);
-          return Math.max(1, Math.floor(rolled * floorMultiplier));
-        };
-        const maxIncomingHitByFloor = () => {
-          // Hard cap anti-spikes: grows with floor but avoids unfair one-shots.
-          const floorFactor = Phaser.Math.Clamp(0.34 + ((currentLevel - 1) * 0.02), 0.34, 0.55);
-          return Math.max(18, Math.floor(playerState.maxHp * floorFactor));
-        };
-        const clampIncomingCreatureDamage = (damage, creatureMaxDamage = 1) => {
-          const raw = Math.max(1, Math.floor(Number(damage) || 1));
-          const byCreature = Math.max(12, Math.floor(Math.max(1, Number(creatureMaxDamage || 1)) * 2.2));
-          const byFloor = maxIncomingHitByFloor();
-          const hardCap = Math.min(byCreature, byFloor);
-          return Phaser.Math.Clamp(raw, 1, hardCap);
-        };
-        const applyShieldingReduction = (incomingDamage) => {
-          const raw = Math.max(1, Math.floor(Number(incomingDamage) || 1));
-          const readAttrValue = (it, attrName) => {
-            const attrs = Array.isArray(it && it.attributes) ? it.attributes : [];
-            const row = attrs.find((a) => (
-              a
-              && String(a.name || '').toLowerCase() === String(attrName || '').toLowerCase()
-            ));
-            const n = Number(row && row.value);
-            return Number.isFinite(n) ? Math.max(0, n) : 0;
-          };
-          const state = window.debugInventory && typeof window.debugInventory.state === 'function'
-            ? window.debugInventory.state()
-            : null;
-          const equipped = (state && state.equipped) ? state.equipped : {};
-          const shield = getEquippedShield();
-          const hand = getEquippedHandWeapon();
-          const shieldDefense = (shield && String(shield.item_type || '').toLowerCase() === 'shields')
-            ? readAttrValue(shield, 'defense')
-            : 0;
-          const handDefense = hand ? readAttrValue(hand, 'defense') : 0;
-          const shieldValue = Math.max(0, Number((shield && shield.shielding_value) || 0)) + shieldDefense;
-          const armorFromEquipment = Object.entries(equipped)
-            .filter(([slot, eq]) => eq && slot !== 'hand' && slot !== 'shield' && slot !== 'ammunition' && slot !== 'bag')
-            .reduce((acc, [, eq]) => {
-              const baseArmor = Math.max(0, Number(eq && eq.armor_value) || 0);
-              const armorAttr = readAttrValue(eq, 'armor');
-              return acc + baseArmor + armorAttr;
-            }, 0);
-          const totalDefenseValue = shieldValue + handDefense + armorFromEquipment;
-          if (totalDefenseValue <= 0) return raw;
-          const skillValue = Math.max(10, Number(playerState.shieldingLevel || 10));
-          // Mitigacion total: escudo + defensa de arma + armor de equipo.
-          const percentReduction = Phaser.Math.Clamp(
-            0.08 + (totalDefenseValue * 0.009) + ((skillValue - 10) * 0.004),
-            0.08,
-            0.72
-          );
-          const flatReduction = Math.floor((totalDefenseValue * 0.18) + ((skillValue - 10) * 0.08));
-          const reducedByPercent = Math.floor(raw * (1 - percentReduction));
-          const reduced = Math.max(1, reducedByPercent - flatReduction);
-          // Apply elemental/physical resistance from ring and amulet (physical% attribute)
-          let accessoryResistPct = 0;
-          for (const accSlot of ['ring', 'amulet']) {
-            const acc = equipped[accSlot];
-            if (!acc) continue;
-            const accAttrs = Array.isArray(acc.attributes) ? acc.attributes : [];
-            const physRow = accAttrs.find((a) => a && String(a.name || '').toLowerCase() === 'physical%');
-            if (physRow) {
-              const v = Number(physRow.value);
-              if (Number.isFinite(v) && v > 0) accessoryResistPct += v;
-            }
-          }
-          if (accessoryResistPct > 0) {
-            return Math.max(1, Math.floor(reduced * (1 - Math.min(50, accessoryResistPct) / 100)));
-          }
-          return reduced;
-        };
+        // Thin wrappers that inject engine-closure context into the pure
+        // CombatMath helpers. Keeps per-call arg lists short at the (many)
+        // call sites below.
+        const pickCreatureDamage = () => _pickCreatureDamage(this._activeAttackerMaxDamage, currentLevel);
+        const maxIncomingHitByFloor = () => _maxIncomingHitByFloor(currentLevel, playerState.maxHp);
+        const clampIncomingCreatureDamage = (damage, creatureMaxDamage = 1) =>
+          _clampIncomingCreatureDamage(damage, creatureMaxDamage, currentLevel, playerState.maxHp);
+        const applyShieldingReduction = (incomingDamage) =>
+          _applyShieldingReduction(incomingDamage, playerState.shieldingLevel);
         const canStrafeCastMagicWeapon = (weapon) => {
           if (!weapon) return false;
           if (isMagicRangedWeapon(weapon)) return playerState.classKey === 'druid' || playerState.classKey === 'sorcerer';
@@ -3266,13 +3209,6 @@ function startGame(configPlayer) {
           }
           return true;
         };
-        const didAttackMiss = (weapon = null) => {
-          const secondary = String((weapon && weapon.type_secondary) || '').toLowerCase();
-          if (secondary === 'throwing weapons') return Math.random() < 0.5;
-          return Math.random() < 0.1;
-        };
-        const didAttackCrit = () => Math.random() < 0.1;
-        const applyCriticalDamage = (baseDamage) => Math.max(1, Math.round(baseDamage * 2.5)); // +150%
         // Ammo-aware projectile visuals
         const AMMO_VISUALS = {
           'simple arrow':      { glyph: '➵', color: '#a8a29e', size: 14, impact: null },
@@ -4406,15 +4342,7 @@ function startGame(configPlayer) {
           return 'offensive';
         };
         let attackersPressureInTurn = 0;
-        const applyMultiAttackerPressure = (baseDamage) => {
-          const raw = Math.max(1, Math.floor(Number(baseDamage) || 1));
-          const bonusMultiplier = Phaser.Math.Clamp(
-            1 + (Math.max(0, attackersPressureInTurn) * 0.15),
-            1,
-            2.1
-          );
-          return Math.max(1, Math.floor(raw * bonusMultiplier));
-        };
+        const applyMultiAttackerPressure = (baseDamage) => _applyMultiAttackerPressure(baseDamage, attackersPressureInTurn);
         const tryUseCreatureAbility = (creature) => {
           const abilities = Array.isArray(creature && creature.abilities) ? creature.abilities : [];
           if (abilities.length === 0) return false;
