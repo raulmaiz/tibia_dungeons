@@ -224,6 +224,22 @@ import {
   applyMultiAttackerPressure as _applyMultiAttackerPressure,
 } from './systems/CombatMath.js';
 import {
+  defaultElementMods,
+  mergeCreatureElementModsForId as _mergeCreatureElementModsForId,
+  normalizeDamageTypeToModifierKey,
+  inferSpellDamageElementKey,
+  applyIncomingElementalDamage,
+} from './systems/ElementalMods.js';
+import {
+  projectileVisualForWeapon as _projectileVisualForWeapon,
+  showAmmoImpactEffect as _showAmmoImpactEffect,
+  showCritText as _showCritText,
+  showMissSmoke as _showMissSmoke,
+  showPlayerHitEffect as _showPlayerHitEffect,
+  showCreatureHitEffect as _showCreatureHitEffect,
+  showRangedProjectileEffect as _showRangedProjectileEffect,
+} from './systems/HitVisuals.js';
+import {
   setupLearnedSpells,
   renderLearnedSpells,
 } from './systems/LearnedSpells.js';
@@ -1921,83 +1937,9 @@ function startGame(configPlayer) {
           if (cost <= 0) return true;
           return playerState.mana >= cost;
         };
-        const defaultElementMods = () => ({
-          physical: 100,
-          earth: 100,
-          fire: 100,
-          ice: 100,
-          energy: 100,
-          death: 100,
-          holy: 100,
-          drown: 100,
-          lifedrain: 100,
-          healing: 100,
-        });
-        const mergeCreatureElementModsForId = (creatureId) => {
-          const row = creatureDamageModifiersById.get(Number(creatureId));
-          const base = defaultElementMods();
-          if (!row) return base;
-          const out = { ...base };
-          for (const k of Object.keys(base)) {
-            if (row[k] != null && Number.isFinite(Number(row[k]))) out[k] = Number(row[k]);
-          }
-          return out;
-        };
-        /** Maps item/spell damage_type string to creature.elementMods key. */
-        const normalizeDamageTypeToModifierKey = (raw) => {
-          const s = String(raw || '').trim().toLowerCase();
-          if (!s) return null;
-          const direct = {
-            physical: 'physical',
-            phys: 'physical',
-            earth: 'earth',
-            terra: 'earth',
-            fire: 'fire',
-            ice: 'ice',
-            frost: 'ice',
-            energy: 'energy',
-            elec: 'energy',
-            electric: 'energy',
-            death: 'death',
-            holy: 'holy',
-            drown: 'drown',
-            lifedrain: 'lifedrain',
-            life: 'lifedrain',
-            healing: 'healing',
-            poison: 'earth',
-          };
-          if (direct[s]) return direct[s];
-          if (s.includes('earth') || s.includes('terra')) return 'earth';
-          if (s.includes('fire') || s.includes('flame')) return 'fire';
-          if (s.includes('ice') || s.includes('frost')) return 'ice';
-          if (s.includes('energy') || s.includes('lightning')) return 'energy';
-          if (s.includes('death')) return 'death';
-          if (s.includes('holy')) return 'holy';
-          if (s.includes('physical')) return 'physical';
-          return null;
-        };
-        const inferSpellDamageElementKey = (spell) => {
-          const t = String((spell && spell.title) || '').toLowerCase();
-          const e = String((spell && spell.raw && spell.raw.effect) || '').toLowerCase();
-          const both = `${t} ${e}`;
-          if (/(fire|flame|burn|great fireball|scorch)/.test(both)) return 'fire';
-          if (/(ice|frost|freeze|avalanche)/.test(both)) return 'ice';
-          if (/(earth|terra|stone|stalagmite|poison)/.test(both)) return 'earth';
-          if (/(energy|lightning|thunder|electric|great energy)/.test(both)) return 'energy';
-          if (/(death|soul|curse|decay|great death)/.test(both)) return 'death';
-          if (/(holy|divine)/.test(both)) return 'holy';
-          return 'energy';
-        };
-        const applyIncomingElementalDamage = (baseDamage, creature, elementKey) => {
-          const raw = Math.max(0, Math.floor(Number(baseDamage) || 0));
-          if (!creature || !elementKey) return raw;
-          const mods = creature.elementMods;
-          if (!mods) return raw;
-          const pct = Number(mods[elementKey]);
-          const m = Number.isFinite(pct) ? pct : 100;
-          const mult = Math.min(3, Math.max(0, m / 100));
-          return Math.max(0, Math.floor(raw * mult));
-        };
+        // Thin wrapper injecting the catalog Map that ElementalMods.js needs.
+        const mergeCreatureElementModsForId = (creatureId) =>
+          _mergeCreatureElementModsForId(creatureId, creatureDamageModifiersById);
         const magicWeaponDamage = (weapon) => {
           const ml = Math.max(0, Number(playerState.magicLevel || 0));
           const lv = Math.max(1, Number(playerState.level || 1));
@@ -3210,170 +3152,25 @@ function startGame(configPlayer) {
           return true;
         };
         // Ammo-aware projectile visuals
-        const AMMO_VISUALS = {
-          'simple arrow':      { glyph: '➵', color: '#a8a29e', size: 14, impact: null },
-          'arrow':             { glyph: '➵', color: '#f59e0b', size: 14, impact: null },
-          'poison arrow':      { glyph: '➵', color: '#4ade80', size: 14, impact: 'poison' },
-          'burst arrow':       { glyph: '➵', color: '#f97316', size: 16, impact: 'explosion' },
-          'sniper arrow':      { glyph: '➵', color: '#38bdf8', size: 15, impact: 'ice' },
-          'diamond arrow':     { glyph: '◇', color: '#e0f2fe', size: 16, impact: 'diamond' },
-          'crystalline arrow': { glyph: '◇', color: '#a78bfa', size: 15, impact: 'crystal' },
-          'onyx arrow':        { glyph: '➵', color: '#1e1b4b', size: 15, impact: 'dark' },
-          'earth arrow':       { glyph: '➵', color: '#84cc16', size: 14, impact: 'earth' },
-          'flaming arrow':     { glyph: '➵', color: '#ef4444', size: 15, impact: 'fire' },
-          'shiver arrow':      { glyph: '➵', color: '#7dd3fc', size: 15, impact: 'ice' },
-          'flash arrow':       { glyph: '➵', color: '#facc15', size: 15, impact: 'energy' },
-          'envenomed arrow':   { glyph: '➵', color: '#22c55e', size: 14, impact: 'poison' },
-          'tarsal arrow':      { glyph: '➵', color: '#d97706', size: 14, impact: 'earth' },
-          'power arrow':       { glyph: '➵', color: '#dc2626', size: 15, impact: 'fire' },
-          'bolt':              { glyph: '✦', color: '#d4d4d8', size: 14, impact: null },
-          'power bolt':        { glyph: '✦', color: '#ef4444', size: 15, impact: 'fire' },
-          'piercing bolt':     { glyph: '✦', color: '#60a5fa', size: 15, impact: 'ice' },
-          'infernal bolt':     { glyph: '✦', color: '#dc2626', size: 16, impact: 'explosion' },
-          'spectral bolt':     { glyph: '✦', color: '#c084fc', size: 16, impact: 'energy' },
-          'vortex bolt':       { glyph: '✦', color: '#818cf8', size: 15, impact: 'energy' },
-          'prismatic bolt':    { glyph: '✦', color: '#f0abfc', size: 15, impact: 'crystal' },
-          'drill bolt':        { glyph: '✦', color: '#a3a3a3', size: 14, impact: 'earth' },
+        // Thin wrapper so call sites don't have to pass ammo every time.
+        const projectileVisualForWeapon = (weapon) => _projectileVisualForWeapon(weapon, getEquippedAmmo());
+        // Thin wrappers injecting scene + local refs into the HitVisuals module.
+        const hitFxPlayerCtx = {
+          player, tileSize, basePlayerScaleX, basePlayerScaleY,
+          isActive: () => !playerState.dead,
+          onBarUpdate: () => updatePlayerBar(),
         };
-        const projectileVisualForWeapon = (weapon) => {
-          const title = String((weapon && weapon.title) || '').toLowerCase();
-          const itemType = String((weapon && weapon.item_type) || '').toLowerCase();
-          const secondary = String((weapon && weapon.type_secondary) || '').toLowerCase();
-          if (itemType === 'wands') return { glyph: '✦', color: '#a78bfa', size: 18 };
-          if (itemType === 'rods') return { glyph: '✧', color: '#60a5fa', size: 18 };
-          if (title.includes('ethereal spear')) return { glyph: '➤', color: '#7dd3fc', size: 18 };
-          if (title.includes('star')) return { glyph: '✶', color: '#fde047', size: 16 };
-          if (title.includes('knife')) return { glyph: '†', color: '#e5e7eb', size: 16 };
-          if (title.includes('spear')) return { glyph: '➤', color: '#f8fafc', size: 16 };
-          if (title.includes('snowball')) return { glyph: '●', color: '#f8fafc', size: 14 };
-          if (title.includes('stone')) return { glyph: '●', color: '#cbd5e1', size: 14 };
-          // Check equipped ammo for bow/crossbow
-          const ammo = getEquippedAmmo();
-          if (ammo) {
-            const ammoVisual = AMMO_VISUALS[String(ammo.title || '').toLowerCase()];
-            if (ammoVisual) return ammoVisual;
-          }
-          if (secondary.includes('crossbow')) return { glyph: '✦', color: '#f59e0b', size: 14 };
-          if (secondary.includes('bow')) return { glyph: '➵', color: '#f59e0b', size: 14 };
-          if (secondary.includes('throwing')) return { glyph: '◆', color: '#e2e8f0', size: 14 };
-          return { glyph: '•', color: '#f8fafc', size: 14 };
+        const hitFxCreatureCtx = {
+          tileSize, centerX, centerY, applyCreatureSize,
+          onBarUpdate: (c) => updateCreatureBar(c),
         };
-        const showAmmoImpactEffect = (tx, ty, impactType) => {
-          if (!impactType) return;
-          const scene = this;
-          if (impactType === 'explosion') {
-            // Orange/red expanding ring + sparks
-            const ring = scene.add.circle(tx, ty, 4, 0xf97316, 0.8);
-            ring.setDepth(20);
-            scene.tweens.add({ targets: ring, scaleX: 3, scaleY: 3, alpha: 0, duration: 350, ease: 'Quad.easeOut', onComplete: () => ring.destroy() });
-            radialSparkBurst(scene, tx, ty, 0xef4444, 14);
-            radialSparkBurst(scene, tx, ty, 0xfbbf24, 8);
-          } else if (impactType === 'fire') {
-            radialSparkBurst(scene, tx, ty, 0xef4444, 10);
-            const flame = scene.add.circle(tx, ty - 4, 3, 0xf97316, 0.7);
-            flame.setDepth(20);
-            scene.tweens.add({ targets: flame, y: ty - 18, alpha: 0, scaleX: 2, scaleY: 2, duration: 400, ease: 'Sine.easeOut', onComplete: () => flame.destroy() });
-          } else if (impactType === 'poison') {
-            radialSparkBurst(scene, tx, ty, 0x4ade80, 10);
-            for (let i = 0; i < 3; i++) {
-              const drop = scene.add.circle(tx + (Math.random() - 0.5) * 16, ty + (Math.random() - 0.5) * 8, 2, 0x22c55e, 0.8);
-              drop.setDepth(20);
-              scene.tweens.add({ targets: drop, y: drop.y + 10, alpha: 0, duration: 500 + i * 100, onComplete: () => drop.destroy() });
-            }
-          } else if (impactType === 'ice') {
-            radialSparkBurst(scene, tx, ty, 0x7dd3fc, 10);
-            const frost = scene.add.circle(tx, ty, 5, 0xbae6fd, 0.6);
-            frost.setDepth(20);
-            scene.tweens.add({ targets: frost, scaleX: 2.5, scaleY: 2.5, alpha: 0, duration: 400, ease: 'Quad.easeOut', onComplete: () => frost.destroy() });
-          } else if (impactType === 'energy') {
-            radialSparkBurst(scene, tx, ty, 0xfacc15, 12);
-            const bolt = scene.add.circle(tx, ty, 3, 0xfde68a, 0.9);
-            bolt.setDepth(20);
-            scene.tweens.add({ targets: bolt, scaleX: 3, scaleY: 0.5, alpha: 0, duration: 250, ease: 'Sine.easeOut', onComplete: () => bolt.destroy() });
-          } else if (impactType === 'earth') {
-            radialSparkBurst(scene, tx, ty, 0x84cc16, 8);
-            for (let i = 0; i < 4; i++) {
-              const rock = scene.add.circle(tx + (Math.random() - 0.5) * 14, ty + (Math.random() - 0.5) * 14, 2 + Math.random(), 0x65a30d, 0.7);
-              rock.setDepth(20);
-              scene.tweens.add({ targets: rock, y: rock.y + 8, alpha: 0, duration: 350 + i * 80, onComplete: () => rock.destroy() });
-            }
-          } else if (impactType === 'diamond' || impactType === 'crystal') {
-            const color = impactType === 'diamond' ? 0xe0f2fe : 0xa78bfa;
-            radialSparkBurst(scene, tx, ty, color, 12);
-            const shard = scene.add.star(tx, ty, 4, 3, 8, color, 0.9);
-            shard.setDepth(20);
-            scene.tweens.add({ targets: shard, angle: 90, scaleX: 2, scaleY: 2, alpha: 0, duration: 400, ease: 'Quad.easeOut', onComplete: () => shard.destroy() });
-          } else if (impactType === 'dark') {
-            radialSparkBurst(scene, tx, ty, 0x6366f1, 10);
-            const void_ = scene.add.circle(tx, ty, 6, 0x1e1b4b, 0.8);
-            void_.setDepth(20);
-            scene.tweens.add({ targets: void_, scaleX: 2, scaleY: 2, alpha: 0, duration: 500, ease: 'Cubic.easeOut', onComplete: () => void_.destroy() });
-          }
-        };
-        const showRangedProjectileEffect = (weapon, target) => {
-          if (!weapon || !target || !target.sprite) return;
-          const visual = projectileVisualForWeapon(weapon);
-          if (isMagicRangedWeapon(weapon)) {
-            const colorHex = Number(
-              String(visual.color || '#a78bfa').replace('#', '0x')
-            );
-            spellProjectileLine(this, player.x, player.y, target.sprite.x, target.sprite.y, colorHex, visual.glyph, () => {
-              spellAuraBurst(this, target.sprite.x, target.sprite.y, tileSize, colorHex, visual.glyph, 0.9);
-            });
-            return;
-          }
-          rangedProjectileLine(this, player.x, player.y, target.sprite.x, target.sprite.y, visual, 150);
-          // Impact flash light + VFX on hit
-          this.time.delayedCall(150, () => {
-            if (!target.sprite || !target.sprite.scene) return;
-            const ix = target.sprite.x;
-            const iy = target.sprite.y;
-            // Brief light at impact point
-            const lightId = `impact_${Date.now()}_${Math.random()}`;
-            floorAtmosphere.addAreaLight(lightId, ix, iy, 1.5, 800);
-            // Small flash glow matching projectile color
-            const colorHex = Number(String(visual.color || '#f59e0b').replace('#', '0x'));
-            const flash = this.add.circle(ix, iy, tileSize * 0.3, colorHex, 0.4);
-            flash.setDepth(4);
-            this.tweens.add({
-              targets: flash, scaleX: 1.8, scaleY: 1.8, alpha: 0,
-              duration: 350, ease: 'Quad.easeOut', onComplete: () => flash.destroy(),
-            });
-            // Ammo-specific impact effect
-            if (visual.impact) showAmmoImpactEffect(ix, iy, visual.impact);
-          });
-        };
-        const showCritText = (x, y) => {
-          critBanner(this, x, y, tileSize);
-        };
-        const showMissSmoke = (x, y) => {
-          missEffect(this, x, y, tileSize);
-        };
-        const showPlayerHitEffect = (dmg) => {
-          if (playerState.dead) return;
-          radialSparkBurst(this, player.x, player.y - 4, 0xff6b6b, 12);
-          shockwaveRing(this, player.x, player.y, 0xff5555, { startR: 10, endScale: 2, duration: 220 });
-          player.setTint(0xff4d4d);
-          this.tweens.add({
-            targets: player,
-            scaleX: basePlayerScaleX * 1.1,
-            scaleY: basePlayerScaleY * 1.1,
-            yoyo: true,
-            duration: 80,
-            ease: 'Sine.easeOut',
-            onComplete: () => {
-              if (!playerState.dead) {
-                player.setScale(basePlayerScaleX, basePlayerScaleY);
-              }
-              player.clearTint();
-              updatePlayerBar();
-            },
-          });
-          floatingCombatText(this, player.x, player.y - tileSize * 0.65, `-${dmg}`, {
-            color: '#ff9b9b',
-            fontSize: '17px',
-          });
-        };
+        const showAmmoImpactEffect = (tx, ty, impactType) => _showAmmoImpactEffect(this, tx, ty, impactType);
+        const showCritText = (x, y) => _showCritText(this, x, y, tileSize);
+        const showMissSmoke = (x, y) => _showMissSmoke(this, x, y, tileSize);
+        const showPlayerHitEffect = (dmg) => _showPlayerHitEffect(this, hitFxPlayerCtx, dmg);
+        const showRangedProjectileEffect = (weapon, target) => _showRangedProjectileEffect(this, {
+          player, tileSize, floorAtmosphere,
+        }, weapon, target, getEquippedAmmo());
         const killSummonsOf = (parent) => {
           if (!parent) return;
           for (const c of creatures) {
@@ -3450,32 +3247,7 @@ function startGame(configPlayer) {
             },
           });
         };
-        const showCreatureHitEffect = (creature, dmg) => {
-          if (!creature || !creature.sprite || !creature.sprite.scene) return;
-          radialSparkBurst(this, creature.sprite.x, creature.sprite.y - 4, 0xff6b6b, 10);
-          creature.sprite.setTint(0xff4d4d);
-          this.tweens.add({
-            targets: creature.sprite,
-            scaleX: creature.sprite.scaleX * 1.1,
-            scaleY: creature.sprite.scaleY * 1.1,
-            yoyo: true,
-            duration: 80,
-            ease: 'Sine.easeOut',
-            onComplete: () => {
-              if (!creature.sprite || !creature.sprite.scene) return;
-              creature.sprite.clearTint();
-              if (creature.isConvinced) creature.sprite.setTint(0x88ffaa);
-              applyCreatureSize(creature.sprite);
-              creature.sprite.x = centerX(creature.gx);
-              creature.sprite.y = centerY(creature.gy);
-              updateCreatureBar(creature);
-            },
-          });
-          floatingCombatText(this, creature.sprite.x, creature.sprite.y - tileSize * 0.65, `-${dmg}`, {
-            color: '#ff9b9b',
-            fontSize: '17px',
-          });
-        };
+        const showCreatureHitEffect = (creature, dmg) => _showCreatureHitEffect(this, hitFxCreatureCtx, creature, dmg);
         const parseAbilityDamage = (ability, fallbackMax) => {
           const raw = String((ability && ability.effect) || '');
           const nums = raw.match(/\d+/g) || [];
