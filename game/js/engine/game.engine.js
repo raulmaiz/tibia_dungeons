@@ -240,6 +240,24 @@ import {
   showRangedProjectileEffect as _showRangedProjectileEffect,
 } from './systems/HitVisuals.js';
 import {
+  frontSweepTiles as _frontSweepTiles,
+  frontSingleTile as _frontSingleTile,
+  frontConeTiles as _frontConeTiles,
+  frontBeamTiles as _frontBeamTiles,
+  aroundCasterTiles as _aroundCasterTiles,
+  ringAroundCasterTiles as _ringAroundCasterTiles,
+  frontPlusTiles as _frontPlusTiles,
+  frontBoxTiles as _frontBoxTiles,
+  resolvePatternTiles as _resolvePatternTiles,
+  bresenhamLineTiles,
+  tilesNovaAtPoint,
+  plusTilesAt,
+  ringTilesAt,
+  tilesNovaAroundCreature,
+  creatureConeTowardPlayer as _creatureConeTowardPlayer,
+  lineToPlayerFromCreature as _lineToPlayerFromCreature,
+} from './systems/SpellPatterns.js';
+import {
   setupLearnedSpells,
   renderLearnedSpells,
 } from './systems/LearnedSpells.js';
@@ -2198,130 +2216,17 @@ function startGame(configPlayer) {
             showSpellAuraEffect(target.sprite.x, target.sprite.y, spell, 0.9);
           });
         };
-        const frontSweepTiles = () => {
-          // 3 impacted tiles in the row directly in front of player.
-          if (playerState.facingFrame === 0) {
-            return [{ gx: playerState.gridX - 1, gy: playerState.gridY + 1 }, { gx: playerState.gridX, gy: playerState.gridY + 1 }, { gx: playerState.gridX + 1, gy: playerState.gridY + 1 }];
-          }
-          if (playerState.facingFrame === 2) {
-            return [{ gx: playerState.gridX - 1, gy: playerState.gridY - 1 }, { gx: playerState.gridX, gy: playerState.gridY - 1 }, { gx: playerState.gridX + 1, gy: playerState.gridY - 1 }];
-          }
-          if (playerState.facingFrame === 1) {
-            return [{ gx: playerState.gridX + 1, gy: playerState.gridY - 1 }, { gx: playerState.gridX + 1, gy: playerState.gridY }, { gx: playerState.gridX + 1, gy: playerState.gridY + 1 }];
-          }
-          return [{ gx: playerState.gridX - 1, gy: playerState.gridY - 1 }, { gx: playerState.gridX - 1, gy: playerState.gridY }, { gx: playerState.gridX - 1, gy: playerState.gridY + 1 }];
-        };
-        const frontSingleTile = () => {
-          if (playerState.facingFrame === 0) return { gx: playerState.gridX, gy: playerState.gridY + 1 };
-          if (playerState.facingFrame === 2) return { gx: playerState.gridX, gy: playerState.gridY - 1 };
-          if (playerState.facingFrame === 1) return { gx: playerState.gridX + 1, gy: playerState.gridY };
-          return { gx: playerState.gridX - 1, gy: playerState.gridY };
-        };
-        const frontConeTiles = (depth = 3) => {
-          const tiles = [];
-          for (let i = 1; i <= depth; i += 1) {
-            const spread = Math.min(2, i - 1);
-            for (let s = -spread; s <= spread; s += 1) {
-              let gx = playerState.gridX;
-              let gy = playerState.gridY;
-              if (playerState.facingFrame === 0) { gx += s; gy += i; } // south
-              else if (playerState.facingFrame === 2) { gx += s; gy -= i; } // north
-              else if (playerState.facingFrame === 1) { gx += i; gy += s; } // east
-              else { gx -= i; gy += s; } // west
-              tiles.push({ gx, gy });
-            }
-          }
-          return tiles;
-        };
-        const frontBeamTiles = (len = 5) => {
-          const tiles = [];
-          for (let i = 1; i <= len; i += 1) {
-            let gx = playerState.gridX;
-            let gy = playerState.gridY;
-            if (playerState.facingFrame === 0) gy += i;
-            else if (playerState.facingFrame === 2) gy -= i;
-            else if (playerState.facingFrame === 1) gx += i;
-            else gx -= i;
-            tiles.push({ gx, gy });
-          }
-          return tiles;
-        };
-        const aroundCasterTiles = (radius = 1) => {
-          const tiles = [];
-          for (let dy = -radius; dy <= radius; dy += 1) {
-            for (let dx = -radius; dx <= radius; dx += 1) {
-              if (dx === 0 && dy === 0) continue;
-              tiles.push({ gx: playerState.gridX + dx, gy: playerState.gridY + dy });
-            }
-          }
-          return tiles;
-        };
-        const ringAroundCasterTiles = (radius) => {
-          const tiles = [];
-          const r = Math.max(1, Math.floor(Number(radius) || 1));
-          for (let dy = -r; dy <= r; dy += 1) {
-            for (let dx = -r; dx <= r; dx += 1) {
-              if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
-              tiles.push({ gx: playerState.gridX + dx, gy: playerState.gridY + dy });
-            }
-          }
-          return tiles;
-        };
-        const frontPlusTiles = (reach = 2) => {
-          let cx = playerState.gridX;
-          let cy = playerState.gridY;
-          const rk = Math.max(1, Math.floor(Number(reach) || 1));
-          if (playerState.facingFrame === 0) cy += rk;
-          else if (playerState.facingFrame === 2) cy -= rk;
-          else if (playerState.facingFrame === 1) cx += rk;
-          else cx -= rk;
-          return [
-            { gx: cx, gy: cy },
-            { gx: cx - 1, gy: cy },
-            { gx: cx + 1, gy: cy },
-            { gx: cx, gy: cy - 1 },
-            { gx: cx, gy: cy + 1 },
-          ];
-        };
-        const frontBoxTiles = (width, depth) => {
-          const tiles = [];
-          const w = Math.max(1, Math.floor(Number(width) || 3));
-          const d = Math.max(1, Math.floor(Number(depth) || 1));
-          const half = Math.floor(w / 2);
-          for (let row = 1; row <= d; row += 1) {
-            for (let c = -half; c <= half; c += 1) {
-              let gx = playerState.gridX;
-              let gy = playerState.gridY;
-              if (playerState.facingFrame === 0) { gx += c; gy += row; }
-              else if (playerState.facingFrame === 2) { gx += c; gy -= row; }
-              else if (playerState.facingFrame === 1) { gx += row; gy += c; }
-              else { gx -= row; gy += c; }
-              tiles.push({ gx, gy });
-            }
-          }
-          return tiles;
-        };
-        const resolvePatternTiles = (pattern) => {
-          if (!pattern || pattern.kind === 'projectile') return null;
-          switch (pattern.kind) {
-            case 'front_sweep':
-              return frontSweepTiles();
-            case 'beam':
-              return frontBeamTiles(pattern.depth ?? 5);
-            case 'cone':
-              return frontConeTiles(pattern.depth ?? 3);
-            case 'nova':
-              return aroundCasterTiles(pattern.radius ?? 1);
-            case 'ring':
-              return ringAroundCasterTiles(pattern.radius ?? 2);
-            case 'plus':
-              return frontPlusTiles(pattern.reach ?? 2);
-            case 'front_box':
-              return frontBoxTiles(pattern.width ?? 3, pattern.depth ?? 2);
-            default:
-              return null;
-          }
-        };
+        // Thin wrappers: read playerState.{gridX,gridY,facingFrame} once per call.
+        const _playerPos = () => ({ gridX: playerState.gridX, gridY: playerState.gridY, facingFrame: playerState.facingFrame });
+        const frontSweepTiles = () => _frontSweepTiles(_playerPos());
+        const frontSingleTile = () => _frontSingleTile(_playerPos());
+        const frontConeTiles = (depth = 3) => _frontConeTiles(_playerPos(), depth);
+        const frontBeamTiles = (len = 5) => _frontBeamTiles(_playerPos(), len);
+        const aroundCasterTiles = (radius = 1) => _aroundCasterTiles(_playerPos(), radius);
+        const ringAroundCasterTiles = (radius) => _ringAroundCasterTiles(_playerPos(), radius);
+        const frontPlusTiles = (reach = 2) => _frontPlusTiles(_playerPos(), reach);
+        const frontBoxTiles = (width, depth) => _frontBoxTiles(_playerPos(), width, depth);
+        const resolvePatternTiles = (pattern) => _resolvePatternTiles(_playerPos(), pattern);
         const spellAttackPattern = (spell) => {
           const title = String((spell && spell.title) || '').toLowerCase();
           const wikiOverride = SPELL_FX_OVERRIDES[title];
@@ -3891,120 +3796,12 @@ function startGame(configPlayer) {
             fontSize: '18px',
           });
         };
-        const bresenhamLineTiles = (x0, y0, x1, y1) => {
-          const pts = [];
-          let x = x0;
-          let y = y0;
-          const dx = Math.abs(x1 - x0);
-          const dy = Math.abs(y1 - y0);
-          const sx = x0 < x1 ? 1 : -1;
-          const sy = y0 < y1 ? 1 : -1;
-          let err = dx - dy;
-          let guard = 0;
-          while (true) {
-            guard += 1;
-            if (guard > 256) {
-              pts.push({ gx: x1, gy: y1 });
-              break;
-            }
-            pts.push({ gx: x, gy: y });
-            if (x === x1 && y === y1) break;
-            const e2 = 2 * err;
-            if (e2 > -dy) {
-              err -= dy;
-              x += sx;
-            }
-            if (e2 < dx) {
-              err += dx;
-              y += sy;
-            }
-          }
-          return pts;
-        };
-        const lineToPlayerFromCreature = (creature, maxLen) => {
-          const lim = Math.max(1, Math.floor(Number(maxLen) || 6));
-          const line = bresenhamLineTiles(creature.gx, creature.gy, playerState.gridX, playerState.gridY);
-          if (line.length <= 1) return [{ gx: playerState.gridX, gy: playerState.gridY }];
-          const out = [];
-          for (let i = 1; i < line.length && out.length < lim; i += 1) {
-            const p = line[i];
-            if (!isWalkableTile(p.gx, p.gy)) break;
-            // Ranged attacks cannot cross walls.
-            if (isWallTile(p.gx, p.gy)) break;
-            out.push(p);
-            if (p.gx === playerState.gridX && p.gy === playerState.gridY) break;
-          }
-          return out;
-        };
-        const creatureConeTowardPlayer = (creature, depth) => {
-          const d = Math.max(1, Math.floor(Number(depth) || 3));
-          const cx = creature.gx;
-          const cy = creature.gy;
-          const px = playerState.gridX - cx;
-          const py = playerState.gridY - cy;
-          if (px === 0 && py === 0) return [];
-          let sx = 0;
-          let sy = 0;
-          const ax = Math.abs(px);
-          const ay = Math.abs(py);
-          if (ax >= ay) sx = Math.sign(px);
-          else sy = Math.sign(py);
-          const tiles = [];
-          for (let i = 1; i <= d; i += 1) {
-            const spread = Math.min(2, i - 1);
-            for (let k = -spread; k <= spread; k += 1) {
-              let gx = cx + sx * i;
-              let gy = cy + sy * i;
-              if (sx !== 0) gy += k;
-              else gx += k;
-              tiles.push({ gx, gy });
-            }
-          }
-          return tiles;
-        };
-        const tilesNovaAroundCreature = (creature, radius, excludeCenter = true) => {
-          const r = Math.max(0, Math.floor(Number(radius) || 1));
-          const cx = creature.gx;
-          const cy = creature.gy;
-          const tiles = [];
-          for (let dy = -r; dy <= r; dy += 1) {
-            for (let dx = -r; dx <= r; dx += 1) {
-              if (Math.max(Math.abs(dx), Math.abs(dy)) > r) continue;
-              if (excludeCenter && dx === 0 && dy === 0) continue;
-              tiles.push({ gx: cx + dx, gy: cy + dy });
-            }
-          }
-          return tiles;
-        };
-        const tilesNovaAtPoint = (px, py, radius) => {
-          const r = Math.max(0, Math.floor(Number(radius) || 1));
-          const tiles = [];
-          for (let dy = -r; dy <= r; dy += 1) {
-            for (let dx = -r; dx <= r; dx += 1) {
-              if (Math.max(Math.abs(dx), Math.abs(dy)) > r) continue;
-              tiles.push({ gx: px + dx, gy: py + dy });
-            }
-          }
-          return tiles;
-        };
-        const plusTilesAt = (px, py) => [
-          { gx: px, gy: py },
-          { gx: px - 1, gy: py },
-          { gx: px + 1, gy: py },
-          { gx: px, gy: py - 1 },
-          { gx: px, gy: py + 1 },
-        ];
-        const ringTilesAt = (px, py, radius) => {
-          const r = Math.max(1, Math.floor(Number(radius) || 2));
-          const tiles = [];
-          for (let dy = -r; dy <= r; dy += 1) {
-            for (let dx = -r; dx <= r; dx += 1) {
-              if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
-              tiles.push({ gx: px + dx, gy: py + dy });
-            }
-          }
-          return tiles;
-        };
+        // Thin wrappers bind the player position + walkability predicates
+        // into the pure SpellPatterns helpers for creature-side use.
+        const lineToPlayerFromCreature = (creature, maxLen) =>
+          _lineToPlayerFromCreature(creature, playerState.gridX, playerState.gridY, maxLen, isWalkableTile, isWallTile);
+        const creatureConeTowardPlayer = (creature, depth) =>
+          _creatureConeTowardPlayer(creature, playerState.gridX, playerState.gridY, depth);
         const resolveCreatureAbilityTiles = (creature, pattern) => {
           if (!pattern || pattern.kind === 'none') return [];
           switch (pattern.kind) {
