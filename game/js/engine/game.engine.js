@@ -240,6 +240,24 @@ import {
   showRangedProjectileEffect as _showRangedProjectileEffect,
 } from './systems/HitVisuals.js';
 import {
+  spellFxProfile,
+  showSpellTileEffect as _showSpellTileEffect,
+  showSpellAuraEffect as _showSpellAuraEffect,
+  showSpellProjectileEffect as _showSpellProjectileEffect,
+  abilityStyle,
+  fireballSizeTilesForEffect,
+} from './systems/SpellVisuals.js';
+import {
+  inferSpellRange,
+  inferHealingAmount as _inferHealingAmount,
+  inferAttackDamage as _inferAttackDamage,
+  isSingleTargetAttackPattern,
+  inferClassAdjustedSpellDamage as _inferClassAdjustedSpellDamage,
+  parseAbilityDamage,
+  parseAbilityHeal,
+  parseSummonMax,
+} from './systems/SpellStats.js';
+import {
   frontSweepTiles as _frontSweepTiles,
   frontSingleTile as _frontSingleTile,
   frontConeTiles as _frontConeTiles,
@@ -2051,54 +2069,13 @@ function startGame(configPlayer) {
             });
           return candidates[0] || null;
         };
-        const inferSpellRange = (spell) => {
-          const effect = String((spell && spell.raw && spell.raw.effect) || '').toLowerCase();
-          if (effect.includes('adjacent')) return 1;
-          if (effect.includes('around the caster') || effect.includes('area')) return 2;
-          return 4;
-        };
-        const inferHealingAmount = (spell) => {
-          const title = String((spell && spell.title) || '').toLowerCase();
-          const ml = Math.max(0, Number(playerState.magicLevel || 0));
-          if (title.includes('ultimate')) return Math.max(20, Math.floor(36 + playerState.level * 1.2 + ml * 6.2));
-          if (title.includes('intense')) return Math.max(14, Math.floor(24 + playerState.level * 1.0 + ml * 4.6));
-          if (title.includes('light')) return Math.max(8, Math.floor(12 + playerState.level * 0.7 + ml * 3.0));
-          return Math.max(10, Math.floor(16 + playerState.level * 0.9 + ml * 3.8));
-        };
-        const inferAttackDamage = (spell) => {
-          const manaCost = Math.max(0, Number((spell && spell.mana) || 0));
-          const ml = Math.max(0, Number(playerState.magicLevel || 0));
-          return Math.max(6, Math.floor(4 + playerState.level * 0.8 + ml * 3.4 + manaCost * 0.18));
-        };
-        const isSingleTargetAttackPattern = (pattern) => {
-          if (!pattern || typeof pattern !== 'object') return true;
-          if (pattern.kind === 'projectile') return true;
-          if (pattern.kind === 'front_box') {
-            const width = Math.max(1, Number(pattern.width || 1));
-            const depth = Math.max(1, Number(pattern.depth || 1));
-            return width === 1 && depth === 1;
-          }
-          return false;
-        };
-        const inferClassAdjustedSpellDamage = (spell, opts = {}) => {
-          const baseSpellDamage = inferAttackDamage(spell);
-          const spellTitle = String((spell && spell.title) || '').toLowerCase();
-          if (playerState.classKey === 'paladin' && spellTitle === 'lesser ethereal spear') {
-            const equippedWeaponDamage = Math.max(1, Number(currentPlayerDamage()) || 1);
-            const distanceFighting = Math.max(10, Number(getWeaponSkillLevelByType('distance weapons')) || 10);
-            return Math.max(1, (equippedWeaponDamage + distanceFighting) * 10);
-          }
-          if (playerState.classKey === 'sorcerer') return Math.max(1, Math.floor(baseSpellDamage * 1.25));
-          if (playerState.classKey !== 'knight') return baseSpellDamage;
-          const currentWeaponDamage = Math.max(1, Number(currentPlayerDamage()) || 1);
-          const area = Boolean(opts.area);
-          if (area) {
-            // Knight AoE attack spells also include current weapon damage.
-            return Math.max(1, baseSpellDamage + currentWeaponDamage);
-          }
-          // Knight single-target attack spells hit for double current weapon damage.
-          return Math.max(1, currentWeaponDamage * 2);
-        };
+        // Thin wrappers injecting playerState progression into SpellStats.
+        const inferHealingAmount = (spell) => _inferHealingAmount(spell, playerState.level, playerState.magicLevel);
+        const inferAttackDamage = (spell) => _inferAttackDamage(spell, playerState.level, playerState.magicLevel);
+        const inferClassAdjustedSpellDamage = (spell, opts = {}) => _inferClassAdjustedSpellDamage(
+          spell, playerState.classKey, playerState.level, playerState.magicLevel,
+          currentPlayerDamage, getWeaponSkillLevelByType, opts,
+        );
         const conjureArrowPayloadFromSpell = (spell) => {
           const id = Number(spell && spell.article_id);
           const mapping = CONJURE_AMMO_MAP.get(id);
@@ -2167,55 +2144,18 @@ function startGame(configPlayer) {
           );
           return equipped ? 'ammo' : null;
         };
-        const showSpellTileEffect = (tiles, color = 0xf59e0b, opts = {}) => {
-          const duration = opts.duration != null ? opts.duration : 300;
-          const delayStep = opts.delayStep != null ? opts.delayStep : 0;
-          const order = opts.order || null;
-          const glyphChar = opts.glyph != null ? opts.glyph : '✦';
-          const glyphColor = opts.glyphColor != null ? opts.glyphColor : '#fde68a';
-          let list = (tiles || []).filter((t) => isWalkableTile(t.gx, t.gy));
-          if (order === 'beam') {
-            list = list.slice().sort((a, b) => (
-              (Math.abs(a.gx - playerState.gridX) + Math.abs(a.gy - playerState.gridY))
-              - (Math.abs(b.gx - playerState.gridX) + Math.abs(b.gy - playerState.gridY))
-            ));
-          }
-          list.forEach((t, i) => {
-            const delay = i * delayStep;
-            const spawnFx = () => {
-              tileSpellBurst(this, centerX(t.gx), centerY(t.gy), tileSize, color, {
-                duration,
-                glyph: glyphChar,
-                glyphColor,
-              });
-            };
-            if (delay > 0) this.time.delayedCall(delay, spawnFx);
-            else spawnFx();
-          });
-        };
-        const spellFxProfile = (spell) => {
-          const element = String((spell && spell.raw && spell.raw.element) || '').toLowerCase();
-          const title = String((spell && spell.title) || '').toLowerCase();
-          if (element.includes('fire') || title.includes('flame') || title.includes('fire')) return { color: 0xfb7185, glyph: '✹' };
-          if (element.includes('ice') || title.includes('ice') || title.includes('frigo')) return { color: 0x93c5fd, glyph: '❄' };
-          if (element.includes('energy') || title.includes('energy') || title.includes('vis')) return { color: 0xa78bfa, glyph: '✧' };
-          if (element.includes('earth') || title.includes('terra')) return { color: 0x86efac, glyph: '✶' };
-          if (element.includes('holy') || title.includes('divine') || title.includes('san')) return { color: 0xfde68a, glyph: '✦' };
-          if (element.includes('death') || title.includes('mort')) return { color: 0xc4b5fd, glyph: '✢' };
-          if (title.includes('heal') || title.includes('exura')) return { color: 0x60a5fa, glyph: '✚' };
-          return { color: 0x7dd3fc, glyph: '✧' };
-        };
-        const showSpellAuraEffect = (x, y, spell, scale = 1) => {
-          const fx = spellFxProfile(spell);
-          spellAuraBurst(this, x, y, tileSize, fx.color, fx.glyph, scale);
-        };
-        const showSpellProjectileEffect = (spell, target) => {
-          if (!spell || !target || !target.sprite) return;
-          const fx = spellFxProfile(spell);
-          spellProjectileLine(this, player.x, player.y, target.sprite.x, target.sprite.y, fx.color, fx.glyph, () => {
-            showSpellAuraEffect(target.sprite.x, target.sprite.y, spell, 0.9);
-          });
-        };
+        // Thin wrappers: scene + tileSize + centerX/Y live in engine.
+        const _spellTileCtx = () => ({
+          tileSize, centerX, centerY,
+          caster: { gridX: playerState.gridX, gridY: playerState.gridY },
+          isWalkable: isWalkableTile,
+        });
+        const showSpellTileEffect = (tiles, color = 0xf59e0b, opts = {}) =>
+          _showSpellTileEffect(this, _spellTileCtx(), tiles, color, opts);
+        const showSpellAuraEffect = (x, y, spell, scale = 1) =>
+          _showSpellAuraEffect(this, tileSize, x, y, spell, scale);
+        const showSpellProjectileEffect = (spell, target) =>
+          _showSpellProjectileEffect(this, { player, tileSize }, spell, target);
         // Thin wrappers: read playerState.{gridX,gridY,facingFrame} once per call.
         const _playerPos = () => ({ gridX: playerState.gridX, gridY: playerState.gridY, facingFrame: playerState.facingFrame });
         const frontSweepTiles = () => _frontSweepTiles(_playerPos());
@@ -3153,27 +3093,6 @@ function startGame(configPlayer) {
           });
         };
         const showCreatureHitEffect = (creature, dmg) => _showCreatureHitEffect(this, hitFxCreatureCtx, creature, dmg);
-        const parseAbilityDamage = (ability, fallbackMax) => {
-          const raw = String((ability && ability.effect) || '');
-          const nums = raw.match(/\d+/g) || [];
-          const baseMax = Math.max(1, Number(fallbackMax || 1));
-          const safeCap = Math.max(8, Math.floor(baseMax * 1.6));
-          if (nums.length === 0) return Phaser.Math.Between(1, safeCap);
-          if (nums.length === 1) return Phaser.Math.Clamp(Math.max(1, Number(nums[0])), 1, safeCap);
-          const a = Math.max(1, Number(nums[0]));
-          const b = Math.max(1, Number(nums[1]));
-          const lo = Phaser.Math.Clamp(Math.min(a, b), 1, safeCap);
-          const hi = Phaser.Math.Clamp(Math.max(a, b), lo, safeCap);
-          return Phaser.Math.Between(lo, hi);
-        };
-        // Summon abilities: `effect` holds the maximum simultaneous summons
-        // (first integer in the string; falls back to 1 for "?" / malformed).
-        const parseSummonMax = (ability) => {
-          const raw = String((ability && ability.effect) || '');
-          const nums = raw.match(/\d+/g) || [];
-          if (nums.length === 0) return 1;
-          return Phaser.Math.Clamp(Math.max(1, Number(nums[0])), 1, 8);
-        };
         const spawnSummonFromTemplate = (template, gx, gy, parent) => {
           const textureKey = creatureKey(template);
           if (!this.textures.exists(textureKey)) return null;
@@ -3708,22 +3627,6 @@ function startGame(configPlayer) {
         // Healing abilities use the ability.effect range for the shape of the
         // roll but clamp the result to 10–40 % of the creature's own maxHp so
         // Tibia-scale numbers (0–200 000) don't trivialise or waste the cast.
-        const parseAbilityHeal = (ability, creature) => {
-          const raw = String((ability && ability.effect) || '');
-          const nums = raw.match(/\d+/g) || [];
-          const maxHp = Math.max(1, Number((creature && creature.maxHp) || 1));
-          const minHeal = Math.max(1, Math.floor(maxHp * 0.10));
-          const maxHeal = Math.max(minHeal + 1, Math.floor(maxHp * 0.40));
-          if (nums.length === 0) return Phaser.Math.Between(minHeal, maxHeal);
-          if (nums.length === 1) {
-            return Phaser.Math.Clamp(Math.max(1, Number(nums[0])), minHeal, maxHeal);
-          }
-          const a = Math.max(1, Number(nums[0]));
-          const b = Math.max(1, Number(nums[1]));
-          const lo = Phaser.Math.Clamp(Math.min(a, b), minHeal, maxHeal);
-          const hi = Phaser.Math.Clamp(Math.max(a, b), lo, maxHeal);
-          return Phaser.Math.Between(lo, hi);
-        };
         const showCreatureHealEffect = (creature, healAmount) => {
           if (!creature || !creature.sprite || !creature.sprite.scene) return;
           const x = creature.sprite.x;
@@ -3827,30 +3730,6 @@ function startGame(configPlayer) {
           }
         };
         const playerInAbilityTiles = (tiles) => (tiles || []).some((t) => t.gx === playerState.gridX && t.gy === playerState.gridY);
-        const abilityStyle = (ability) => {
-          const n = String((ability && ability.name) || '').toLowerCase();
-          const el = String((ability && ability.element) || '').toLowerCase();
-          if (el.includes('fire') || n.includes('fire')) return { color: 0xfb7185, glyph: '✹' };
-          if (el.includes('ice') || n.includes('ice') || n.includes('frost')) return { color: 0x93c5fd, glyph: '❄' };
-          if (el.includes('death') || n.includes('death') || n.includes('mort')) return { color: 0xc4b5fd, glyph: '✢' };
-          if (el.includes('energy') || n.includes('energy') || n.includes('vis')) return { color: 0xa78bfa, glyph: '✧' };
-          if (el.includes('earth') || n.includes('earth') || n.includes('poison')) return { color: 0x86efac, glyph: '✶' };
-          if (el.includes('holy') || n.includes('holy')) return { color: 0xfde68a, glyph: '✦' };
-          if (el.includes('healing') || n.includes('heal')) return { color: 0x60a5fa, glyph: '✚' };
-          return { color: 0xe2e8f0, glyph: '✦' };
-        };
-        // Fireball-family abilities don't shoot a projectile — they detonate
-        // an area explosion on the target tile whose size scales with the
-        // ability's effect range (bigger damage → bigger blast).
-        const fireballSizeTilesForEffect = (ability) => {
-          const raw = String((ability && ability.effect) || '');
-          const nums = raw.match(/\d+/g) || [];
-          let maxDmg = 0;
-          for (const n of nums) maxDmg = Math.max(maxDmg, Number(n) || 0);
-          // Default for unknown effect ("?") — medium.
-          if (maxDmg <= 0) return 2.2;
-          return Phaser.Math.Clamp(1.5 + maxDmg / 250, 1.5, 4.5);
-        };
         const showCreatureAbilityEffect = (creature, ability, affectedTiles = null) => {
           const style = abilityStyle(ability);
           void affectedTiles;
