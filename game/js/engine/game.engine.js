@@ -287,6 +287,28 @@ import {
   consumePendingSpellSlot,
   consumePendingConsumable,
 } from './systems/SpellBar.js';
+import { setupPlayerAttack } from './systems/PlayerAttack.js';
+import { setupTargeting } from './systems/Targeting.js';
+import {
+  primeConjureAmmoCache,
+  conjureArrowPayloadFromSpell,
+  resolveConjuredArrowItem as _resolveConjuredArrowItem,
+  placeConjuredArrow as _placeConjuredArrow,
+} from './systems/ConjureAmmo.js';
+import { setupStatusEffects } from './systems/StatusEffects.js';
+import {
+  showPlayerPoisonedEffect as _showPlayerPoisonedEffect,
+  showPlayerElectrifiedEffect as _showPlayerElectrifiedEffect,
+  showPlayerCureEffect as _showPlayerCureEffect,
+  showPlayerLifeDrainEffect as _showPlayerLifeDrainEffect,
+  showPlayerManaDrainEffect as _showPlayerManaDrainEffect,
+} from './systems/PlayerFx.js';
+import {
+  playCreatureDeathEffect as _playCreatureDeathEffect,
+  showCreatureSummonEffect as _showCreatureSummonEffect,
+  showCreatureHealEffect as _showCreatureHealEffect,
+} from './systems/CreatureFx.js';
+import { setupCreatureMovement } from './systems/CreatureMovement.js';
 
 // Expose the bus for debugging / browser console listeners.
 if (typeof window !== 'undefined') window.tdEvents = bus;
@@ -300,22 +322,6 @@ let itemsShopCatalog = [];
 let creatureAbilitiesById = new Map();
 let creatureDamageModifiersById = new Map();
 
-// Spell ID → { itemId, title, count } for arrow/bolt conjure spells.
-// Used internally by loadEngineData to pre-fetch ammo items missing from
-// the shop catalog (value_buy=0).
-const CONJURE_AMMO_MAP = new Map([
-  [68921, { itemId: 68886, title: 'Simple Arrow',  count: 30 }],
-  [1805,  { itemId: 1657,  title: 'Arrow',         count: 10 }],
-  [1905,  { itemId: 2009,  title: 'Poison Arrow',  count: 7 }],
-  [1912,  { itemId: 1673,  title: 'Bolt',          count: 5 }],
-  [1940,  { itemId: 2015,  title: 'Burst Arrow',   count: 8 }],
-  [1964,  { itemId: 2726,  title: 'Power Bolt',    count: 10 }],
-  [16502, { itemId: 16501, title: 'Sniper Arrow',  count: 5 }],
-  [16503, { itemId: 16498, title: 'Piercing Bolt', count: 5 }],
-  [80912, { itemId: 80872, title: 'Diamond Arrow', count: 100 }],
-  [80914, { itemId: 80873, title: 'Spectral Bolt', count: 100 }],
-]);
-const _conjureAmmoCache = new Map();
 // Light source state, image resolution, and atmosphere bridge live in
 // systems/lighting/LightItems.js. The scene wires the atmosphere callback
 // via attachAtmosphereLightSink() once floorAtmosphere is ready.
@@ -2028,47 +2034,17 @@ function startGame(configPlayer) {
           }
           return true;
         };
-        const findRangedTargetInDirection = (dx, dy, rangeTiles) => {
-          const maxRange = Math.max(1, Math.floor(Number(rangeTiles) || 1));
-          for (let step = 1; step <= maxRange; step += 1) {
-            const tx = playerState.gridX + dx * step;
-            const ty = playerState.gridY + dy * step;
-            if (!isWalkableTile(tx, ty)) break;
-            if (isWallTile(tx, ty)) break;
-            const c = enemyCreatureAt(tx, ty);
-            if (c) return c;
-          }
-          return null;
-        };
-        const hasRangedLineOfSight = (fromX, fromY, toX, toY) => {
-          const dx = toX - fromX;
-          const dy = toY - fromY;
-          const steps = Math.max(Math.abs(dx), Math.abs(dy));
-          if (steps <= 1) return true;
-          for (let i = 1; i < steps; i += 1) {
-            const t = i / steps;
-            const sx = Math.round(fromX + dx * t);
-            const sy = Math.round(fromY + dy * t);
-            if (sx === toX && sy === toY) break;
-            if (isWallTile(sx, sy)) return false;
-          }
-          return true;
-        };
-        const findNearestRangedTarget = (rangeTiles) => {
-          const maxRange = Math.max(1, Math.floor(Number(rangeTiles) || 1));
-          const candidates = aliveCreatures()
-            .filter((c) => {
-              const dist = Math.max(Math.abs(c.gx - playerState.gridX), Math.abs(c.gy - playerState.gridY));
-              if (dist <= 0 || dist > maxRange) return false;
-              return hasRangedLineOfSight(playerState.gridX, playerState.gridY, c.gx, c.gy);
-            })
-            .sort((a, b) => {
-              const da = Math.max(Math.abs(a.gx - playerState.gridX), Math.abs(a.gy - playerState.gridY));
-              const db = Math.max(Math.abs(b.gx - playerState.gridX), Math.abs(b.gy - playerState.gridY));
-              return da - db;
-            });
-          return candidates[0] || null;
-        };
+        const {
+          findRangedTargetInDirection,
+          hasRangedLineOfSight,
+          findNearestRangedTarget,
+        } = setupTargeting({
+          playerState,
+          isWalkableTile,
+          isWallTile,
+          enemyCreatureAt,
+          aliveCreatures,
+        });
         // Thin wrappers injecting playerState progression into SpellStats.
         const inferHealingAmount = (spell) => _inferHealingAmount(spell, playerState.level, playerState.magicLevel);
         const inferAttackDamage = (spell) => _inferAttackDamage(spell, playerState.level, playerState.magicLevel);
@@ -2076,74 +2052,8 @@ function startGame(configPlayer) {
           spell, playerState.classKey, playerState.level, playerState.magicLevel,
           currentPlayerDamage, getWeaponSkillLevelByType, opts,
         );
-        const conjureArrowPayloadFromSpell = (spell) => {
-          const id = Number(spell && spell.article_id);
-          const mapping = CONJURE_AMMO_MAP.get(id);
-          if (mapping) return { itemId: mapping.itemId, count: mapping.count };
-          // Fallback: parse effect text
-          const effectRaw = String((spell && spell.raw && spell.raw.effect) || '').trim();
-          if (!effectRaw) return null;
-          const m = effectRaw.match(/(?:creates?|create)\s+(\d+)\s+(.+?)\.?\s*$/i);
-          if (!m) return null;
-          const count = Math.max(1, Number(m[1] || 1));
-          const name = String(m[2] || '').trim();
-          if (!/arrow|bolt/i.test(name)) return null;
-          return { count, title: name.replace(/\barrows\b/ig, 'Arrow').replace(/\bbolts\b/ig, 'Bolt').replace(/\s+/g, ' ').trim() };
-        };
-        const resolveConjuredArrowItem = (payload) => {
-          if (payload.itemId) {
-            const byId = (itemsShopCatalog || []).find(it => Number(it.id) === payload.itemId);
-            if (byId) return byId;
-            if (_conjureAmmoCache.has(payload.itemId)) return _conjureAmmoCache.get(payload.itemId);
-          }
-          const wanted = String(payload.title || '').trim().toLowerCase();
-          if (!wanted) return null;
-          const ammoItems = (itemsShopCatalog || []).filter(it =>
-            it && String(it.item_type || '').toLowerCase() === 'ammunition'
-          );
-          const exact = ammoItems.find(it => String(it.title || '').trim().toLowerCase() === wanted);
-          if (exact) return exact;
-          const singular = wanted.replace(/\barrows\b/g, 'arrow').replace(/\bbolts\b/g, 'bolt').trim();
-          return ammoItems.find(it => String(it.title || '').trim().toLowerCase() === singular) || null;
-        };
-        const placeConjuredArrow = (ammoItem, amount) => {
-          if (!ammoItem) return null;
-          const qty = Math.max(1, Number(amount || 1));
-          const equippedAmmo = getEquippedAmmo();
-          const sameAmmoEquipped = Boolean(
-            equippedAmmo
-            && Number(equippedAmmo.id) === Number(ammoItem.id)
-          );
-          if (sameAmmoEquipped) {
-            if (typeof inventorySetEquippedSlotVisual !== 'function') return null;
-            const nextAmmo = {
-              ...equippedAmmo,
-              count: Math.max(1, Number(equippedAmmo.count || 1)) + qty,
-            };
-            return inventorySetEquippedSlotVisual('ammunition', nextAmmo, `${ammoItem.title} +${qty} (ammo slot).`)
-              ? 'ammo'
-              : null;
-          }
-
-          // Keep current ammo equipped if it is a different type:
-          // conjured arrows should go to loot (stacking there if possible).
-          if (equippedAmmo) {
-            const inv = window.debugInventory;
-            const storedInBag = inv && typeof inv.addLoot === 'function'
-              ? inv.addLoot({ ...ammoItem, isStackable: true, count: qty })
-              : false;
-            return storedInBag ? 'bag' : null;
-          }
-
-          // Ammo slot empty: equip conjured ammo directly.
-          if (typeof inventorySetEquippedSlotVisual !== 'function') return null;
-          const equipped = inventorySetEquippedSlotVisual(
-            'ammunition',
-            { ...ammoItem, isStackable: true, count: qty },
-            `Conjured ${qty} ${ammoItem.title}${qty > 1 ? 's' : ''} to ammo slot.`
-          );
-          return equipped ? 'ammo' : null;
-        };
+        const resolveConjuredArrowItem = (payload) => _resolveConjuredArrowItem(payload, itemsShopCatalog);
+        const placeConjuredArrow = (ammoItem, amount) => _placeConjuredArrow(ammoItem, amount, { inventorySetEquippedSlotVisual });
         // Thin wrappers: scene + tileSize + centerX/Y live in engine.
         const _spellTileCtx = () => ({
           tileSize, centerX, centerY,
@@ -2769,233 +2679,6 @@ function startGame(configPlayer) {
           updateHud();
           return true;
         };
-        const performPlayerAttack = (targetCreature, handWeapon, usedRangedShot, now) => {
-          if (!targetCreature) return false;
-          let activeWeapon = handWeapon;
-          if (activeWeapon && requiresAmmoForWeapon(activeWeapon) && !hasAmmoForWeapon(activeWeapon)) {
-            const equippedAmmo = getEquippedAmmo();
-            if (equippedAmmo && !isAmmoCompatibleWithWeapon(activeWeapon, equippedAmmo)) {
-              addCombatLog(`Wrong ammo for ${activeWeapon.title}. Attacking with base melee.`);
-            } else {
-              addCombatLog(`Out of ammo for ${activeWeapon.title}. Attacking with base melee.`);
-            }
-            activeWeapon = null;
-          }
-          if (activeWeapon && requiresAmmoForWeapon(activeWeapon)) {
-            const consumed = spendOneAmmo(activeWeapon);
-            if (!consumed) {
-              const equippedAmmo = getEquippedAmmo();
-              if (equippedAmmo && !isAmmoCompatibleWithWeapon(activeWeapon, equippedAmmo)) {
-                addCombatLog(`Wrong ammo for ${activeWeapon.title}. Attacking with base melee.`);
-              } else {
-                addCombatLog(`Out of ammo for ${activeWeapon.title}. Attacking with base melee.`);
-              }
-              activeWeapon = null;
-            }
-          }
-          if (activeWeapon && isMagicRangedWeapon(activeWeapon)) {
-            const manaCost = magicWeaponManaCost(activeWeapon);
-            if (manaCost > 0) {
-              if (playerState.mana < manaCost) {
-                addCombatLog(`Not enough mana for ${activeWeapon.title}. Attacking with base melee.`);
-                activeWeapon = null;
-              } else {
-                playerState.mana = Math.max(0, playerState.mana - manaCost);
-                updatePlayerBar();
-              }
-            }
-          }
-          if (activeWeapon && isDistanceWeapon(activeWeapon)) {
-            showRangedProjectileEffect(activeWeapon, targetCreature);
-            gainWeaponSkillUse(activeWeapon, 1);
-          } else if (activeWeapon && String(activeWeapon.item_class || '').toLowerCase() === 'weapons') {
-            gainWeaponSkillUse(activeWeapon, 1);
-          } else if (!activeWeapon) {
-            gainFistSkillUse(1);
-          }
-          if (didAttackMiss(activeWeapon)) {
-            showMissSmoke(targetCreature.sprite.x, targetCreature.sprite.y);
-            addCombatLog(`You miss your hit against ${targetCreature.title}.`);
-          } else {
-            const isCrit = didAttackCrit();
-            const baseDamage = currentPlayerDamage(activeWeapon);
-            const damage = isCrit ? applyCriticalDamage(baseDamage) : baseDamage;
-            let elemKey = 'physical';
-            if (activeWeapon && isMagicRangedWeapon(activeWeapon)) {
-              elemKey = normalizeDamageTypeToModifierKey(magicWeaponDamageTypeRaw(activeWeapon)) || 'energy';
-            }
-            const dealtBase = applyIncomingElementalDamage(damage, targetCreature, elemKey);
-            const dealt = playerState.godMode ? Math.max(1, Number(targetCreature.hp || 1)) : dealtBase;
-            targetCreature.hp = Math.max(0, targetCreature.hp - dealt);
-            showCreatureHitEffect(targetCreature, dealt);
-            if (isCrit) {
-              showCritText(targetCreature.sprite.x, targetCreature.sprite.y);
-            }
-            // Burst Arrow: AoE fire splash + temporary light
-            const _firedAmmo = getEquippedAmmo();
-            const _firedAmmoTitle = String((_firedAmmo && _firedAmmo.title) || '').toLowerCase();
-            if (_firedAmmoTitle === 'burst arrow' && targetCreature.sprite) {
-              const tx = centerX(targetCreature.gx);
-              const ty = centerY(targetCreature.gy);
-              const splashDmg = Math.max(1, Math.floor(dealt * 0.4));
-              // Damage adjacent enemies
-              const splashTargets = aliveCreatures().filter(c =>
-                c !== targetCreature
-                && Math.abs(c.gx - targetCreature.gx) <= 1
-                && Math.abs(c.gy - targetCreature.gy) <= 1
-              );
-              for (const st of splashTargets) {
-                const fireDmg = applyIncomingElementalDamage(splashDmg, st, 'fire');
-                st.hp = Math.max(0, st.hp - fireDmg);
-                showCreatureHitEffect(st, fireDmg);
-                addCombatLog(`Burst Arrow explosion hits ${st.title} for ${fireDmg} (fire).`, LOG_COLORS.HIT);
-                if (st.hp <= 0) {
-                  st.alive = false;
-                  playCreatureDeathEffect(st);
-                  updateCreatureBar(st);
-                  grantPlayerXp(effectiveXpFromCreature(st));
-                  playerState.runKills += 1;
-                  addCombatLog(`${st.title} dies from the explosion.`);
-                  killSummonsOf(st);
-                }
-              }
-              // Fire explosion VFX: large ring + sparks + ground glow
-              showAmmoImpactEffect(tx, ty, 'explosion');
-              const fireGlow = this.add.circle(tx, ty, tileSize * 0.8, 0xf97316, 0.35);
-              fireGlow.setDepth(4);
-              this.tweens.add({
-                targets: fireGlow,
-                scaleX: 2.2, scaleY: 2.2, alpha: 0,
-                duration: 600, ease: 'Quad.easeOut',
-                onComplete: () => fireGlow.destroy(),
-              });
-              // Temporary light at impact point (3 seconds)
-              const lightId = `burst_${Date.now()}_${Math.random()}`;
-              floorAtmosphere.addAreaLight(lightId, tx, ty, 2.5, 3000);
-            }
-            const dtHit = magicWeaponDamageTypeSuffix(activeWeapon);
-            addCombatLog(
-              isCrit
-                ? `CRITICAL hit on ${targetCreature.title} for ${dealt}${dtHit}.`
-                : `You hit ${targetCreature.title} for ${dealt}${dtHit}.`,
-              isCrit ? LOG_COLORS.CRIT : LOG_COLORS.HIT
-            );
-            if (targetCreature.hp <= 0) {
-              targetCreature.alive = false;
-              playCreatureDeathEffect(targetCreature);
-              updateCreatureBar(targetCreature);
-              grantPlayerXp(effectiveXpFromCreature(targetCreature));
-              playerState.runKills += 1;
-              addCombatLog(
-                isCrit
-                  ? `CRITICAL hit on ${targetCreature.title} for ${dealt}${dtHit}, and it dies.`
-                  : `You hit ${targetCreature.title} for ${dealt}${dtHit} and it dies.`,
-                isCrit ? LOG_COLORS.CRIT : LOG_COLORS.HIT
-              );
-              const rolledDrops = rollCreatureDrops(targetCreature.id);
-              if (rolledDrops.length > 0) {
-                addCombatLog(`${targetCreature.title} dropped: ${rolledDrops.map((d) => d.itemTitle).join(', ')}.`);
-                bus.emit(EVENTS.LOOT_DROPPED, {
-                  sourceId: targetCreature.id,
-                  sourceTitle: targetCreature.title,
-                  drops: rolledDrops.map((d) => ({ itemId: d.itemId, itemTitle: d.itemTitle })),
-                });
-              } else {
-                const fallbackGold = fallbackGoldFromLevel();
-                if (window.debugInventory && typeof window.debugInventory.addGold === 'function') {
-                  window.debugInventory.addGold(fallbackGold);
-                }
-                addCombatLog(`${targetCreature.title} dropped no items. You receive ${fallbackGold} gold.`);
-              }
-              if (rolledDrops.length > 0 && window.debugInventory && typeof window.debugInventory.addLoot === 'function') {
-                for (const d of rolledDrops) {
-                  const lootCount = Math.max(1, Math.floor(Number(d.lootCount) || 1));
-                  const stored = window.debugInventory.addLoot({
-                    id: d.itemId,
-                    title: d.itemTitle,
-                    image: d.itemImage || null,
-                    item_type: d.itemType || null,
-                    item_class: d.itemClass || null,
-                    type_secondary: d.itemSecondary || null,
-                    armor_value: Number(d.armorValue || 0),
-                    shielding_value: Number(d.shieldingValue || 0),
-                    attack_value: Number(d.attackValue || 0),
-                    range_value: Number(d.rangeValue || 1),
-                    throwable: Boolean(d.throwable),
-                    attributes: Array.isArray(d.attributes) ? d.attributes : [],
-                    raw: (d.raw && typeof d.raw === 'object') ? d.raw : {},
-                    isStackable: Boolean(d.isStackable),
-                    count: lootCount,
-                  });
-                  if (stored) {
-                    addCombatLog(`Stored in bag: ${d.itemTitle}.`);
-                  } else {
-                      const droppedItem = {
-                        id: d.itemId,
-                        title: d.itemTitle,
-                        image: d.itemImage || null,
-                        item_type: d.itemType || null,
-                        item_class: d.itemClass || null,
-                        type_secondary: d.itemSecondary || null,
-                        armor_value: Number(d.armorValue || 0),
-                        shielding_value: Number(d.shieldingValue || 0),
-                        attack_value: Number(d.attackValue || 0),
-                        range_value: Number(d.rangeValue || 1),
-                        throwable: Boolean(d.throwable),
-                        attributes: Array.isArray(d.attributes) ? d.attributes : [],
-                        raw: (d.raw && typeof d.raw === 'object') ? d.raw : {},
-                        isStackable: Boolean(d.isStackable),
-                        count: lootCount,
-                      };
-                      dropItemOnGround(targetCreature.gx, targetCreature.gy, droppedItem);
-                      if (lastLootRejectReason === 'capacity') {
-                        addCombatLog(`Not enough capacity, dropped on ground: ${d.itemTitle}.`);
-                      } else {
-                        addCombatLog(`Bag slots full, dropped on ground: ${d.itemTitle}.`);
-                      }
-                  }
-                }
-              }
-              killSummonsOf(targetCreature);
-            } else {
-              addCombatLog(
-                isCrit
-                  ? `CRITICAL hit on ${targetCreature.title} for ${dealt}${dtHit} (${targetCreature.hp} HP).`
-                  : `You hit ${targetCreature.title} for ${dealt}${dtHit} (${targetCreature.hp} HP).`,
-                isCrit ? LOG_COLORS.CRIT : LOG_COLORS.HIT
-              );
-            }
-          }
-          if (activeWeapon && isDistanceWeapon(activeWeapon) && isThrowableWeapon(activeWeapon) && Math.random() < 0.1) {
-            const currentCount = Math.max(1, Number(activeWeapon.count || 1));
-            if (currentCount > 1) {
-              if (typeof inventorySetEquippedSlotVisual === 'function') {
-                inventorySetEquippedSlotVisual('hand', { ...activeWeapon, count: currentCount - 1 }, `${activeWeapon.title} consumed on throw (${currentCount - 1} left).`);
-              }
-            } else if (window.debugInventory && typeof window.debugInventory.unequipHand === 'function') {
-              window.debugInventory.unequipHand();
-            }
-            addCombatLog(`${activeWeapon.title} was consumed after the throw.`);
-          }
-          updateCreatureBar(targetCreature);
-          updateHud();
-          if (aliveCreatures().length === 0) {
-            floorAtmosphere.showPit(true);
-            addCombatLog(`You defeated all creatures on floor ${currentLevel}. Drop into the pit.`);
-            if (canStrafeCastMagicWeapon(activeWeapon)) {
-              playerState.nextMagicWeaponShotAt = now + playerState.actionDelayMs;
-            } else {
-              playerState.nextActionAt = now + playerState.actionDelayMs;
-            }
-            return true;
-          }
-          if (canStrafeCastMagicWeapon(activeWeapon)) {
-            playerState.nextMagicWeaponShotAt = now + playerState.actionDelayMs;
-          } else {
-            playerState.nextActionAt = now + playerState.actionDelayMs;
-          }
-          return true;
-        };
         // Ammo-aware projectile visuals
         // Thin wrapper so call sites don't have to pass ammo every time.
         const projectileVisualForWeapon = (weapon) => _projectileVisualForWeapon(weapon, getEquippedAmmo());
@@ -3028,71 +2711,38 @@ function startGame(configPlayer) {
             addCombatLog(`${c.title} (summoned by ${parent.title}) vanishes.`);
           }
         };
-        const playCreatureDeathEffect = (creature) => {
-          if (creature) {
-            bus.emit(EVENTS.ENTITY_DIED, {
-              id: creature.id,
-              title: creature.title,
-              gx: creature.gx,
-              gy: creature.gy,
-              sprite: creature.sprite || null,
-            });
-          }
-          if (!creature || !creature.sprite || !creature.sprite.scene) {
-            if (creature && creature.sprite) creature.sprite.setVisible(false);
-            return;
-          }
-          const sprite = creature.sprite;
-          const cx = sprite.x;
-          const cy = sprite.y;
-          // Dark ground ring — reads as "something hit the floor".
-          const ring = this.add.graphics();
-          ring.setDepth(5);
-          ring.lineStyle(2, 0x0f172a, 0.75);
-          ring.strokeEllipse(cx, cy + tileSize * 0.22, tileSize * 0.55, tileSize * 0.22);
-          this.tweens.add({
-            targets: ring,
-            scaleX: 1.7, scaleY: 0.9,
-            alpha: 0,
-            duration: 440, ease: 'Quad.easeOut',
-            onComplete: () => ring.destroy(),
-          });
-          // Rising dark smoke puffs so the disappearance has weight.
-          for (let i = 0; i < 5; i += 1) {
-            const ox = (Math.random() - 0.5) * tileSize * 0.5;
-            const oy = (Math.random() - 0.5) * 4;
-            const smoke = this.add.circle(cx + ox, cy + oy, 2 + Math.random() * 2, 0x475569, 0.75);
-            smoke.setDepth(16);
-            this.tweens.add({
-              targets: smoke,
-              y: smoke.y - 14 - Math.random() * 10,
-              alpha: 0,
-              scaleX: 1.8, scaleY: 1.8,
-              duration: 520 + Math.random() * 160, ease: 'Sine.easeOut',
-              onComplete: () => smoke.destroy(),
-            });
-          }
-          // The sprite collapses: red tint + tilt + shrink + fade.
-          sprite.setTint(0x991b1b);
-          const tiltDir = Math.random() < 0.5 ? -1 : 1;
-          this.tweens.killTweensOf(sprite);
-          this.tweens.add({
-            targets: sprite,
-            angle: tiltDir * 22,
-            scaleX: sprite.scaleX * 0.6,
-            scaleY: sprite.scaleY * 0.6,
-            alpha: 0,
-            duration: 420, ease: 'Cubic.easeIn',
-            onComplete: () => {
-              if (!sprite || !sprite.scene) return;
-              sprite.setVisible(false);
-              sprite.clearTint();
-              sprite.setAngle(0);
-              sprite.setAlpha(1);
-            },
-          });
-        };
+        const playCreatureDeathEffect = (creature) => _playCreatureDeathEffect({ scene: this, tileSize }, creature);
         const showCreatureHitEffect = (creature, dmg) => _showCreatureHitEffect(this, hitFxCreatureCtx, creature, dmg);
+        const performPlayerAttack = setupPlayerAttack({
+          scene: this,
+          playerState,
+          tileSize,
+          centerX,
+          centerY,
+          floorAtmosphere,
+          getCurrentLevel: () => currentLevel,
+          aliveCreatures,
+          inventorySetEquippedSlotVisual,
+          updatePlayerBar,
+          updateCreatureBar,
+          updateHud,
+          currentPlayerDamage,
+          spendOneAmmo,
+          gainWeaponSkillUse,
+          gainFistSkillUse,
+          grantPlayerXp,
+          effectiveXpFromCreature,
+          playCreatureDeathEffect,
+          killSummonsOf,
+          rollCreatureDrops,
+          fallbackGoldFromLevel,
+          canStrafeCastMagicWeapon,
+          showCreatureHitEffect,
+          showCritText,
+          showAmmoImpactEffect,
+          showMissSmoke,
+          showRangedProjectileEffect,
+        });
         const spawnSummonFromTemplate = (template, gx, gy, parent) => {
           const textureKey = creatureKey(template);
           if (!this.textures.exists(textureKey)) return null;
@@ -3136,24 +2786,7 @@ function startGame(configPlayer) {
           updateCreatureBar(fresh);
           return fresh;
         };
-        // ── Fire fields + burn effect ──────────────────────────────────
-        // Tile-based hazard placed by creature "fire field" abilities. Each
-        // tile is stored in fireFields by "gx,gy" key. Stepping onto one
-        // inflicts a one-off hit and (re)starts a burn DoT with diminishing
-        // ticks over one minute.
-        const FIRE_FIELD_DURATION_MS = 5 * 60 * 1000;
-        const FIRE_FIELD_STEP_DAMAGE = 10;
-        const BURN_TICK_INTERVAL_MS = 10 * 1000;
-        const BURN_TICK_DAMAGES = [10, 8, 6, 4, 2, 1];
-        const POISON_FIELD_DURATION_MS = 5 * 60 * 1000;
-        const POISON_FIELD_STEP_DAMAGE = 5;
-        const fireFields = new Map();
-        const poisonFields = new Map();
-        // burnState / poisonState / electrifiedState initialized null by createPlayer()
-        const POISON_TICK_INTERVAL_MS = 10 * 1000;
-        const POISON_TICK_DAMAGES = [6, 5, 4, 3, 2, 1];
-        const ELECTRIFIED_TICK_INTERVAL_MS = 10 * 1000;
-        const ELECTRIFIED_TICK_DAMAGES = [8, 6, 5, 4, 3, 2];
+        // ── Status chips (HUD indicator pills) ────────────────────────
         const combatChipEl = document.getElementById('statusCombat');
         const burnChipEl = document.getElementById('statusBurn');
         const poisonChipEl = document.getElementById('statusPoison');
@@ -3177,528 +2810,55 @@ function startGame(configPlayer) {
           if (!electrifiedChipEl) return;
           electrifiedChipEl.hidden = !active;
         };
-        const fireFieldKey = (gx, gy) => `${gx},${gy}`;
-        const destroyFireFieldVisual = (ff) => {
-          if (!ff) return;
-          if (ff.sprite) ff.sprite.destroy();
-          if (ff.spriteTween && ff.spriteTween.remove) ff.spriteTween.remove();
-          if (floorAtmosphere && typeof floorAtmosphere.removeAreaLight === 'function') {
-            floorAtmosphere.removeAreaLight(ff.lightId);
-          }
-        };
-        const addFireFieldTile = (gx, gy) => {
-          if (!isWalkableTile(gx, gy)) return;
-          const key = fireFieldKey(gx, gy);
-          const existing = fireFields.get(key);
-          if (existing) {
-            existing.expiresAt = this.time.now + FIRE_FIELD_DURATION_MS;
-            return;
-          }
-          const cx = centerX(gx);
-          const cy = centerY(gy);
-          const sprite = createFireFieldSprite(this, gx, gy);
-          // Subtle life-sign pulse so the tile doesn't look static.
-          const spriteTween = this.tweens.add({
-            targets: sprite,
-            scaleX: { from: sprite.scaleX * 0.95, to: sprite.scaleX * 1.08 },
-            scaleY: { from: sprite.scaleY * 1.05, to: sprite.scaleY * 0.94 },
-            alpha:  { from: 0.95, to: 0.8 },
-            yoyo: true, repeat: -1,
-            duration: 320 + Math.random() * 220,
-            ease: 'Sine.inOut',
-          });
-          const lightId = `firefield-${key}-${this.time.now}`;
-          floorAtmosphere.addAreaLight(lightId, cx, cy, 1.8, FIRE_FIELD_DURATION_MS);
-          fireFields.set(key, {
-            gx, gy,
-            expiresAt: this.time.now + FIRE_FIELD_DURATION_MS,
-            sprite, spriteTween, lightId,
-          });
-        };
-        const cleanupExpiredFireFields = (nowMs) => {
-          if (fireFields.size === 0) return;
-          for (const [key, ff] of fireFields) {
-            if (nowMs >= ff.expiresAt) {
-              destroyFireFieldVisual(ff);
-              fireFields.delete(key);
-            }
-          }
-        };
-        // Called on every floor transition: the tile-bound hazards (fire /
-        // poison fields) belong to the old map and have to be removed, but
-        // the per-player DoT status (burn, poison, shock) is a debuff on
-        // the character and carries over — including its ongoing tick
-        // schedule and visible status chip.
-        const clearAllFireFields = () => {
-          for (const ff of fireFields.values()) destroyFireFieldVisual(ff);
-          fireFields.clear();
-          for (const pf of poisonFields.values()) destroyPoisonFieldVisual(pf);
-          poisonFields.clear();
-          if (floorAtmosphere && typeof floorAtmosphere.clearAreaLights === 'function') {
-            floorAtmosphere.clearAreaLights();
-          }
-        };
-        const placeFireFieldAroundPlayer = () => {
-          for (let dy = -1; dy <= 1; dy += 1) {
-            for (let dx = -1; dx <= 1; dx += 1) {
-              addFireFieldTile(playerState.gridX + dx, playerState.gridY + dy);
-            }
-          }
-          // The player is standing on the newly-placed centre tile, so apply
-          // the step hit + (re)start the burn right away.
-          triggerFireStep();
-        };
-        const destroyPoisonFieldVisual = (pf) => {
-          if (!pf) return;
-          if (pf.sprite) pf.sprite.destroy();
-          if (pf.spriteTween && pf.spriteTween.remove) pf.spriteTween.remove();
-          if (floorAtmosphere && typeof floorAtmosphere.removeAreaLight === 'function') {
-            floorAtmosphere.removeAreaLight(pf.lightId);
-          }
-        };
-        const addPoisonFieldTile = (gx, gy) => {
-          if (!isWalkableTile(gx, gy)) return;
-          const key = fireFieldKey(gx, gy);
-          const existing = poisonFields.get(key);
-          if (existing) {
-            existing.expiresAt = this.time.now + POISON_FIELD_DURATION_MS;
-            return;
-          }
-          const cx = centerX(gx);
-          const cy = centerY(gy);
-          const sprite = createPoisonFieldSprite(this, gx, gy);
-          const spriteTween = this.tweens.add({
-            targets: sprite,
-            scaleX: { from: sprite.scaleX * 0.96, to: sprite.scaleX * 1.06 },
-            scaleY: { from: sprite.scaleY * 1.04, to: sprite.scaleY * 0.96 },
-            alpha:  { from: 0.9, to: 0.7 },
-            yoyo: true, repeat: -1,
-            duration: 520 + Math.random() * 260,
-            ease: 'Sine.inOut',
-          });
-          // Subtle greenish glow so the cloud is visible in darkness.
-          const lightId = `poisonfield-${key}-${this.time.now}`;
-          floorAtmosphere.addAreaLight(lightId, cx, cy, 1.1, POISON_FIELD_DURATION_MS);
-          poisonFields.set(key, {
-            gx, gy,
-            expiresAt: this.time.now + POISON_FIELD_DURATION_MS,
-            sprite, spriteTween, lightId,
-          });
-        };
-        const cleanupExpiredPoisonFields = (nowMs) => {
-          if (poisonFields.size === 0) return;
-          for (const [key, pf] of poisonFields) {
-            if (nowMs >= pf.expiresAt) {
-              destroyPoisonFieldVisual(pf);
-              poisonFields.delete(key);
-            }
-          }
-        };
-        const playerOnPoisonField = () => poisonFields.has(fireFieldKey(playerState.gridX, playerState.gridY));
-        const triggerPoisonStep = (casterTitle = 'Poison Field') => {
-          if (playerState.dead) return;
-          const dmg = playerState.godMode ? 0 : POISON_FIELD_STEP_DAMAGE;
-          applyFireDamage(dmg, casterTitle);
-          floatingCombatText(this, player.x, player.y - tileSize * 0.5, `-${dmg} ☠`, {
-            color: '#4ade80', fontSize: '16px',
-          });
-          if (!playerState.godMode) triggerPoisonApply(casterTitle);
-          updatePlayerBar();
-          updateHud();
-        };
-        const placePoisonFieldAroundPlayer = () => {
-          for (let dy = -1; dy <= 1; dy += 1) {
-            for (let dx = -1; dx <= 1; dx += 1) {
-              addPoisonFieldTile(playerState.gridX + dx, playerState.gridY + dy);
-            }
-          }
-          triggerPoisonStep();
-        };
-        const applyFireDamage = (dmg, killedByTitle) => {
-          if (playerState.godMode || playerState.dead) return;
-          playerState.hp = Math.max(0, playerState.hp - dmg);
-          if (playerState.hp <= 0 && !playerState.dead) {
-            gameOver = true;
-            playerState.dead = true;
-            if (window.tdGame && typeof window.tdGame.deleteCurrentSave === 'function') {
-              window.tdGame.deleteCurrentSave();
-            }
-            this.tweens.killTweensOf(player);
-            const deathKey = deathTextureName(configPlayer.sex === 'female' ? 'female' : 'male');
-            player.setTexture(deathKey);
-            player.setAngle(0);
-            player.setFlipX(false); player.setFlipY(false);
-            player.setScale(1, 1);
-            player.setDisplaySize(tileSize, tileSize);
-            deathCaption.setPosition(player.x, player.y + tileSize * 0.72);
-            deathCaption.setVisible(true);
-            addCombatLog('You are dead.');
-            this.time.delayedCall(3000, () => {
-              showDeathSummary({
-                name: configPlayer.name,
-                classKey: configPlayer.classKey,
-                sex: configPlayer.sex || 'male',
-                floor: currentLevel,
-                kills: playerState.runKills,
-                level: playerState.level,
-                gold: window.debugInventory ? window.debugInventory.getGold() : 0,
-                killedBy: killedByTitle || 'Fire',
-              });
-            });
-          }
-        };
-        const triggerFireStep = () => {
-          if (playerState.dead) return;
-          const dmg = playerState.godMode ? 0 : FIRE_FIELD_STEP_DAMAGE;
-          applyFireDamage(dmg, 'Fire Field');
-          playerState.burnState = {
-            startedAt: this.time.now,
-            nextTickAt: this.time.now + BURN_TICK_INTERVAL_MS,
-            tickIndex: 0,
-          };
-          setBurnIndicator(true);
-          floatingCombatText(this, player.x, player.y - tileSize * 0.5, `-${dmg} 🔥`, {
-            color: '#ef4444', fontSize: '16px',
-          });
-          addCombatLog(`You step on fire! -${dmg} HP and burning.`, LOG_COLORS.SPELL);
-          updatePlayerBar();
-          updateHud();
-        };
-        const tickBurn = (nowMs) => {
-          if (!playerState.burnState || playerState.dead) return;
-          if (nowMs < playerState.burnState.nextTickAt) return;
-          if (playerState.burnState.tickIndex >= BURN_TICK_DAMAGES.length) {
-            playerState.burnState = null;
-            setBurnIndicator(false);
-            return;
-          }
-          const dmg = BURN_TICK_DAMAGES[playerState.burnState.tickIndex];
-          applyFireDamage(dmg, 'Burn');
-          floatingCombatText(this, player.x, player.y - tileSize * 0.5, `-${dmg} 🔥`, {
-            color: '#ef4444', fontSize: '14px',
-          });
-          playerState.burnState.tickIndex += 1;
-          playerState.burnState.nextTickAt = nowMs + BURN_TICK_INTERVAL_MS;
-          updatePlayerBar();
-          updateHud();
-        };
-        const playerOnFireField = () => fireFields.has(fireFieldKey(playerState.gridX, playerState.gridY));
-        // Poison mirrors burn: periodic ticks with diminishing damage. A new
-        // hit with a poisoned ability restarts the schedule from the top.
-        const triggerPoisonApply = (casterTitle) => {
-          if (playerState.dead) return;
-          const alreadyPoisoned = Boolean(playerState.poisonState);
-          playerState.poisonState = {
-            startedAt: this.time.now,
-            nextTickAt: this.time.now + POISON_TICK_INTERVAL_MS,
-            tickIndex: 0,
-          };
-          setPoisonIndicator(true);
-          showPlayerPoisonedEffect();
-          addCombatLog(
-            alreadyPoisoned
-              ? `${casterTitle || 'Enemy'} refreshes the poison on you.`
-              : `${casterTitle || 'Enemy'} poisons you.`,
-            LOG_COLORS.SPELL,
-          );
-        };
-        const tickPoison = (nowMs) => {
-          if (!playerState.poisonState || playerState.dead) return;
-          if (nowMs < playerState.poisonState.nextTickAt) return;
-          if (playerState.poisonState.tickIndex >= POISON_TICK_DAMAGES.length) {
-            playerState.poisonState = null;
-            setPoisonIndicator(false);
-            return;
-          }
-          const dmg = POISON_TICK_DAMAGES[playerState.poisonState.tickIndex];
-          applyFireDamage(dmg, 'Poison');
-          floatingCombatText(this, player.x, player.y - tileSize * 0.5, `-${dmg} ☠`, {
-            color: '#4ade80', fontSize: '14px',
-          });
-          playerState.poisonState.tickIndex += 1;
-          playerState.poisonState.nextTickAt = nowMs + POISON_TICK_INTERVAL_MS;
-          updatePlayerBar();
-          updateHud();
-        };
-        const showPlayerPoisonedEffect = () => {
-          if (playerState.dead) return;
-          radialSparkBurst(this, player.x, player.y - 4, 0x4ade80, 8);
-          for (let i = 0; i < 6; i += 1) {
-            const ox = (Math.random() - 0.5) * tileSize * 0.6;
-            const oy = (Math.random() - 0.5) * 6;
-            const drop = this.add.circle(player.x + ox, player.y + oy, 2 + Math.random(), 0x16a34a, 0.95);
-            drop.setDepth(28);
-            this.tweens.add({
-              targets: drop,
-              y: drop.y + 8 + Math.random() * 8,
-              alpha: 0, scaleX: 0.3, scaleY: 0.3,
-              duration: 520 + Math.random() * 200, ease: 'Sine.easeOut',
-              onComplete: () => drop.destroy(),
-            });
-          }
-        };
-        const triggerElectrifiedApply = (casterTitle) => {
-          if (playerState.dead) return;
-          const already = Boolean(playerState.electrifiedState);
-          playerState.electrifiedState = {
-            startedAt: this.time.now,
-            nextTickAt: this.time.now + ELECTRIFIED_TICK_INTERVAL_MS,
-            tickIndex: 0,
-          };
-          setElectrifiedIndicator(true);
-          showPlayerElectrifiedEffect();
-          addCombatLog(
-            already
-              ? `${casterTitle || 'Enemy'} refreshes the shock on you.`
-              : `${casterTitle || 'Enemy'} electrifies you.`,
-            LOG_COLORS.SPELL,
-          );
-        };
-        const tickElectrified = (nowMs) => {
-          if (!playerState.electrifiedState || playerState.dead) return;
-          if (nowMs < playerState.electrifiedState.nextTickAt) return;
-          if (playerState.electrifiedState.tickIndex >= ELECTRIFIED_TICK_DAMAGES.length) {
-            playerState.electrifiedState = null;
-            setElectrifiedIndicator(false);
-            return;
-          }
-          const dmg = ELECTRIFIED_TICK_DAMAGES[playerState.electrifiedState.tickIndex];
-          applyFireDamage(dmg, 'Shock');
-          floatingCombatText(this, player.x, player.y - tileSize * 0.5, `-${dmg} ⚡`, {
-            color: '#c084fc', fontSize: '14px',
-          });
-          playerState.electrifiedState.tickIndex += 1;
-          playerState.electrifiedState.nextTickAt = nowMs + ELECTRIFIED_TICK_INTERVAL_MS;
-          updatePlayerBar();
-          updateHud();
-        };
-        const showPlayerElectrifiedEffect = () => {
-          if (playerState.dead) return;
-          radialSparkBurst(this, player.x, player.y - 4, 0x60a5fa, 10);
-          // Jagged arc lines radiating from the player.
-          for (let i = 0; i < 4; i += 1) {
-            const a = (i / 4) * Math.PI * 2 + Math.random() * 0.3;
-            const g = this.add.graphics();
-            g.setDepth(28);
-            g.lineStyle(2.2, 0xbfdbfe, 0.95);
-            g.beginPath();
-            g.moveTo(player.x, player.y);
-            const mx = player.x + Math.cos(a) * 10 + (Math.random() - 0.5) * 6;
-            const my = player.y + Math.sin(a) * 10 + (Math.random() - 0.5) * 6;
-            const tx = player.x + Math.cos(a) * 22;
-            const ty = player.y + Math.sin(a) * 22;
-            g.lineTo(mx, my);
-            g.lineTo(tx, ty);
-            g.strokePath();
-            this.tweens.add({
-              targets: g, alpha: 0, duration: 240, ease: 'Quad.easeIn',
-              onComplete: () => g.destroy(),
-            });
-          }
-          // Quick cyan tint pulse on the player.
-          player.setTint(0x60a5fa);
-          this.tweens.add({
-            targets: player, alpha: 0.8, yoyo: true, duration: 90,
-            onComplete: () => { if (!playerState.dead) { player.clearTint(); player.setAlpha(1); } },
-          });
-        };
-        const showPlayerCureEffect = () => {
-          if (playerState.dead) return;
-          // Soft cyan sparkles rising off the player.
-          for (let i = 0; i < 10; i += 1) {
-            const ox = (Math.random() - 0.5) * tileSize * 0.8;
-            const oy = (Math.random() - 0.5) * 6;
-            const s = this.add.circle(player.x + ox, player.y + oy, 1.8 + Math.random() * 1.4, 0x67e8f9, 0.95);
-            s.setDepth(28);
-            this.tweens.add({
-              targets: s,
-              y: s.y - 22 - Math.random() * 10,
-              alpha: 0, scaleX: 0.3, scaleY: 0.3,
-              duration: 640 + Math.random() * 220, ease: 'Sine.easeOut',
-              onComplete: () => s.destroy(),
-            });
-          }
-        };
-        const showPlayerLifeDrainEffect = (amount, casterSprite) => {
-          if (playerState.dead) return;
-          radialSparkBurst(this, player.x, player.y - 4, 0xb91c1c, 10);
-          const tx = casterSprite ? casterSprite.x : player.x;
-          const ty = casterSprite ? casterSprite.y : player.y - 24;
-          for (let i = 0; i < 8; i += 1) {
-            const a = Math.random() * Math.PI * 2;
-            const ox = Math.cos(a) * 6;
-            const oy = Math.sin(a) * 6;
-            const p = this.add.circle(player.x + ox, player.y + oy, 2.2, 0x7f1d1d, 0.95);
-            p.setDepth(28);
-            this.tweens.add({
-              targets: p, x: tx, y: ty,
-              alpha: 0, scaleX: 0.3, scaleY: 0.3,
-              duration: 460 + Math.random() * 180, delay: i * 28,
-              ease: 'Sine.easeIn',
-              onComplete: () => p.destroy(),
-            });
-          }
-          floatingCombatText(this, player.x, player.y - tileSize * 0.65, `-${amount} HP`, {
-            color: '#ef4444', fontSize: '17px',
-          });
-        };
-        const showPlayerManaDrainEffect = (amount, casterSprite) => {
-          if (playerState.dead) return;
-          radialSparkBurst(this, player.x, player.y - 4, 0x60a5fa, 10);
-          const tx = casterSprite ? casterSprite.x : player.x;
-          const ty = casterSprite ? casterSprite.y : player.y - 24;
-          for (let i = 0; i < 10; i += 1) {
-            const a = Math.random() * Math.PI * 2;
-            const ox = Math.cos(a) * 6;
-            const oy = Math.sin(a) * 6;
-            const p = this.add.circle(player.x + ox, player.y + oy, 2.2, 0x93c5fd, 0.95);
-            p.setDepth(28);
-            this.tweens.add({
-              targets: p, x: tx, y: ty,
-              alpha: 0, scaleX: 0.3, scaleY: 0.3,
-              duration: 520 + Math.random() * 200, delay: i * 26,
-              ease: 'Sine.easeIn',
-              onComplete: () => p.destroy(),
-            });
-          }
-          // Brief cyan pulse on the player sprite.
-          if (!playerState.dead) {
-            player.setTint(0x60a5fa);
-            this.tweens.add({
-              targets: player, alpha: 0.75, yoyo: true, duration: 120,
-              onComplete: () => { if (!playerState.dead) { player.clearTint(); player.setAlpha(1); } },
-            });
-          }
-          floatingCombatText(this, player.x, player.y - tileSize * 0.5, `-${amount} MP`, {
-            color: '#93c5fd', fontSize: '16px',
-          });
-        };
-        const showCreatureSummonEffect = (caster, summoned) => {
-          if (!caster || !summoned) return;
-          const sx = caster.sprite.x;
-          const sy = caster.sprite.y;
-          const tx = summoned.sprite.x;
-          const ty = summoned.sprite.y;
-          // Purple rune circle expanding on the summoner.
-          const rune = this.add.circle(sx, sy, 8, 0x7c3aed, 0);
-          rune.setStrokeStyle(2, 0xa855f7, 0.9);
-          rune.setDepth(27);
-          this.tweens.add({
-            targets: rune, scaleX: 2.8, scaleY: 2.8, alpha: 0,
-            duration: 520, ease: 'Quad.easeOut',
-            onComplete: () => rune.destroy(),
-          });
-          // Dark vortex at the summon target tile.
-          const portal = this.add.circle(tx, ty, 14, 0x3b0764, 0.7);
-          portal.setDepth(14);
-          this.tweens.add({
-            targets: portal, scaleX: 2.2, scaleY: 0.6, alpha: 0,
-            duration: 560, ease: 'Sine.easeOut',
-            onComplete: () => portal.destroy(),
-          });
-          // Arc of purple sparks from caster to target.
-          const arcSteps = 8;
-          for (let i = 0; i < arcSteps; i += 1) {
-            const t = i / arcSteps;
-            const px = sx + (tx - sx) * t + (Math.random() - 0.5) * 6;
-            const py = sy + (ty - sy) * t - Math.sin(t * Math.PI) * 16;
-            this.time.delayedCall(Math.floor(t * 220), () => {
-              const dot = this.add.circle(px, py, 2.4, 0xc084fc, 0.95);
-              dot.setDepth(28);
-              this.tweens.add({
-                targets: dot, alpha: 0, scaleX: 0.3, scaleY: 0.3,
-                duration: 320, ease: 'Sine.easeOut',
-                onComplete: () => dot.destroy(),
-              });
-            });
-          }
-          // Pop-in bounce on the summoned sprite.
-          summoned.sprite.setAlpha(0);
-          summoned.sprite.setScale((summoned.sprite.scaleX || 1) * 0.4, (summoned.sprite.scaleY || 1) * 0.4);
-          this.tweens.add({
-            targets: summoned.sprite,
-            alpha: 1,
-            scaleX: summoned.sprite.scaleX * (1 / 0.4),
-            scaleY: summoned.sprite.scaleY * (1 / 0.4),
-            duration: 260, ease: 'Back.easeOut',
-            onComplete: () => applyCreatureSize(summoned.sprite),
-          });
-        };
-        // Healing abilities use the ability.effect range for the shape of the
-        // roll but clamp the result to 10–40 % of the creature's own maxHp so
-        // Tibia-scale numbers (0–200 000) don't trivialise or waste the cast.
-        const showCreatureHealEffect = (creature, healAmount) => {
-          if (!creature || !creature.sprite || !creature.sprite.scene) return;
-          const x = creature.sprite.x;
-          const y = creature.sprite.y;
-          // Expanding green ring.
-          const ring = this.add.circle(x, y, 6, 0x22c55e, 0);
-          ring.setStrokeStyle(2, 0x4ade80, 0.9);
-          ring.setDepth(27);
-          this.tweens.add({
-            targets: ring,
-            scaleX: 3.5, scaleY: 3.5, alpha: 0,
-            duration: 560, ease: 'Quad.easeOut',
-            onComplete: () => ring.destroy(),
-          });
-          // Soft green glow under the creature.
-          const glow = this.add.circle(x, y, 14, 0x34d399, 0.45);
-          glow.setDepth(26);
-          this.tweens.add({
-            targets: glow,
-            scaleX: 1.8, scaleY: 1.8, alpha: 0,
-            duration: 520, ease: 'Sine.easeOut',
-            onComplete: () => glow.destroy(),
-          });
-          // Rising sparkles.
-          for (let i = 0; i < 8; i += 1) {
-            const ox = (Math.random() - 0.5) * tileSize * 0.7;
-            const oy = tileSize * 0.2 + (Math.random() - 0.5) * 4;
-            const spark = this.add.circle(x + ox, y + oy, 1.8 + Math.random() * 1.6, 0x86efac, 0.95);
-            spark.setDepth(28);
-            this.tweens.add({
-              targets: spark,
-              y: spark.y - 16 - Math.random() * 12,
-              alpha: 0, scaleX: 0.35, scaleY: 0.35,
-              duration: 700 + Math.random() * 260, ease: 'Sine.easeOut',
-              onComplete: () => spark.destroy(),
-            });
-          }
-          // Floating "+" cross glyph.
-          const plus = this.add.text(x, y - tileSize * 0.35, '✚', {
-            fontSize: '22px',
-            color: '#bbf7d0',
-            fontStyle: 'bold',
-          });
-          plus.setOrigin(0.5, 0.5);
-          plus.setDepth(29);
-          plus.setShadow(0, 0, '#22c55e', 10, true, true);
-          this.tweens.add({
-            targets: plus,
-            y: plus.y - tileSize * 0.4,
-            scaleX: 1.4, scaleY: 1.4, alpha: 0,
-            duration: 620, ease: 'Sine.easeOut',
-            onComplete: () => plus.destroy(),
-          });
-          // Brief green sprite tint + gentle bounce so the target is unambiguous.
-          creature.sprite.setTint(0x4ade80);
-          this.tweens.add({
-            targets: creature.sprite,
-            scaleX: creature.sprite.scaleX * 1.08,
-            scaleY: creature.sprite.scaleY * 1.08,
-            yoyo: true,
-            duration: 140,
-            ease: 'Sine.easeOut',
-            onComplete: () => {
-              creature.sprite.clearTint();
-              applyCreatureSize(creature.sprite);
-            },
-          });
-          floatingCombatText(this, x, y - tileSize * 0.65, `+${healAmount}`, {
-            color: '#34d399',
-            fontSize: '18px',
-          });
-        };
+        // ── Fire / poison fields + burn / poison / shock DoT ──────────
+        const {
+          addFireFieldTile,
+          addPoisonFieldTile,
+          cleanupExpiredFireFields,
+          cleanupExpiredPoisonFields,
+          clearAllFireFields,
+          placeFireFieldAroundPlayer,
+          placePoisonFieldAroundPlayer,
+          playerOnFireField,
+          playerOnPoisonField,
+          applyFireDamage,
+          triggerFireStep,
+          triggerPoisonStep,
+          triggerPoisonApply,
+          triggerElectrifiedApply,
+          tickBurn,
+          tickPoison,
+          tickElectrified,
+        } = setupStatusEffects({
+          scene: this,
+          player,
+          playerState,
+          tileSize,
+          centerX,
+          centerY,
+          floorAtmosphere,
+          configPlayer,
+          deathCaption,
+          isWalkableTile,
+          getCurrentLevel: () => currentLevel,
+          setGameOver: () => { gameOver = true; },
+          updatePlayerBar,
+          updateHud,
+          setCombatIndicator,
+          setBurnIndicator,
+          setPoisonIndicator,
+          setElectrifiedIndicator,
+        });
+        // Thin wrappers over PlayerFx so call sites don't pass the ctx.
+        const _playerFxCtx = () => ({ scene: this, player, playerState, tileSize });
+        const showPlayerPoisonedEffect = () => _showPlayerPoisonedEffect(_playerFxCtx());
+        const showPlayerElectrifiedEffect = () => _showPlayerElectrifiedEffect(_playerFxCtx());
+        const showPlayerCureEffect = () => _showPlayerCureEffect(_playerFxCtx());
+        const showPlayerLifeDrainEffect = (amount, casterSprite) => _showPlayerLifeDrainEffect(_playerFxCtx(), amount, casterSprite);
+        const showPlayerManaDrainEffect = (amount, casterSprite) => _showPlayerManaDrainEffect(_playerFxCtx(), amount, casterSprite);
+        const _creatureFxCtx = { scene: this, tileSize };
+        const showCreatureSummonEffect = (caster, summoned) => _showCreatureSummonEffect(_creatureFxCtx, caster, summoned);
+        const showCreatureHealEffect = (creature, healAmount) => _showCreatureHealEffect(_creatureFxCtx, creature, healAmount);
         // Thin wrappers bind the player position + walkability predicates
         // into the pure SpellPatterns helpers for creature-side use.
         const lineToPlayerFromCreature = (creature, maxLen) =>
@@ -3975,64 +3135,29 @@ function startGame(configPlayer) {
           );
           return true;
         };
-        const tileKey = (x, y) => `${x},${y}`;
-        // ── Ally AI: find nearest enemy and path toward it ────────
-        const findNearestEnemy = (fromX, fromY) => {
-          let best = null;
-          let bestDist = Infinity;
-          for (const c of aliveCreatures()) {
-            const d = Math.abs(c.gx - fromX) + Math.abs(c.gy - fromY);
-            if (d < bestDist) { bestDist = d; best = c; }
-          }
-          return best;
-        };
-        const findNextStepToTarget = (fromX, fromY, targetGX, targetGY) => {
-          const startKey = tileKey(fromX, fromY);
-          if (isCreatureMeleeAdjacent(fromX, fromY, targetGX, targetGY)) return null;
-          const goalKeys = new Set();
-          const neigh = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
-          for (const [dx, dy] of neigh) {
-            const px = targetGX + dx;
-            const py = targetGY + dy;
-            if (!isWalkable(px, py)) continue;
-            const blocker = creatureAt(px, py);
-            if (blocker && (px !== fromX || py !== fromY)) continue;
-            goalKeys.add(tileKey(px, py));
-          }
-          if (goalKeys.size === 0) return null;
-          const queue = [{ x: fromX, y: fromY }];
-          let head = 0;
-          const visited = new Set([startKey]);
-          const prev = new Map();
-          const dirs = [{ x:1,y:0 },{ x:-1,y:0 },{ x:0,y:1 },{ x:0,y:-1 }];
-          const MAX_BFS_NODES = 400;
-          while (head < queue.length && visited.size < MAX_BFS_NODES) {
-            const cur = queue[head++];
-            const curKey = tileKey(cur.x, cur.y);
-            if (goalKeys.has(curKey)) {
-              if (curKey === startKey) return null;
-              let step = { x: cur.x, y: cur.y };
-              let stepPrev = prev.get(curKey);
-              while (stepPrev && tileKey(stepPrev.x, stepPrev.y) !== startKey) {
-                step = stepPrev;
-                stepPrev = prev.get(tileKey(stepPrev.x, stepPrev.y));
-              }
-              return step;
-            }
-            for (const d of dirs) {
-              const nx = cur.x + d.x;
-              const ny = cur.y + d.y;
-              const key = tileKey(nx, ny);
-              if (visited.has(key)) continue;
-              if (!isWalkable(nx, ny)) continue;
-              if (key !== startKey && isOccupiedByActor(nx, ny)) continue;
-              visited.add(key);
-              prev.set(key, cur);
-              queue.push({ x: nx, y: ny });
-            }
-          }
-          return null;
-        };
+        const {
+          tileKey,
+          findNearestEnemy,
+          findNextStepToTarget,
+          findNextStepToPlayer,
+          tryMoveCreature,
+          tryWanderCreature,
+          tryMoveRangedCreature,
+          shouldFlee,
+          tryFleeCreature,
+        } = setupCreatureMovement({
+          playerState,
+          centerX,
+          centerY,
+          isWalkable,
+          isCreatureMeleeAdjacent,
+          creatureAt,
+          isOccupiedByActor,
+          aliveCreatures,
+          _invalidateCreatureTileMap,
+          updateCreatureBar,
+          orientCreatureSprite,
+        });
         const allyTurn = (ally, now) => {
           if (gameOver || playerState.dead) return;
           if (!ally.alive) return;
@@ -4108,184 +3233,6 @@ function startGame(configPlayer) {
           // Path to the nearest enemy is blocked — fall back to following the
           // player so the ally doesn't freeze in place.
           followPlayerStep();
-        };
-        const findNextStepToPlayer = (fromX, fromY) => {
-          const startKey = tileKey(fromX, fromY);
-          if (isCreatureMeleeAdjacent(fromX, fromY, playerState.gridX, playerState.gridY)) return null;
-
-          const goalKeys = new Set();
-          const neigh = [
-            [1, 0], [-1, 0], [0, 1], [0, -1],
-            [1, 1], [1, -1], [-1, 1], [-1, -1],
-          ];
-          for (const [dx, dy] of neigh) {
-            const px = playerState.gridX + dx;
-            const py = playerState.gridY + dy;
-            if (!isWalkable(px, py)) continue;
-            const blocker = creatureAt(px, py);
-            if (blocker && (px !== fromX || py !== fromY)) continue;
-            goalKeys.add(tileKey(px, py));
-          }
-          if (goalKeys.size === 0) return null;
-
-          const queue = [{ x: fromX, y: fromY }];
-          let head = 0;
-          const visited = new Set([startKey]);
-          const prev = new Map();
-          const directions = [
-            { x: 1, y: 0 },
-            { x: -1, y: 0 },
-            { x: 0, y: 1 },
-            { x: 0, y: -1 },
-          ];
-          const MAX_BFS_NODES = 400;
-
-          while (head < queue.length && visited.size < MAX_BFS_NODES) {
-            const cur = queue[head++];
-            const curKey = tileKey(cur.x, cur.y);
-            if (goalKeys.has(curKey)) {
-              if (curKey === startKey) return null;
-              let step = { x: cur.x, y: cur.y };
-              let stepPrev = prev.get(curKey);
-              while (stepPrev && tileKey(stepPrev.x, stepPrev.y) !== startKey) {
-                step = stepPrev;
-                stepPrev = prev.get(tileKey(stepPrev.x, stepPrev.y));
-              }
-              return step;
-            }
-            for (const d of directions) {
-              const nx = cur.x + d.x;
-              const ny = cur.y + d.y;
-              const key = tileKey(nx, ny);
-              if (visited.has(key)) continue;
-              if (!isWalkable(nx, ny)) continue;
-              if (key !== startKey && isOccupiedByActor(nx, ny)) continue;
-
-              visited.add(key);
-              prev.set(key, cur);
-              queue.push({ x: nx, y: ny });
-            }
-          }
-          return null;
-        };
-        const tryMoveCreature = (creature) => {
-          const next = findNextStepToPlayer(creature.gx, creature.gy);
-          if (!next) return false;
-          if (next.x === playerState.gridX && next.y === playerState.gridY) return false;
-          orientCreatureSprite(creature, next.x - creature.gx, next.y - creature.gy);
-          creature.gx = next.x;
-          creature.gy = next.y;
-          _invalidateCreatureTileMap();
-          creature.sprite.x = centerX(creature.gx);
-          creature.sprite.y = centerY(creature.gy);
-          updateCreatureBar(creature);
-          return true;
-        };
-        const tryWanderCreature = (creature, now) => {
-          if (now < creature.nextWanderAt) return false;
-          creature.nextWanderAt = now + Phaser.Math.Between(900, 1600);
-
-          // Fuera de agro: solo movimiento cardinal de 1 casilla (N/E/O/S).
-          const cardinalDirections = [
-            { dx: 0, dy: -1 }, // norte
-            { dx: 1, dy: 0 },  // este
-            { dx: -1, dy: 0 }, // oeste
-            { dx: 0, dy: 1 },  // sur
-          ];
-          const firstIndex = Phaser.Math.Between(0, cardinalDirections.length - 1);
-          for (let i = 0; i < cardinalDirections.length; i += 1) {
-            const d = cardinalDirections[(firstIndex + i) % cardinalDirections.length];
-            const nx = creature.gx + d.dx;
-            const ny = creature.gy + d.dy;
-            if (!isWalkable(nx, ny)) continue;
-            if (isOccupiedByActor(nx, ny)) continue;
-            orientCreatureSprite(creature, d.dx, d.dy);
-            creature.gx = nx;
-            creature.gy = ny;
-            _invalidateCreatureTileMap();
-            creature.sprite.x = centerX(creature.gx);
-            creature.sprite.y = centerY(creature.gy);
-            updateCreatureBar(creature);
-            return true;
-          }
-          return false;
-        };
-        // Ranged creature movement: flee if too close, approach if too far, idle at range.
-        const tryMoveRangedCreature = (creature) => {
-          const dist = Math.max(Math.abs(creature.gx - playerState.gridX), Math.abs(creature.gy - playerState.gridY));
-          const targetRange = creature.range;
-
-          if (dist === targetRange) return false; // already at ideal range — don't move
-
-          const options = [
-            { dx: 1, dy: 0 }, { dx: -1, dy: 0 },
-            { dx: 0, dy: 1 }, { dx: 0, dy: -1 },
-          ];
-
-          if (dist < targetRange) {
-            // Too close — pick step that maximises distance from player
-            let best = null;
-            let bestDist = dist;
-            for (const d of options) {
-              const nx = creature.gx + d.dx;
-              const ny = creature.gy + d.dy;
-              if (!isWalkable(nx, ny)) continue;
-              if (isOccupiedByActor(nx, ny)) continue;
-              const nd = Math.max(Math.abs(nx - playerState.gridX), Math.abs(ny - playerState.gridY));
-              if (nd > bestDist) { bestDist = nd; best = { nx, ny, d }; }
-            }
-            if (!best) return false;
-            orientCreatureSprite(creature, best.d.dx, best.d.dy);
-            creature.gx = best.nx; creature.gy = best.ny;
-            _invalidateCreatureTileMap();
-            creature.sprite.x = centerX(creature.gx);
-            creature.sprite.y = centerY(creature.gy);
-            updateCreatureBar(creature);
-            return true;
-          }
-
-          // Too far — move toward player (BFS, one step)
-          const next = findNextStepToPlayer(creature.gx, creature.gy);
-          if (!next) return false;
-          orientCreatureSprite(creature, next.x - creature.gx, next.y - creature.gy);
-          creature.gx = next.x; creature.gy = next.y;
-          _invalidateCreatureTileMap();
-          creature.sprite.x = centerX(creature.gx);
-          creature.sprite.y = centerY(creature.gy);
-          updateCreatureBar(creature);
-          return true;
-        };
-
-        const shouldFlee = (creature) => creature.runsAt > 0 && creature.hp <= creature.runsAt;
-        const tryFleeCreature = (creature) => {
-          const options = [
-            { dx: 1, dy: 0 },
-            { dx: -1, dy: 0 },
-            { dx: 0, dy: 1 },
-            { dx: 0, dy: -1 },
-          ];
-          let best = null;
-          let bestDist = Math.abs(creature.gx - playerState.gridX) + Math.abs(creature.gy - playerState.gridY);
-          for (const d of options) {
-            const nx = creature.gx + d.dx;
-            const ny = creature.gy + d.dy;
-            if (!isWalkable(nx, ny)) continue;
-            if (isOccupiedByActor(nx, ny)) continue;
-            const dist = Math.abs(nx - playerState.gridX) + Math.abs(ny - playerState.gridY);
-            if (dist > bestDist) {
-              bestDist = dist;
-              best = { nx, ny, d };
-            }
-          }
-          if (!best) return false;
-          orientCreatureSprite(creature, best.d.dx, best.d.dy);
-          creature.gx = best.nx;
-          creature.gy = best.ny;
-          _invalidateCreatureTileMap();
-          creature.sprite.x = centerX(creature.gx);
-          creature.sprite.y = centerY(creature.gy);
-          updateCreatureBar(creature);
-          return true;
         };
         // Ability cooldown ranges (ms): normal and fury mode
         const ABILITY_CD_MIN = 2400;
@@ -4762,17 +3709,6 @@ export async function loadEngineData(onProgress) {
     (async () => { itemsShopCatalog = await getItemShopCatalog(); })().then(() => tick('Loading items...')),
     loadKnownItemImages(),
   ]);
-  // Pre-cache ammo items not in shop catalog (value_buy=0). After the
-  // catalog is populated we know which ammo IDs are missing.
-  for (const [, mapping] of CONJURE_AMMO_MAP) {
-    const inShop = (itemsShopCatalog || []).some((it) => Number(it.id) === mapping.itemId);
-    if (inShop) continue;
-    try {
-      const full = await getItemByArticleId(mapping.itemId);
-      if (full) {
-        full.isStackable = true;
-        _conjureAmmoCache.set(mapping.itemId, full);
-      }
-    } catch { /* best effort */ }
-  }
+  // Pre-cache ammo items not in shop catalog (value_buy=0).
+  await primeConjureAmmoCache(itemsShopCatalog, getItemByArticleId);
 }
