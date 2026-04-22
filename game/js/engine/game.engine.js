@@ -181,6 +181,12 @@ import {
   showHallOfFame,
 } from './systems/DeathSummary.js';
 import {
+  setupGroundLoot,
+  dropItemOnGround,
+  pickupGroundLootAtPlayer,
+  clearGroundLoot,
+} from './systems/GroundLoot.js';
+import {
   setupLearnedSpells,
   renderLearnedSpells,
 } from './systems/LearnedSpells.js';
@@ -716,7 +722,13 @@ function startGame(configPlayer) {
         };
 
         const creatures = [];
-        const groundLootByTile = new Map();
+        setupGroundLoot({
+          scene: this,
+          tileSize,
+          centerX, centerY,
+          getPlayerPos: () => ({ gx: gridX, gy: gridY }),
+          onHudRefresh: () => updateHud(),
+        });
 
         const isWallTile = (gx, gy) => {
           if (!isWalkableTile(gx, gy)) return true;
@@ -779,120 +791,6 @@ function startGame(configPlayer) {
             return { gx: nx, gy: ny };
           }
           return null;
-        };
-        const groundTileKey = (gx, gy) => `${gx},${gy}`;
-        const groundLootTextureKey = (imagePath) => `ground_loot_${String(imagePath || '').replace(/[^a-zA-Z0-9_]/g, '_')}`;
-        const refreshGroundLootMarker = (entry) => {
-          if (!entry) return;
-          const count = entry.items.length;
-          const firstItem = count > 0 ? entry.items[0] : null;
-          const markerX = centerX(entry.gx);
-          const markerY = centerY(entry.gy) + tileSize * 0.18;
-          const ensureTextMarker = (txt = '📦') => {
-            if (!entry.marker || entry.marker.type !== 'Text') {
-              if (entry.marker) entry.marker.destroy();
-              entry.marker = this.add.text(markerX, markerY, txt, {
-                color: '#facc15',
-                fontSize: '14px',
-                fontStyle: 'bold',
-              });
-              entry.marker.setOrigin(0.5, 0.5);
-            } else {
-              entry.marker.setText(txt);
-            }
-          };
-          const ensureImageMarker = (textureKey) => {
-            const isImageMarker = entry.marker && entry.marker.type !== 'Text' && typeof entry.marker.setTexture === 'function';
-            if (!isImageMarker) {
-              if (entry.marker) entry.marker.destroy();
-              entry.marker = this.add.image(markerX, markerY, textureKey);
-              entry.marker.setOrigin(0.5, 0.5);
-              entry.marker.setDisplaySize(tileSize * 0.42, tileSize * 0.42);
-            } else {
-              entry.marker.setTexture(textureKey);
-              entry.marker.setDisplaySize(tileSize * 0.42, tileSize * 0.42);
-            }
-          };
-          if (count <= 0) {
-            if (entry.marker) entry.marker.destroy();
-            if (entry.markerCount) entry.markerCount.destroy();
-            groundLootByTile.delete(groundTileKey(entry.gx, entry.gy));
-            return;
-          }
-          if (firstItem && firstItem.image) {
-            const textureKey = groundLootTextureKey(firstItem.image);
-            if (this.textures.exists(textureKey)) {
-              ensureImageMarker(textureKey);
-            } else {
-              ensureTextMarker('📦');
-              if (entry.loadingTextureKey !== textureKey) {
-                entry.loadingTextureKey = textureKey;
-                this.load.image(textureKey, imageUrl(firstItem.image));
-                this.load.once(`filecomplete-image-${textureKey}`, () => {
-                  entry.loadingTextureKey = null;
-                  refreshGroundLootMarker(entry);
-                });
-                if (!this.load.isLoading()) this.load.start();
-              }
-            }
-          } else {
-            ensureTextMarker('📦');
-          }
-          if (!entry.markerCount) {
-            entry.markerCount = this.add.text(markerX + tileSize * 0.2, markerY + tileSize * 0.08, '', {
-              color: '#f8fafc',
-              fontSize: '10px',
-              fontStyle: 'bold',
-            });
-            entry.markerCount.setOrigin(1, 1);
-          }
-          entry.markerCount.setPosition(markerX + tileSize * 0.2, markerY + tileSize * 0.08);
-          entry.markerCount.setText(count > 1 ? String(count) : '');
-        };
-        const dropItemOnGround = (gx, gy, item) => {
-          const key = groundTileKey(gx, gy);
-          if (!groundLootByTile.has(key)) {
-            groundLootByTile.set(key, { gx, gy, items: [], marker: null, markerCount: null, loadingTextureKey: null });
-          }
-          const entry = groundLootByTile.get(key);
-          const incoming = { ...item };
-          if (incoming.isStackable) {
-            const stackIdx = entry.items.findIndex((it) => (
-              Boolean(it && it.isStackable)
-              && (
-                (incoming.id != null && it.id != null && Number(incoming.id) === Number(it.id))
-                || String(incoming.title || '').toLowerCase() === String(it.title || '').toLowerCase()
-              )
-            ));
-            if (stackIdx >= 0) {
-              entry.items[stackIdx].count = Math.max(1, Number(entry.items[stackIdx].count || 1)) + Math.max(1, Number(incoming.count || 1));
-              refreshGroundLootMarker(entry);
-              return;
-            }
-          }
-          entry.items.push(incoming);
-          refreshGroundLootMarker(entry);
-        };
-        const pickupGroundLootAtPlayer = () => {
-          const key = groundTileKey(gridX, gridY);
-          const entry = groundLootByTile.get(key);
-          if (!entry || entry.items.length === 0) return;
-          const kept = [];
-          let picked = 0;
-          for (const item of entry.items) {
-            const stored = window.debugInventory && typeof window.debugInventory.addLoot === 'function'
-              ? window.debugInventory.addLoot(item)
-              : false;
-            if (stored) {
-              picked += 1;
-              addCombatLog(`Picked from ground: ${item.title}.`);
-            } else {
-              kept.push(item);
-            }
-          }
-          entry.items = kept;
-          refreshGroundLootMarker(entry);
-          if (picked > 0) updateHud();
         };
         const isOccupiedByActor = (gx, gy) => {
           if (gx === gridX && gy === gridY) return true;
@@ -1582,11 +1480,7 @@ function startGame(configPlayer) {
         };
         const descendLevel = (toNext = true) => {
           setCombatIndicator(false);
-          for (const entry of groundLootByTile.values()) {
-            if (entry.marker) entry.marker.destroy();
-            if (entry.markerCount) entry.markerCount.destroy();
-          }
-          groundLootByTile.clear();
+          clearGroundLoot();
           clearAllFireFields();
           const prevLevel = currentLevel;
           if (toNext) currentLevel += 1;
