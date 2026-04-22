@@ -169,6 +169,29 @@ import {
   setupItemsShop,
   renderItemsShop,
 } from './systems/ItemsShop.js';
+import {
+  setupSpellShop,
+  renderSpellShop,
+  invalidateSpellShopCache,
+} from './systems/SpellShop.js';
+import { generateLevelMap } from './systems/Dungeon.js';
+import {
+  setupDeathSummary,
+  showDeathSummary,
+  showHallOfFame,
+} from './systems/DeathSummary.js';
+import {
+  setupLearnedSpells,
+  renderLearnedSpells,
+} from './systems/LearnedSpells.js';
+import {
+  setupSpellBar,
+  renderSpellBar,
+  renderConsumableBar,
+  invalidateSpellBarCache,
+  consumePendingSpellSlot,
+  consumePendingConsumable,
+} from './systems/SpellBar.js';
 
 // Expose the bus for debugging / browser console listeners.
 if (typeof window !== 'undefined') window.tdEvents = bus;
@@ -239,6 +262,17 @@ function isWalkableTile(gx, gy) {
 
 function startGame(configPlayer) {
   if (game) return;
+  setupDeathSummary({
+    onPlayAgain: () => {
+      if (game) {
+        // false = don't remove the canvas from DOM (avoids WebGL null-context errors)
+        game.destroy(false);
+        game = null;
+        const phaserDiv = document.getElementById('phaser');
+        if (phaserDiv) phaserDiv.innerHTML = '';
+      }
+    },
+  });
 
   const tileSize = TILE_SIZE;
   const mapWidth = MAP_W * tileSize;
@@ -1178,83 +1212,6 @@ function startGame(configPlayer) {
         };
         const hasStairsAtPlayer = () => gridX === currentStairsTile.gx && gridY === currentStairsTile.gy;
         const hasRopeUpAtPlayer = () => gridX === START_TILE.gx && gridY === START_TILE.gy;
-        const generateLevelMap = () => {
-          // Classic dungeon style: rooms connected by corridors.
-          const map = Array.from({ length: MAP_H }, () => Array.from({ length: MAP_W }, () => '#'));
-          const rooms = [];
-          const roomCount = Phaser.Math.Between(4, 6);
-          const carveRoom = (rx, ry, rw, rh) => {
-            for (let y = ry; y < ry + rh; y += 1) {
-              for (let x = rx; x < rx + rw; x += 1) {
-                if (x <= 0 || y <= 0 || x >= MAP_W - 1 || y >= MAP_H - 1) continue;
-                map[y][x] = '.';
-              }
-            }
-          };
-          const roomOverlaps = (a, b) => !(
-            a.x + a.w + 1 < b.x
-            || b.x + b.w + 1 < a.x
-            || a.y + a.h + 1 < b.y
-            || b.y + b.h + 1 < a.y
-          );
-          for (let i = 0; i < roomCount; i += 1) {
-            const rw = Phaser.Math.Between(4, 7);
-            const rh = Phaser.Math.Between(3, 5);
-            const rx = Phaser.Math.Between(1, Math.max(1, MAP_W - rw - 2));
-            const ry = Phaser.Math.Between(1, Math.max(1, MAP_H - rh - 2));
-            const next = { x: rx, y: ry, w: rw, h: rh };
-            if (rooms.some((r) => roomOverlaps(r, next))) continue;
-            carveRoom(rx, ry, rw, rh);
-            rooms.push(next);
-          }
-          if (rooms.length === 0) {
-            const fallback = { x: 2, y: 2, w: Math.max(4, MAP_W - 4), h: Math.max(3, MAP_H - 4) };
-            carveRoom(fallback.x, fallback.y, fallback.w, fallback.h);
-            rooms.push(fallback);
-          }
-          const centerOf = (r) => ({
-            gx: Math.floor(r.x + r.w / 2),
-            gy: Math.floor(r.y + r.h / 2),
-          });
-          const carveHCorridor = (x1, x2, y) => {
-            const from = Math.min(x1, x2);
-            const to = Math.max(x1, x2);
-            for (let x = from; x <= to; x += 1) {
-              if (x > 0 && x < MAP_W - 1 && y > 0 && y < MAP_H - 1) map[y][x] = '.';
-            }
-          };
-          const carveVCorridor = (y1, y2, x) => {
-            const from = Math.min(y1, y2);
-            const to = Math.max(y1, y2);
-            for (let y = from; y <= to; y += 1) {
-              if (x > 0 && x < MAP_W - 1 && y > 0 && y < MAP_H - 1) map[y][x] = '.';
-            }
-          };
-          for (let i = 1; i < rooms.length; i += 1) {
-            const a = centerOf(rooms[i - 1]);
-            const b = centerOf(rooms[i]);
-            if (Math.random() < 0.5) {
-              carveHCorridor(a.gx, b.gx, a.gy);
-              carveVCorridor(a.gy, b.gy, b.gx);
-            } else {
-              carveVCorridor(a.gy, b.gy, a.gx);
-              carveHCorridor(a.gx, b.gx, b.gy);
-            }
-          }
-          const startNear = centerOf(rooms[0]);
-          carveHCorridor(START_TILE.gx, startNear.gx, START_TILE.gy);
-          carveVCorridor(START_TILE.gy, startNear.gy, startNear.gx);
-          map[START_TILE.gy][START_TILE.gx] = '.';
-
-          const stairsRoom = rooms[rooms.length - 1];
-          const stairsCenter = centerOf(stairsRoom);
-          const stairs = {
-            gx: Phaser.Math.Clamp(stairsCenter.gx, 1, MAP_W - 2),
-            gy: Phaser.Math.Clamp(stairsCenter.gy, 1, MAP_H - 2),
-          };
-          map[stairs.gy][stairs.gx] = '.';
-          return { map: map.map((r) => r.join('')), stairs };
-        };
         const refreshMapVisuals = () => {
           floorAtmosphere.rebuildAll(
             currentMap,
@@ -1772,16 +1729,13 @@ function startGame(configPlayer) {
         const itemsShopAccordionEl = document.getElementById('itemsShopAccordion');
         const itemsShopSearchInputEl = document.getElementById('itemsShopSearchInput');
         setupSpellTooltipDismissers();
-        // Update cooldown countdown text every 250ms
-        setInterval(() => {
-          const now2 = Date.now();
-          for (const [spellId, cdUntil] of spellCooldownUntil.entries()) {
-            const rem = cdUntil - now2;
-            const textEl = document.querySelector(`.spell-cd-text[data-cd-text-for="${spellId}"]`);
-            if (!textEl) continue;
-            textEl.textContent = rem > 200 ? String(Math.ceil(rem / 1000)) : '';
-          }
-        }, 250);
+        setupSpellBar({
+          getCatalog:          () => spellsCatalog,
+          learnedSpellIds,
+          learnedSpellOrder,
+          spellCooldownUntil,
+          spellCdDurations,
+        });
         const lootAccordionEl = document.getElementById('lootAccordion');
         const {
           syncLootPanelPosition,
@@ -1800,504 +1754,26 @@ function startGame(configPlayer) {
           itemsShopPanelEl,
           itemsShopAccordionEl,
         });
-        const renderLearnedSpells = () => {
-          const learnedGrid = document.getElementById('learnedSpellsGrid');
-          const learnedFoot = document.getElementById('learnedSpellsFoot');
-          if (!learnedGrid || !learnedFoot) return;
-          learnedGrid.innerHTML = '';
-
-          // Build position map: spellId → index in learnedSpellOrder. First
-          // 10 positions map to hotkey slots; any beyond are unslotted but
-          // still user-reorderable via the up/down arrows.
-          const posBySpellId = new Map();
-          for (let i = 0; i < learnedSpellOrder.length; i += 1) {
-            const id = learnedSpellOrder[i];
-            if (id != null) posBySpellId.set(Number(id), i);
-          }
-
-          const learned = (spellsCatalog || [])
-            .filter((s) => learnedSpellIds.has(Number(s.article_id)))
-            .filter((s) => !isBlockedSpellTitle(s.title))
-            .sort((a, b) => {
-              const aPos = posBySpellId.has(Number(a.article_id)) ? posBySpellId.get(Number(a.article_id)) : Number.MAX_SAFE_INTEGER;
-              const bPos = posBySpellId.has(Number(b.article_id)) ? posBySpellId.get(Number(b.article_id)) : Number.MAX_SAFE_INTEGER;
-              if (aPos !== bPos) return aPos - bPos;
-              return String(a.title || '').localeCompare(String(b.title || ''));
-            });
-
-          if (learned.length === 0) {
-            const empty = document.createElement('div');
-            empty.className = 'learned-spell-row';
-            empty.style.justifyContent = 'center';
-            empty.style.color = '#475569';
-            empty.textContent = 'No spells learned yet.';
-            learnedGrid.appendChild(empty);
-            learnedFoot.textContent = 'Total: 0';
-            syncLootPanelPosition(); syncLearnedPanelPosition(); syncItemsShopPanelPosition();
-            renderSpellBar();
-            renderConsumableBar();
-            return;
-          }
-
-          // Drag state
-          let draggedSpellId = null;
-
-          const slotBadgeLabel = (slotIdx) => {
-            if (slotIdx < 0 || slotIdx > 9) return null;
-            return slotIdx < 9 ? String(slotIdx + 1) : '0';
-          };
-
-          // Swap two spells' positions in the master order array. This single
-          // swap handles every case — both in hotkey slots, both unslotted, or
-          // one of each (the hotkey "label" automatically follows positions).
-          const applyDrop = (fromId, toId) => {
-            if (fromId === toId) return;
-            const fromIdx = learnedSpellOrder.findIndex((s) => Number(s) === Number(fromId));
-            const toIdx   = learnedSpellOrder.findIndex((s) => Number(s) === Number(toId));
-            if (fromIdx < 0 || toIdx < 0) return;
-            [learnedSpellOrder[fromIdx], learnedSpellOrder[toIdx]] = [learnedSpellOrder[toIdx], learnedSpellOrder[fromIdx]];
-            _lastSpellBarKey = '';
-            _lastSpellShopKey = '';
-            renderLearnedSpells();
-          };
-
-          for (let i = 0; i < learned.length; i += 1) {
-            const spell = learned[i];
-            const spellId = Number(spell.article_id);
-            const pos = posBySpellId.has(spellId) ? posBySpellId.get(spellId) : -1;
-            const slotIdx = pos >= 0 && pos < 10 ? pos : -1;
-            const badgeLabel = slotBadgeLabel(slotIdx);
-            const prevId = i > 0 ? Number(learned[i - 1].article_id) : null;
-            const nextId = i < learned.length - 1 ? Number(learned[i + 1].article_id) : null;
-
-            const row = document.createElement('div');
-            row.className = 'learned-spell-row';
-            row.draggable = true;
-            row.dataset.spellId = String(spellId);
-
-            // Drag handle (desktop / mouse input)
-            const handle = document.createElement('span');
-            handle.className = 'ls-handle';
-            handle.textContent = '⠿';
-            row.appendChild(handle);
-
-            // Slot badge
-            const badge = document.createElement('span');
-            badge.className = `ls-badge ${badgeLabel ? 'has-slot' : 'no-slot'}`;
-            badge.textContent = badgeLabel || '–';
-            row.appendChild(badge);
-
-            // Icon
-            const iconWrap = document.createElement('div');
-            iconWrap.className = 'ls-icon';
-            if (spell.image) {
-              const img = document.createElement('img');
-              img.src = spell.image;
-              img.alt = spell.title;
-              iconWrap.appendChild(img);
-            }
-            row.appendChild(iconWrap);
-
-            // Info
-            const info = document.createElement('div');
-            info.className = 'ls-info';
-            const titleEl = document.createElement('div');
-            titleEl.className = 'ls-title';
-            titleEl.textContent = spell.title || '';
-            const metaEl = document.createElement('div');
-            metaEl.className = 'ls-meta';
-            metaEl.textContent = `Lv ${Math.max(0, Number(spell.level || 0))}  ·  Mana ${Math.max(0, Number(spell.mana || 0))}`;
-            info.appendChild(titleEl);
-            info.appendChild(metaEl);
-            row.appendChild(info);
-
-            // Reorder arrows (touch / tablet / mobile — hidden via CSS on desktop)
-            const arrows = document.createElement('div');
-            arrows.className = 'ls-reorder-arrows';
-            const upBtn = document.createElement('button');
-            upBtn.type = 'button';
-            upBtn.className = 'ls-arrow-btn ls-arrow-up';
-            upBtn.setAttribute('aria-label', 'Move spell up');
-            upBtn.textContent = '▲';
-            upBtn.disabled = prevId == null;
-            const downBtn = document.createElement('button');
-            downBtn.type = 'button';
-            downBtn.className = 'ls-arrow-btn ls-arrow-down';
-            downBtn.setAttribute('aria-label', 'Move spell down');
-            downBtn.textContent = '▼';
-            downBtn.disabled = nextId == null;
-            const stopDragOnArrow = (ev) => { ev.stopPropagation(); };
-            upBtn.addEventListener('pointerdown', stopDragOnArrow);
-            downBtn.addEventListener('pointerdown', stopDragOnArrow);
-            upBtn.addEventListener('click', (ev) => {
-              ev.preventDefault();
-              ev.stopPropagation();
-              hideSpellTooltip();
-              if (prevId != null) applyDrop(spellId, prevId);
-            });
-            downBtn.addEventListener('click', (ev) => {
-              ev.preventDefault();
-              ev.stopPropagation();
-              hideSpellTooltip();
-              if (nextId != null) applyDrop(spellId, nextId);
-            });
-            // Tapping the row (but not the arrows) should keep the tooltip
-            // visible instead of letting the document-level click close it.
-            row.addEventListener('click', (ev) => {
-              if (ev.target.closest('.ls-reorder-arrows')) return;
-              ev.stopPropagation();
-            });
-            arrows.appendChild(upBtn);
-            arrows.appendChild(downBtn);
-            row.appendChild(arrows);
-
-            bindSpellTooltip(row, spell);
-
-            // Drag & drop events
-            row.addEventListener('dragstart', (ev) => {
-              draggedSpellId = spellId;
-              row.classList.add('ls-dragging');
-              ev.dataTransfer.effectAllowed = 'move';
-              ev.dataTransfer.setData('text/plain', String(spellId));
-            });
-            row.addEventListener('dragend', () => {
-              draggedSpellId = null;
-              row.classList.remove('ls-dragging');
-              learnedGrid.querySelectorAll('.ls-drag-over').forEach((el) => el.classList.remove('ls-drag-over'));
-            });
-            row.addEventListener('dragover', (ev) => {
-              ev.preventDefault();
-              ev.dataTransfer.dropEffect = 'move';
-              if (draggedSpellId !== spellId) row.classList.add('ls-drag-over');
-            });
-            row.addEventListener('dragleave', () => row.classList.remove('ls-drag-over'));
-            row.addEventListener('drop', (ev) => {
-              ev.preventDefault();
-              row.classList.remove('ls-drag-over');
-              const fromId = Number(ev.dataTransfer.getData('text/plain'));
-              if (fromId && fromId !== spellId) applyDrop(fromId, spellId);
-            });
-
-            learnedGrid.appendChild(row);
-          }
-
-          learnedFoot.textContent = `Total: ${learned.length}`;
-          syncLootPanelPosition(); syncLearnedPanelPosition(); syncItemsShopPanelPosition();
-          renderSpellBar();
-          renderConsumableBar();
-        };
-
-        // Shared state for click/touch-triggered spell casts
-        let _pendingSpellSlot = 0;
-        window._triggerSpellSlot = (slot) => { _pendingSpellSlot = slot; };
-
-        let _lastSpellBarKey = '';
-        const renderSpellBar = () => {
-          const slotsEl = document.getElementById('spellBarSlots');
-          if (!slotsEl) return;
-          // Skip rebuild if slot assignments haven't changed — prevents per-frame flicker
-          const barKey = learnedSpellOrder.slice(0, 10).join(',') + '|' + [...learnedSpellIds].sort((a, b) => a - b).join(',');
-          if (barKey === _lastSpellBarKey) return;
-          _lastSpellBarKey = barKey;
-          slotsEl.innerHTML = '';
-          const now = Date.now();
-          const spellById = new Map();
-          for (const s of spellsCatalog || []) spellById.set(Number(s.article_id), s);
-
-          const makeImgWrap = (spell, spellId) => {
-            const imgWrap = document.createElement('div');
-            imgWrap.className = 'spell-slot-img-wrap';
-            if (spell && spell.image) {
-              const img = document.createElement('img');
-              img.className = 'spell-slot-img';
-              img.src = spell.image;
-              img.alt = spell.title;
-              imgWrap.appendChild(img);
-            }
-            // Cooldown overlay
-            const cdOverlay = document.createElement('div');
-            cdOverlay.className = 'spell-cd-overlay';
-            if (spellId != null) cdOverlay.dataset.cdFor = String(spellId);
-            const cdText = document.createElement('div');
-            cdText.className = 'spell-cd-text';
-            if (spellId != null) cdText.dataset.cdTextFor = String(spellId);
-            imgWrap.appendChild(cdOverlay);
-            imgWrap.appendChild(cdText);
-            // Restore active cooldown if any
-            if (spellId != null) {
-              const cdUntil = Number(spellCooldownUntil.get(spellId) || 0);
-              const totalMs = (spellCdDurations.get(spellId) || 0) * 1000;
-              if (now < cdUntil && totalMs > 0) {
-                const remMs = cdUntil - now;
-                const durSec = (remMs / 1000).toFixed(2);
-                cdOverlay.style.setProperty('--cd-dur', `${durSec}s`);
-                cdOverlay.classList.add('cd-active');
-                cdText.textContent = Math.ceil(remMs / 1000);
-              }
-            }
-            return imgWrap;
-          };
-
-          // Hotkey slots 1-9 + 0 (index 9 = slot 10 = key "0")
-          for (let i = 0; i < 10; i += 1) {
-            const spellId = i < learnedSpellOrder.length && learnedSpellOrder[i] != null ? Number(learnedSpellOrder[i]) : null;
-            const spell = spellId != null ? spellById.get(spellId) : null;
-            const slot = document.createElement('div');
-            slot.className = `spell-slot ${spell ? 'active' : 'empty'}`;
-            if (spellId != null) slot.dataset.spellId = String(spellId);
-            // Key badge: slots 1-9 show 1-9, slot index 9 shows "0"
-            const keyBadge = document.createElement('span');
-            keyBadge.className = 'spell-slot-key';
-            keyBadge.textContent = i < 9 ? String(i + 1) : '0';
-            slot.appendChild(keyBadge);
-            slot.appendChild(makeImgWrap(spell, spellId));
-            // Name
-            const nameEl = document.createElement('span');
-            nameEl.className = 'spell-slot-name';
-            nameEl.textContent = spell ? spell.title : '';
-            slot.appendChild(nameEl);
-            if (spell) bindSpellBarTooltip(slot, spell, null);
-            // Click / touch to cast
-            const slotNum = i < 9 ? i + 1 : 10;
-            slot.addEventListener('pointerdown', (e) => {
-              e.preventDefault();
-              _pendingSpellSlot = slotNum;
-            });
-            slotsEl.appendChild(slot);
-          }
-        };
-
-        // ── Consumable hotkey slots (F=Food, G=Mana, H=Health) ─────
-        let _pendingConsumable = '';  // 'food' | 'mana' | 'health' | ''
-        window._triggerConsumable = (type) => { _pendingConsumable = type; };
-
-        const _inv = () => window.debugInventory;
-
+        setupLearnedSpells({
+          getCatalog:             () => spellsCatalog,
+          learnedSpellIds,
+          learnedSpellOrder,
+          onOrderChanged:         invalidateSpellBarCache,
+          onPanelsResync:         () => {
+            syncLootPanelPosition();
+            syncLearnedPanelPosition();
+            syncItemsShopPanelPosition();
+          },
+          onSpellBarRefresh:      () => renderSpellBar(),
+          onConsumableBarRefresh: () => renderConsumableBar(),
+        });
         const consumeConsumable = (type) => {
-          const inv = _inv();
+          const inv = window.debugInventory;
           if (!inv) return false;
           const ok = inv.consumeItem(type);
           if (ok) renderConsumableBar();
           return ok;
         };
-
-        let _lastConsumableKey = '';
-        const renderConsumableBar = () => {
-          const container = document.getElementById('consumableBarSlots');
-          if (!container) return;
-          const inv = _inv();
-          const types = [
-            { type: 'food',   key: 'F', cssClass: 'food-slot' },
-            { type: 'mana',   key: 'G', cssClass: 'mana-slot' },
-            { type: 'health', key: 'H', cssClass: 'health-slot' },
-          ];
-          const barKey = types.map(t => {
-            const f = inv ? inv.findConsumable(t.type) : null;
-            return f ? `${f.item.id}:${f.item.count}` : '-';
-          }).join('|');
-          if (barKey === _lastConsumableKey) return;
-          _lastConsumableKey = barKey;
-          container.innerHTML = '';
-          for (const t of types) {
-            const found = inv ? inv.findConsumable(t.type) : null;
-            const item = found ? found.item : null;
-            const slot = document.createElement('div');
-            slot.className = `spell-slot consumable-slot ${t.cssClass} ${item ? 'active' : 'empty'}`;
-            // Key badge
-            const keyBadge = document.createElement('span');
-            keyBadge.className = 'spell-slot-key';
-            keyBadge.textContent = t.key;
-            slot.appendChild(keyBadge);
-            // Image wrap
-            const imgWrap = document.createElement('div');
-            imgWrap.className = 'spell-slot-img-wrap';
-            if (item && item.image) {
-              const img = document.createElement('img');
-              img.className = 'spell-slot-img';
-              img.src = imageUrl(item.image);
-              img.alt = item.title;
-              imgWrap.appendChild(img);
-            }
-            if (item && item.count > 1) {
-              const countEl = document.createElement('span');
-              countEl.className = 'spell-slot-count';
-              countEl.textContent = String(item.count);
-              imgWrap.appendChild(countEl);
-            }
-            slot.appendChild(imgWrap);
-            // Name
-            const nameEl = document.createElement('span');
-            nameEl.className = 'spell-slot-name';
-            nameEl.textContent = item ? item.title : t.type.charAt(0).toUpperCase() + t.type.slice(1);
-            slot.appendChild(nameEl);
-            // Click / touch
-            slot.addEventListener('pointerdown', (e) => {
-              e.preventDefault();
-              _pendingConsumable = t.type;
-            });
-            container.appendChild(slot);
-          }
-        };
-
-        let _lastSpellShopKey = '';
-        const renderSpellShop = () => {
-          const spellsGrid = document.getElementById('spellsGrid');
-          const spellsFoot = document.getElementById('spellsFoot');
-          if (!spellsGrid || !spellsFoot) return;
-          const currentGold = window.debugInventory && typeof window.debugInventory.getGold === 'function'
-            ? Math.max(0, Number(window.debugInventory.getGold() || 0))
-            : 0;
-          const roomCleared = aliveCreatures().length === 0;
-          // Skip rebuild if nothing affecting the shop display has changed
-          const shopKey = `${playerLevel}|${currentGold}|${roomCleared ? 1 : 0}|${[...learnedSpellIds].sort((a, b) => a - b).join(',')}`;
-          if (shopKey === _lastSpellShopKey) return;
-          _lastSpellShopKey = shopKey;
-          spellsGrid.innerHTML = '';
-          // Light-family spells are universally available regardless of class —
-          // they're a core utility for the darkness/light system.
-          const UNIVERSAL_SPELL_IDS = new Set([797, 805, 1952]);
-          const available = (spellsCatalog || []).filter((s) => {
-            if (String(s.status || '').toLowerCase() !== 'active') return false;
-            if (Math.max(0, Number(s.level || 0)) === 0) return false;
-            if (String(s.spell_type || '').toLowerCase() === 'rune') return false;
-            if (Math.max(0, Number(s.level || 0)) > playerLevel) return false;
-            if (learnedSpellIds.has(Number(s.article_id))) return false;
-            const classAllowed = UNIVERSAL_SPELL_IDS.has(Number(s.article_id))
-              || Number((s.raw && s.raw[playerClassKey]) || 0) === 1;
-            if (!classAllowed) return false;
-            const title = String(s.title || '').trim().toLowerCase();
-            if (isBlockedSpellTitle(title)) return false;
-            return true;
-          });
-          const frag = document.createDocumentFragment();
-          for (const spell of available) {
-            const row = document.createElement('div');
-            row.className = 'spell-row';
-            const lvl = Math.max(0, Number(spell.level || 0));
-            const price = Math.max(0, Number(spell.price || 0));
-            const isLearned = learnedSpellIds.has(Number(spell.article_id));
-            const canLevel = playerLevel >= lvl;
-            const canGold = currentGold >= price;
-            const head = document.createElement('div');
-            head.className = 'head';
-            const left = document.createElement('span');
-            left.textContent = spell.title || `Spell ${spell.article_id}`;
-            const right = document.createElement('span');
-            right.className = 'price';
-            right.textContent = `${price} gp`;
-            head.appendChild(left);
-            head.appendChild(right);
-            // Desktop: hover shows the tooltip. Mobile/tablet: use the
-            // "Info" button below (touchShow: false disables tap-on-row).
-            const showSpellTooltipAt = bindSpellTooltip(row, spell, { touchShow: false });
-            const meta = document.createElement('div');
-            meta.className = 'meta';
-            meta.textContent = `Lv ${lvl}  ·  Mana ${Math.max(0, Number(spell.mana || 0))}`;
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            if (isLearned) {
-              btn.textContent = '✓ Learned';
-              btn.disabled = true;
-            } else if (!canLevel) {
-              btn.textContent = `Lv ${lvl} required`;
-              btn.disabled = true;
-            } else if (!canGold) {
-              btn.textContent = `${price} gp required`;
-              btn.disabled = true;
-            } else if (!roomCleared) {
-              btn.textContent = 'Clear room first';
-              btn.disabled = true;
-            } else {
-              btn.textContent = 'Buy Spell';
-              btn.className = 'btn-buy';
-              btn.disabled = false;
-              const buySpell = (ev) => {
-                ev.preventDefault();
-                ev.stopPropagation();
-                if (btn.disabled) return;
-                if (aliveCreatures().length > 0) {
-                  addCombatLog('Clear all creatures on this floor before buying spells.');
-                  return;
-                }
-                const spent = window.debugInventory && typeof window.debugInventory.spendGold === 'function'
-                  ? window.debugInventory.spendGold(price)
-                  : false;
-                if (!spent) {
-                  addCombatLog(`Not enough gold to buy ${spell.title}.`);
-                  return;
-                }
-                btn.disabled = true;
-                const boughtId = Number(spell.article_id);
-                learnedSpellIds.add(boughtId);
-                learnedSpellOrder.push(boughtId);
-                if (learnedSpellOrder.length > 10) {
-                  addCombatLog(`Learned ${spell.title} — use ▲/▼ in Learned Spells to bring it into a hotkey slot.`);
-                }
-                addCombatLog(`Bought spell: ${spell.title} for ${price} gp.`);
-                // El inventario ya se redibuja dentro de spendGoldFromInventory (debugInventory.spendGold).
-                updateHud();
-                renderSpellShop();
-                renderLearnedSpells();
-              };
-              btn.addEventListener('mousedown', (ev) => {
-                if (ev.button !== 0) return;
-                buySpell(ev);
-              });
-              // Touch: only trigger the buy if the finger didn't move — this
-              // way, dragging from the button scrolls the panel instead of
-              // forcing a purchase.
-              let btStartX = 0;
-              let btStartY = 0;
-              let btMoved = false;
-              btn.addEventListener('touchstart', (ev) => {
-                const t = ev.touches && ev.touches[0];
-                if (!t) return;
-                btStartX = t.clientX;
-                btStartY = t.clientY;
-                btMoved = false;
-              }, { passive: true });
-              btn.addEventListener('touchmove', (ev) => {
-                if (btMoved) return;
-                const t = ev.touches && ev.touches[0];
-                if (!t) return;
-                if (Math.abs(t.clientX - btStartX) > 10 || Math.abs(t.clientY - btStartY) > 10) {
-                  btMoved = true;
-                }
-              }, { passive: true });
-              btn.addEventListener('touchend', (ev) => {
-                if (btMoved) return;
-                buySpell(ev);
-              }, { passive: false });
-            }
-            row.appendChild(head);
-            row.appendChild(meta);
-            // Mobile/tablet: an explicit "Info" button opens the tooltip
-            // (tap-on-row is disabled above). Hidden on desktop via CSS,
-            // where hovering the row already shows the tooltip.
-            const infoBtn = document.createElement('button');
-            infoBtn.type = 'button';
-            infoBtn.className = 'spell-row-info-btn';
-            infoBtn.textContent = 'Info';
-            infoBtn.addEventListener('click', (ev) => {
-              ev.preventDefault();
-              ev.stopPropagation();
-              const rect = infoBtn.getBoundingClientRect();
-              showSpellTooltipAt({ clientX: rect.left, clientY: rect.top });
-            });
-            const actions = document.createElement('div');
-            actions.className = 'spell-row-actions';
-            actions.appendChild(btn);
-            actions.appendChild(infoBtn);
-            row.appendChild(actions);
-            frag.appendChild(row);
-          }
-          spellsGrid.appendChild(frag);
-          spellsFoot.textContent = roomCleared
-            ? `Gold: ${currentGold} | Learned: ${learnedSpellIds.size}`
-            : `Clear room to buy | Gold: ${currentGold} | Learned: ${learnedSpellIds.size}`;
-          renderLearnedSpells();
-        };
-        window.addEventListener('coins-changed', renderSpellShop);
 
         // ── Full Market overlay ─────────────────────────────────────────
         // Market browse/buy UI lives in engine/systems/Market.js. The engine
@@ -2308,6 +1784,16 @@ function startGame(configPlayer) {
           playerClassKey,
           getAliveCreaturesCount: () => aliveCreatures().length,
           onHudRefresh:           () => updateHud(),
+        });
+        setupSpellShop({
+          playerClassKey,
+          getCatalog:             () => spellsCatalog,
+          getPlayerLevel:         () => playerLevel,
+          learnedSpellIds,
+          learnedSpellOrder,
+          getAliveCreaturesCount: () => aliveCreatures().length,
+          onHudRefresh:           () => updateHud(),
+          onLearnedSpellsRefresh: () => renderLearnedSpells(),
         });
         setupMarket({
           getCatalog:             () => itemsShopCatalog,
@@ -5931,8 +5417,7 @@ function startGame(configPlayer) {
             return Boolean(equippedHand && isMagicRangedWeapon(equippedHand));
           };
           // Check click/touch-triggered spell slot first, then keyboard
-          let spellSlotToCast = _pendingSpellSlot;
-          _pendingSpellSlot = 0;
+          let spellSlotToCast = consumePendingSpellSlot();
           if (!spellSlotToCast) {
             spellSlotToCast = (
               Phaser.Input.Keyboard.JustDown(spellHotkeys.one)   || Phaser.Input.Keyboard.JustDown(spellHotkeys.num1) ? 1
@@ -5959,8 +5444,7 @@ function startGame(configPlayer) {
           }
 
           // Consumable hotkeys: F=Food, G=Mana potion, H=Health potion
-          let consumableType = _pendingConsumable;
-          _pendingConsumable = '';
+          let consumableType = consumePendingConsumable();
           if (!consumableType) {
             if (Phaser.Input.Keyboard.JustDown(consumableKeys.F)) consumableType = 'food';
             else if (Phaser.Input.Keyboard.JustDown(consumableKeys.G)) consumableType = 'mana';
@@ -6073,375 +5557,6 @@ setupInventoryPanel({ startGame });
 // can call it too. Engine still imports + uses it during the Phaser preload
 // (lines ~215-240).
 
-const CLASS_META = {
-  knight:   { label: 'Elite Knight',    icon: '⚔️' },
-  paladin:  { label: 'Royal Paladin',   icon: '🏹' },
-  sorcerer: { label: 'Master Sorcerer', icon: '🔥' },
-  druid:    { label: 'Elder Druid',     icon: '🌿' },
-};
-
-function fmtGold(g) {
-  if (g >= 1_000_000) return `${(g / 1_000_000).toFixed(1)}M gp`;
-  if (g >= 1_000)     return `${(g / 1_000).toFixed(1)}k gp`;
-  return `${g} gp`;
-}
-
-function fmtDate(ts) {
-  const d = new Date(ts);
-  const now = Date.now();
-  const diff = now - ts;
-  if (diff < 60_000)          return 'just now';
-  if (diff < 3_600_000)       return `${Math.floor(diff / 60_000)}m ago`;
-  if (diff < 86_400_000)      return `${Math.floor(diff / 3_600_000)}h ago`;
-  if (diff < 7 * 86_400_000)  return `${Math.floor(diff / 86_400_000)}d ago`;
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-async function saveRun(run) {
-  // Hall of Fame submissions are now authenticated (Level 4 security plan).
-  // Guests silently skip posting — their run still stays on their screen but
-  // doesn't land on the leaderboard.
-  //
-  // In the OFFLINE build there is no real leaderboard to pollute; every run
-  // goes to localStorage so the player's personal Hall of Fame stays populated.
-  const api = window.tdAuth && window.tdAuth.apiFetch;
-  if (!api) return;
-  if (!OFFLINE_BUILD) {
-    const loggedIn = window.tdAuth.isLoggedIn && window.tdAuth.isLoggedIn();
-    if (!loggedIn) return;
-    // Admins play for testing — their deaths should never pollute the board,
-    // even though god mode is available to them.
-    if (window.tdAuth.isAdmin && window.tdAuth.isAdmin()) return;
-  }
-  try {
-    await api('/api/runs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(run),
-    });
-  } catch { /* silent — offline */ }
-}
-
-function showHallOfFame() {
-  const existing = document.getElementById('hofOverlay');
-  if (existing) existing.remove();
-
-  const overlay = document.createElement('div');
-  overlay.id = 'hofOverlay';
-  overlay.style.cssText = `
-    position: fixed; inset: 0; z-index: 10001;
-    background:
-      radial-gradient(ellipse at 50% 30%, rgba(4,6,14,0.6) 0%, rgba(3,5,12,0.93) 65%, rgba(1,2,6,0.98) 100%),
-      url('/data/images/game/sword.jpg') center/cover no-repeat fixed,
-      #05070f;
-    display: flex; flex-direction: column; align-items: center;
-    font-family: "Segoe UI", system-ui, sans-serif; color: #efe4c9;
-    animation: hofFadeIn 0.35s ease; overflow: hidden;
-  `;
-
-  overlay.innerHTML = `
-    <style>
-      @keyframes hofFadeIn { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
-      #hofOverlay::before {
-        content: ''; position: absolute; inset: 0;
-        background: repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0 1px, transparent 1px 3px);
-        pointer-events: none; mix-blend-mode: multiply; opacity: 0.5;
-      }
-      #hofOverlay .hof-panel {
-        position: relative;
-        width: 100%; max-width: 920px;
-        margin: 28px 16px;
-        flex: 1; min-height: 0;
-        display: flex; flex-direction: column;
-        background: linear-gradient(165deg, rgba(24,18,10,0.88) 0%, rgba(10,12,24,0.92) 100%);
-        border: 1px solid rgba(226,160,48,0.32);
-        border-radius: 18px;
-        box-shadow:
-          0 0 0 1px rgba(226,160,48,0.08) inset,
-          0 32px 80px rgba(0,0,0,0.85),
-          0 0 90px rgba(226,160,48,0.08);
-        backdrop-filter: blur(6px);
-      }
-      #hofOverlay .hof-panel::before {
-        content: ''; position: absolute; top: 0; left: 14%; right: 14%; height: 2px;
-        background: linear-gradient(90deg, transparent, #e2a030 50%, transparent);
-        filter: blur(0.4px); opacity: 0.8;
-      }
-      #hofOverlay .hof-header {
-        padding: 26px 32px 0;
-        display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
-      }
-      #hofOverlay .hof-title-wrap { display: flex; align-items: center; gap: 14px; }
-      #hofOverlay .hof-trophy { font-size: 2.2rem; filter: drop-shadow(0 0 14px rgba(244,192,84,0.7)); }
-      #hofOverlay .hof-title {
-        font-family: Georgia, 'Times New Roman', serif;
-        font-size: clamp(1.4rem, 3vw, 1.9rem); font-weight: 900;
-        letter-spacing: 0.14em; text-transform: uppercase; color: #f4c054;
-        text-shadow:
-          0 0 24px rgba(226,160,48,0.55),
-          0 0 4px rgba(255,200,120,0.7),
-          0 2px 0 rgba(0,0,0,0.7);
-      }
-      #hofOverlay .hof-subtitle { font-size: 0.72rem; color: #c9b589; letter-spacing: 0.22em; text-transform: uppercase; margin-top: 3px; opacity: 0.8; }
-      #hofOverlay .hof-close {
-        background: rgba(138, 42, 42, 0.28); border: 1px solid rgba(215, 72, 72, 0.45);
-        border-radius: 8px; color: #f5c5c5; font-size: 0.78rem; font-weight: 700;
-        padding: 8px 14px;
-        letter-spacing: 0.12em; text-transform: uppercase;
-        cursor: pointer; font-family: inherit;
-        transition: background 0.15s, color 0.15s, box-shadow 0.15s;
-      }
-      #hofOverlay .hof-close:hover {
-        background: rgba(153, 27, 27, 0.55); color: #fff;
-        box-shadow: 0 0 18px rgba(215,72,72,0.3);
-      }
-      #hofOverlay .hof-divider {
-        height: 1px; margin: 18px 32px 0; flex-shrink: 0;
-        background: linear-gradient(90deg, transparent, rgba(226,160,48,0.45), transparent);
-      }
-      #hofOverlay .hof-scroll {
-        flex: 1; overflow-y: auto; padding: 0 32px 28px;
-        scrollbar-width: thin; scrollbar-color: rgba(226,160,48,0.3) transparent;
-      }
-      #hofOverlay .hof-scroll::-webkit-scrollbar { width: 5px; }
-      #hofOverlay .hof-scroll::-webkit-scrollbar-thumb { background: rgba(226,160,48,0.35); border-radius: 3px; }
-      #hofOverlay table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-      #hofOverlay thead th {
-        font-size: 0.68rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
-        color: #c9b589; padding: 0 10px 10px; text-align: left; white-space: nowrap;
-        border-bottom: 1px solid rgba(226,160,48,0.25);
-        opacity: 0.85;
-      }
-      #hofOverlay thead th.col-num { text-align: center; width: 44px; }
-      #hofOverlay thead th.col-num2 { text-align: right; }
-      #hofOverlay tbody tr {
-        border-bottom: 1px solid rgba(226,160,48,0.08);
-        transition: background 0.12s;
-      }
-      #hofOverlay tbody tr:hover { background: rgba(226,160,48,0.07); }
-      #hofOverlay tbody tr.hof-me {
-        background: linear-gradient(90deg, rgba(226,160,48,0.1), rgba(226,160,48,0.04));
-        box-shadow: inset 3px 0 0 #f4c054;
-      }
-      #hofOverlay tbody tr.hof-me td { color: #ffe7ba; }
-      #hofOverlay tbody td {
-        padding: 11px 10px; font-size: 0.88rem; color: #d9cba8; white-space: nowrap;
-      }
-      #hofOverlay td.col-rank { text-align: center; font-weight: 900; font-size: 1rem; width: 44px; color: #c9b589; }
-      #hofOverlay td.col-num2 { text-align: right; }
-      #hofOverlay .col-name { font-weight: 700; color: #efe4c9; max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
-      #hofOverlay .col-class { color: #c9b589; }
-      #hofOverlay .col-floor { font-weight: 800; font-size: 1rem; color: #efe4c9; }
-      #hofOverlay .col-gold { color: #f4c054; font-weight: 700; text-shadow: 0 0 6px rgba(226,160,48,0.35); }
-      #hofOverlay .col-killedby { color: #f5a9a9; font-size: 0.82rem; }
-      #hofOverlay .col-date { color: #8c7858; font-size: 0.78rem; }
-      #hofOverlay .rank-medal { font-size: 1.15rem; filter: drop-shadow(0 0 6px rgba(244,192,84,0.55)); }
-      #hofOverlay .hof-loading, #hofOverlay .hof-empty, #hofOverlay .hof-error {
-        text-align: center; padding: 60px 20px; color: #9a8468;
-        font-size: 0.95rem; letter-spacing: 0.1em;
-      }
-      #hofOverlay .hof-error { color: #f5a9a9; }
-      #hofOverlay .hof-spinner {
-        display: inline-block; width: 28px; height: 28px;
-        border: 3px solid rgba(226,160,48,0.18); border-top-color: #f4c054;
-        border-radius: 50%; animation: hofSpin 0.7s linear infinite; margin-bottom: 14px;
-      }
-      @keyframes hofSpin { to { transform: rotate(360deg); } }
-    </style>
-    <div class="hof-panel">
-      <div class="hof-header">
-        <div class="hof-title-wrap">
-          <span class="hof-trophy">🏆</span>
-          <div>
-            <div class="hof-title">Hall of Fame</div>
-            <div class="hof-subtitle">${OFFLINE_BUILD ? 'Your personal top runs on this device' : 'Top 100 adventurers of all time'}</div>
-          </div>
-        </div>
-        <button class="hof-close" id="hofCloseBtn">✕ Close</button>
-      </div>
-      <div class="hof-divider"></div>
-      <div class="hof-scroll">
-        <div class="hof-loading" id="hofContent">
-          <div class="hof-spinner"></div><br>Loading leaderboard...
-        </div>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(overlay);
-
-  document.getElementById('hofCloseBtn').addEventListener('click', () => overlay.remove());
-
-  const MEDALS = ['🥇', '🥈', '🥉'];
-
-  const hofFetch = (window.tdAuth && window.tdAuth.apiFetch) || fetch;
-  hofFetch('/api/runs')
-    .then((r) => {
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.json();
-    })
-    .then(({ runs }) => {
-      const content = document.getElementById('hofContent');
-      if (!content) return;
-      if (!runs || runs.length === 0) {
-        content.outerHTML = '<div class="hof-empty">No runs recorded yet. Be the first!</div>';
-        return;
-      }
-      const rows = runs.map((run, i) => {
-        const rank = i + 1;
-        const medal = MEDALS[i] ?? rank;
-        const cls = CLASS_META[run.classKey] || { label: escHtml(String(run.classKey || '—')), icon: '❓' };
-        const sexIcon = run.sex === 'female' ? '♀' : '♂';
-        return `
-          <tr>
-            <td class="col-rank">${rank <= 3 ? `<span class="rank-medal">${medal}</span>` : rank}</td>
-            <td class="col-name">${sexIcon} ${escHtml(run.name)}</td>
-            <td class="col-class">${cls.icon} ${escHtml(cls.label)}</td>
-            <td class="col-floor col-num2">${Number(run.floor) || 0}</td>
-            <td class="col-num2">${Number(run.kills) || 0}</td>
-            <td class="col-num2">${Number(run.playerLevel) || 0}</td>
-            <td class="col-gold col-num2">${fmtGold(Number(run.gold) || 0)}</td>
-            <td class="col-killedby">${escHtml(run.killedBy || '—')}</td>
-            <td class="col-date col-num2">${fmtDate(Number(run.ts) || 0)}</td>
-          </tr>`;
-      }).join('');
-
-      content.outerHTML = `
-        <table>
-          <thead>
-            <tr>
-              <th class="col-num">#</th>
-              <th>Name</th>
-              <th>Class</th>
-              <th class="col-num2">Floor</th>
-              <th class="col-num2">Kills</th>
-              <th class="col-num2">Level</th>
-              <th class="col-num2">Gold</th>
-              <th>Killed by</th>
-              <th class="col-num2">Date</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>`;
-    })
-    .catch(() => {
-      const content = document.getElementById('hofContent');
-      if (content) content.outerHTML = '<div class="hof-error">Could not load leaderboard.<br><small>Hall of Fame requires the deployed version.</small></div>';
-    });
-}
-
-function escHtml(str) {
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function showDeathSummary({ name, classKey, sex, floor, kills, playerLevel, gold, killedBy }) {
-  const existing = document.getElementById('deathSummaryOverlay');
-  if (existing) existing.remove();
-
-  // Save run to leaderboard silently
-  saveRun({ name, classKey, sex, floor, kills, playerLevel, gold, killedBy });
-
-  const cls = CLASS_META[String(classKey).toLowerCase()] || { label: classKey, icon: '' };
-
-  const overlay = document.createElement('div');
-  overlay.id = 'deathSummaryOverlay';
-  overlay.style.cssText = `
-    position: fixed; inset: 0; z-index: 9999;
-    background: radial-gradient(ellipse at center, rgba(10,15,30,0.97) 0%, rgba(5,8,18,0.99) 100%);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    font-family: "Segoe UI", system-ui, sans-serif; color: #e2e8f0;
-    animation: fadeInOverlay 0.6s ease;
-  `;
-
-  overlay.innerHTML = `
-    <style>
-      @keyframes fadeInOverlay { from { opacity:0; transform:scale(0.97); } to { opacity:1; transform:scale(1); } }
-      @keyframes pulseRed { 0%,100% { text-shadow:0 0 30px #ef4444,0 0 60px #ef444488; } 50% { text-shadow:0 0 50px #ef4444,0 0 100px #ef444455; } }
-      #deathSummaryOverlay .death-title {
-        font-size: clamp(2.5rem,6vw,4.5rem); font-weight:900; letter-spacing:0.15em;
-        color:#ef4444; text-transform:uppercase;
-        animation:pulseRed 2s ease-in-out infinite; margin-bottom:0.2em;
-      }
-      #deathSummaryOverlay .death-subtitle {
-        font-size:clamp(0.85rem,2vw,1.05rem); color:#64748b; letter-spacing:0.18em;
-        text-transform:uppercase; margin-bottom:2em;
-      }
-      #deathSummaryOverlay .stats-card {
-        background:linear-gradient(165deg,rgba(22,36,58,0.9) 0%,rgba(8,14,26,0.95) 100%);
-        border:1px solid rgba(56,189,248,0.18); border-radius:16px;
-        padding:1.6em 2.8em; min-width:min(400px,90vw);
-        box-shadow:0 20px 60px rgba(0,0,0,0.6); margin-bottom:2em;
-      }
-      #deathSummaryOverlay .stat-row {
-        display:flex; justify-content:space-between; align-items:center;
-        padding:0.5em 0; border-bottom:1px solid rgba(255,255,255,0.06);
-        font-size:clamp(0.88rem,1.8vw,1rem);
-      }
-      #deathSummaryOverlay .stat-row:last-child { border-bottom:none; }
-      #deathSummaryOverlay .stat-label { color:#64748b; }
-      #deathSummaryOverlay .stat-value { color:#e2e8f0; font-weight:700; }
-      #deathSummaryOverlay .btn-row { display:flex; gap:12px; }
-      #deathSummaryOverlay .btn-hof {
-        background:linear-gradient(135deg,rgba(99,102,241,0.2),rgba(99,102,241,0.3));
-        color:#a5b4fc; border:1px solid rgba(99,102,241,0.4); border-radius:10px;
-        padding:0.85em 1.6em; font-size:clamp(0.88rem,1.8vw,1rem);
-        font-weight:700; letter-spacing:0.06em; cursor:pointer;
-        transition:transform 0.15s,box-shadow 0.15s,background 0.15s;
-      }
-      #deathSummaryOverlay .btn-hof:hover {
-        background:linear-gradient(135deg,rgba(99,102,241,0.35),rgba(99,102,241,0.45));
-        transform:translateY(-2px); box-shadow:0 6px 20px rgba(99,102,241,0.25);
-      }
-      #deathSummaryOverlay .btn-play {
-        background:linear-gradient(135deg,#1e40af,#1d4ed8);
-        color:#fff; border:none; border-radius:10px;
-        padding:0.85em 2em; font-size:clamp(0.88rem,1.8vw,1rem);
-        font-weight:700; letter-spacing:0.08em; cursor:pointer;
-        box-shadow:0 6px 24px rgba(29,78,216,0.4);
-        transition:transform 0.15s,box-shadow 0.15s,background 0.15s;
-        text-transform:uppercase;
-      }
-      #deathSummaryOverlay .btn-play:hover {
-        background:linear-gradient(135deg,#2563eb,#3b82f6);
-        transform:translateY(-2px); box-shadow:0 10px 32px rgba(59,130,246,0.5);
-      }
-      #deathSummaryOverlay .btn-play:active,
-      #deathSummaryOverlay .btn-hof:active { transform:translateY(0); }
-    </style>
-    <div class="death-title">You Died</div>
-    <div class="death-subtitle">${cls.icon} ${escHtml(name)} &mdash; ${cls.label}</div>
-    <div class="stats-card">
-      <div class="stat-row"><span class="stat-label">Killed by</span><span class="stat-value" style="color:#f87171;">${escHtml(killedBy || 'Unknown')}</span></div>
-      <div class="stat-row"><span class="stat-label">Floor reached</span><span class="stat-value">${floor}</span></div>
-      <div class="stat-row"><span class="stat-label">Creatures killed</span><span class="stat-value">${kills}</span></div>
-      <div class="stat-row"><span class="stat-label">Player level</span><span class="stat-value">${playerLevel}</span></div>
-      <div class="stat-row"><span class="stat-label">Gold earned</span><span class="stat-value">${fmtGold(gold)}</span></div>
-    </div>
-    <div class="btn-row">
-      <button class="btn-hof" id="hofBtn">🏆 Hall of Fame</button>
-      <button class="btn-play" id="playAgainBtn">▶ Play Again</button>
-    </div>
-  `;
-
-  document.body.appendChild(overlay);
-
-  document.getElementById('hofBtn').addEventListener('click', () => showHallOfFame());
-
-  document.getElementById('playAgainBtn').addEventListener('click', () => {
-    overlay.remove();
-    if (game) {
-      game.destroy(false);  // false = no eliminar el canvas del DOM (evita errores de WebGL context nulo)
-      game = null;
-      const phaserDiv = document.getElementById('phaser');
-      if (phaserDiv) phaserDiv.innerHTML = '';  // limpiar canvas manualmente
-    }
-    if (typeof window._resetInventoryForNewRun === 'function') {
-      window._resetInventoryForNewRun();
-    }
-    const startOverlay = document.getElementById('startOverlay');
-    if (startOverlay) startOverlay.style.display = '';
-  });
-}
 
 async function loadProgressionDatabase() {
   if (typeProgressionGroups.length > 0) return;
