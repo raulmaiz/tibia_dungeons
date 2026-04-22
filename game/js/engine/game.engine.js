@@ -134,6 +134,11 @@ import {
   restoreWeaponSkills,
   restoreLearnedSpells,
 } from './systems/SaveLoad.js';
+import {
+  initMinimap,
+  drawMinimapBase,
+  drawMinimapDynamic,
+} from './systems/Minimap.js';
 
 // Expose the bus for debugging / browser console listeners.
 if (typeof window !== 'undefined') window.tdEvents = bus;
@@ -374,93 +379,15 @@ function startGame(configPlayer) {
 
 
         // ── Minimap (HTML canvas in right sidebar) ───────────────────────────
-        const MMAP_PAD = 5;
-        const minimapCanvas = /** @type {HTMLCanvasElement|null} */ (document.getElementById('minimapCanvas'));
-        const minimapCtx = minimapCanvas ? minimapCanvas.getContext('2d') : null;
-        let minimapMMTile = 3; // tile size in px, updated each floor
-        let minimapBaseImageData = null;
-
-        const drawMinimapBase = () => {
-          if (!minimapCtx || !minimapCanvas) return;
-          const containerW = (minimapCanvas.parentElement && minimapCanvas.parentElement.clientWidth) || 252;
-          minimapMMTile = Math.max(2, Math.floor((containerW - MMAP_PAD * 2) / dungeonW));
-          const mmW = dungeonW * minimapMMTile + MMAP_PAD * 2;
-          const mmH = dungeonH * minimapMMTile + MMAP_PAD * 2;
-          minimapCanvas.width = mmW;
-          minimapCanvas.height = mmH;
-
-          // Background
-          minimapCtx.fillStyle = 'rgba(5,10,20,0.95)';
-          minimapCtx.fillRect(0, 0, mmW, mmH);
-          // Border
-          minimapCtx.strokeStyle = 'rgba(56,189,248,0.35)';
-          minimapCtx.lineWidth = 1;
-          minimapCtx.strokeRect(0.5, 0.5, mmW - 1, mmH - 1);
-          // Floor tiles
-          minimapCtx.fillStyle = '#2a3a52';
-          for (let gy = 0; gy < dungeonH; gy++) {
-            const row = currentMap[gy];
-            if (!row) continue;
-            for (let gx = 0; gx < dungeonW; gx++) {
-              if (row[gx] === '.') {
-                minimapCtx.fillRect(
-                  MMAP_PAD + gx * minimapMMTile,
-                  MMAP_PAD + gy * minimapMMTile,
-                  minimapMMTile,
-                  minimapMMTile
-                );
-              }
-            }
-          }
-          // Stairs down (yellow-orange)
-          minimapCtx.fillStyle = '#fbbf24';
-          minimapCtx.fillRect(
-            MMAP_PAD + currentStairsTile.gx * minimapMMTile - 1,
-            MMAP_PAD + currentStairsTile.gy * minimapMMTile - 1,
-            minimapMMTile + 2,
-            minimapMMTile + 2
-          );
-          // Stairs up / rope (sky-blue)
-          minimapCtx.fillStyle = '#38bdf8';
-          minimapCtx.fillRect(
-            MMAP_PAD + START_TILE.gx * minimapMMTile - 1,
-            MMAP_PAD + START_TILE.gy * minimapMMTile - 1,
-            minimapMMTile + 2,
-            minimapMMTile + 2
-          );
-          // Save static snapshot for fast dynamic overlay
-          minimapBaseImageData = minimapCtx.getImageData(0, 0, mmW, mmH);
-          drawMinimapDynamic();
-        };
-
-        const drawMinimapDynamic = () => {
-          if (!minimapCtx || !minimapBaseImageData) return;
-          minimapCtx.putImageData(minimapBaseImageData, 0, 0);
-          // Convinced/summoned allies — green dots so the player can locate
-          // them when they wander out of sight. Enemies remain hidden to keep
-          // the minimap a navigation aid, not a combat tracker.
-          if (Array.isArray(creatures)) {
-            minimapCtx.fillStyle = '#22c55e';
-            for (const c of creatures) {
-              if (!c || !c.alive || !c.isConvinced) continue;
-              minimapCtx.fillRect(
-                MMAP_PAD + c.gx * minimapMMTile,
-                MMAP_PAD + c.gy * minimapMMTile,
-                minimapMMTile,
-                minimapMMTile
-              );
-            }
-          }
-          // Player on top so it stays visible when an ally shares the tile.
-          minimapCtx.fillStyle = '#ffffff';
-          minimapCtx.fillRect(
-            MMAP_PAD + gridX * minimapMMTile,
-            MMAP_PAD + gridY * minimapMMTile,
-            minimapMMTile,
-            minimapMMTile
-          );
-        };
-        // ── End Minimap setup ─────────────────────────────────────────────────
+        initMinimap();
+        // Small wrappers so call sites stay short. The engine still drives
+        // WHEN the minimap redraws (floor change + 200ms tick); Minimap.js
+        // owns HOW it draws.
+        const redrawMinimapBase = () => drawMinimapBase({
+          map: currentMap, dungeonW, dungeonH,
+          stairsTile: currentStairsTile, startTile: START_TILE,
+        });
+        const redrawMinimapDynamic = () => drawMinimapDynamic({ creatures, gridX, gridY });
 
         this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
         this.cameras.main.startFollow(player, true, 0.15, 0.15);
@@ -1929,7 +1856,8 @@ function startGame(configPlayer) {
           // the player with only the base halo while a torch is equipped.
           applyCurrentLightStateToAtmosphere();
           floorAtmosphere.showPit(false);
-          drawMinimapBase();
+          redrawMinimapBase();
+          redrawMinimapDynamic();
           const canRopeUp = currentLevel > 1;
           floorAtmosphere.showRopeAnchor(canRopeUp);
           spawnCreaturesForLevel(currentLevel);
@@ -7008,7 +6936,7 @@ function startGame(configPlayer) {
         this.time.addEvent({
           delay: 200,
           loop: true,
-          callback: drawMinimapDynamic,
+          callback: redrawMinimapDynamic,
         });
         this.time.addEvent({
           delay: 2000,
