@@ -1,16 +1,16 @@
-// Spell tooltip system — Phase 4 extraction from game.engine.js.
+// Spell tooltip system - Phase 4 extraction from game.engine.js.
 //
 // Owns the `#itemTooltip` DOM node while it is showing SPELL content (the
 // learned-spells grid, the spell bar, the spell shop). The separate item
-// tooltip — used for market cards and equipment slots — lives under
+// tooltip - used for market cards and equipment slots - lives under
 // `ui/panels/itemTooltip.js`; both compete for the same DOM target,
 // which is fine because only one is visible at a time.
 //
 // Public surface:
-//   hideSpellTooltip()                       — close the tooltip
-//   bindSpellTooltip(el, spell, opts)        — attach hover/tap handlers
-//   bindSpellBarTooltip(el, spell, slotLabel) — short-form variant for hotbar
-//   setupSpellTooltipDismissers()            — global listeners (blur, Esc, …)
+//   hideSpellTooltip()                       - close the tooltip
+//   bindSpellTooltip(el, spell, opts)        - attach hover/tap handlers
+//   bindSpellBarTooltip(el, spell, slotLabel) - short-form variant for hotbar
+//   setupSpellTooltipDismissers()            - global listeners (blur, Esc, …)
 //
 // Call `setupSpellTooltipDismissers()` once at scene create. The other
 // functions are called per DOM element as the engine re-renders the
@@ -93,7 +93,7 @@ export function bindSpellTooltip(el, spell, opts = {}) {
     ttEl.style.maxWidth = '260px';
     place(ev);
   };
-  // Hover handlers only on true hover-capable devices — on touch,
+  // Hover handlers only on true hover-capable devices - on touch,
   // synthesized mouseenter/leave fires at the end of a tap and would
   // hide the tooltip immediately after our pointerup shows it.
   if (hasRealHover()) {
@@ -101,7 +101,7 @@ export function bindSpellTooltip(el, spell, opts = {}) {
     el.addEventListener('mousemove', place);
     el.addEventListener('mouseleave', hideSpellTooltip);
   }
-  // Unified tap-to-show via pointer events — works for mouse, touch,
+  // Unified tap-to-show via pointer events - works for mouse, touch,
   // and pen. Filters out taps on child buttons/reorder arrows so their
   // own handlers (reorder / buy) don't get masked by tooltip logic.
   // Callers can pass { touchShow: false } to opt out (e.g. Spells
@@ -158,7 +158,7 @@ export function bindSpellBarTooltip(el, spell, slotLabel) {
   el.addEventListener('mouseleave', hideSpellTooltip);
 }
 
-// Global dismissers — attach once on scene create.
+// Global dismissers - attach once on scene create.
 export function setupSpellTooltipDismissers() {
   window.addEventListener('blur', hideSpellTooltip);
   document.addEventListener('visibilitychange', () => {

@@ -1,4 +1,4 @@
-// Boot flow — the seam between the character-select overlay and the running
+// Boot flow - the seam between the character-select overlay and the running
 // engine scene. Wires:
 //
 //   • "Enter Dungeon" click  → bootGame({ name, sex, classKey })
@@ -9,9 +9,9 @@
 //                                new character-select round starts clean
 //
 // The closure holds two pieces of state unique to the boot lifecycle:
-//   • _starting      — one-shot guard so double-clicking "Enter" doesn't
+//   • _starting      - one-shot guard so double-clicking "Enter" doesn't
 //                      kick off two parallel boots
-//   • currentSaveId  — which server-side save slot this run is bound to
+//   • currentSaveId  - which server-side save slot this run is bound to
 //                      (null for a brand-new run)
 //
 // Dep injection: the orchestrator passes `startGame` in so we don't
@@ -61,7 +61,7 @@ export function setupBootFlow(deps) {
     if (loadingOverlay) loadingOverlay.style.display = 'flex';
     setLoadingProgress(0, 'Loading creature data...');
 
-    // Progress bar driver — one tick per finished task. Engine tasks (6)
+    // Progress bar driver - one tick per finished task. Engine tasks (6)
     // arrive via loadEngineData's onProgress callback; the panel-internal
     // tasks (bag + coin templates) tick on completion of their own promise.
     let jsonsDone = 0;
@@ -151,7 +151,7 @@ export function setupBootFlow(deps) {
     // Shared-state accessors for the in-game Save button.
     getCurrentSaveId() { return currentSaveId; },
     setCurrentSaveId(id) { currentSaveId = id || null; },
-    // Wipe the active run's save slot — called from death flows so a
+    // Wipe the active run's save slot - called from death flows so a
     // completed/failed run doesn't keep polluting the Load Game list.
     async deleteCurrentSave() {
       const id = currentSaveId;

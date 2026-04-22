@@ -1,6 +1,6 @@
-// Floating-text visual effects — scene-bound splash effects that play when
+// Floating-text visual effects - scene-bound splash effects that play when
 // the player eats/drinks/levels up. Each function creates short-lived
-// Phaser objects (text, circles) with tweens; nothing is returned — the
+// Phaser objects (text, circles) with tweens; nothing is returned - the
 // tweens destroy their targets on completion.
 //
 // Extracted from game.engine.js Phase 4. These are pure presentation:
@@ -21,6 +21,20 @@ import {
   shockwaveRing,
 } from '../../rendering/Renderer.js';
 
+/**
+ * @typedef {object} FloatingFxCtx
+ * @property {any} player                          - Phaser player sprite
+ * @property {number} tileSize
+ * @property {number} basePlayerScaleX
+ * @property {number} basePlayerScaleY
+ * @property {() => boolean} [isActive]            - false after player death mid-tween
+ */
+
+/**
+ * @param {any} scene
+ * @param {FloatingFxCtx} ctx
+ * @param {string} label
+ */
 export function showEatEffect(scene, ctx, label) {
   const { player, tileSize, basePlayerScaleX, basePlayerScaleY, isActive } = ctx;
   shockwaveRing(scene, player.x, player.y, 0x4ade80, { startR: 8, endScale: 2.1, duration: 280 });
@@ -74,6 +88,12 @@ export function showEatEffect(scene, ctx, label) {
   });
 }
 
+/**
+ * @param {any} scene
+ * @param {FloatingFxCtx} ctx
+ * @param {string} label
+ * @param {string} [color]
+ */
 export function showDrinkEffect(scene, ctx, label, color = '#7dd3fc') {
   const { player, tileSize } = ctx;
   shockwaveRing(scene, player.x, player.y, 0x38bdf8, { startR: 6, endScale: 2.4, duration: 300 });
@@ -109,6 +129,10 @@ export function showDrinkEffect(scene, ctx, label, color = '#7dd3fc') {
   });
 }
 
+/**
+ * @param {any} scene
+ * @param {FloatingFxCtx} ctx
+ */
 export function showFullFoodEffect(scene, ctx) {
   const { player, tileSize, basePlayerScaleX, basePlayerScaleY, isActive } = ctx;
   player.setTint(0xfbbf24);
@@ -144,6 +168,7 @@ export function showFullFoodEffect(scene, ctx) {
   });
 }
 
+/** @param {any} scene */
 export function showLevelUpText(scene) {
   const cx = scene.scale.width / 2;
   const cy = scene.scale.height / 2;
@@ -182,6 +207,11 @@ export function showLevelUpText(scene) {
   });
 }
 
+/**
+ * @param {any} scene
+ * @param {string} label
+ * @param {number} level
+ */
 export function showSkillLevelUpText(scene, label, level) {
   const txt = scene.add.text(scene.scale.width / 2, 88, `${label} +1 (Lv ${level})`, {
     color: '#bbf7d0',

@@ -1,4 +1,4 @@
-// Save/Load — first Phase 4 extraction from game.engine.js.
+// Save/Load - first Phase 4 extraction from game.engine.js.
 //
 // Only the **snapshot capture** side lives here for now. It is pure: given
 // the current run state (a ctx object built from the engine closure), it
@@ -46,7 +46,7 @@
  * @returns {SaveSnapshot}
  */
 export function captureSaveSnapshot(ctx) {
-  // Pull inventory state through the debugInventory bridge — the
+  // Pull inventory state through the debugInventory bridge - the
   // underlying equippedSlots / bagLootItems live in the panel closure
   // and aren't directly reachable from the engine.
   let invState = null;
@@ -93,7 +93,7 @@ export function captureSaveSnapshot(ctx) {
       : {},
     bagLootItems:     (invState && Array.isArray(invState.items))
       ? invState.items.map((i) => ({ ...i })) : [],
-    // Spells — learnedSpellOrder is the new authoritative order
+    // Spells - learnedSpellOrder is the new authoritative order
     // (first 10 are hotkeys, rest are unslotted). The legacy
     // learnedSpellSlots field is preserved for old clients/saves.
     learnedSpellIds:   Array.from(ctx.learnedSpellIds || []),
@@ -119,8 +119,8 @@ export function captureSaveSnapshot(ctx) {
  * valid everywhere it's already captured. Each level is clamped to >= 10
  * (the baseline every weapon type starts at).
  *
- * @param {Map<string,number>} map   — engine's `weaponSkillLevelByType`
- * @param {object} snap              — save snapshot returned by captureSaveSnapshot
+ * @param {Map<string,number>} map   - engine's `weaponSkillLevelByType`
+ * @param {object} snap              - save snapshot returned by captureSaveSnapshot
  */
 export function restoreWeaponSkills(map, snap) {
   if (!map || typeof map.clear !== 'function') return;
@@ -134,13 +134,13 @@ export function restoreWeaponSkills(map, snap) {
  * Rehydrate learned-spell state from a snapshot. Prefers the new
  * `learnedSpellOrder` field but falls back to the legacy
  * `learnedSpellSlots` (pre-unified-order saves). Also backfills any IDs
- * present in `learnedSpellIds` but missing from the order — guarantees the
+ * present in `learnedSpellIds` but missing from the order - guarantees the
  * hotbar never loses a spell the player legitimately learned.
  *
  * Mutates both containers in place.
  *
- * @param {Set<number>} idsSet    — engine's `learnedSpellIds`
- * @param {number[]}    orderArr  — engine's `learnedSpellOrder`
+ * @param {Set<number>} idsSet    - engine's `learnedSpellIds`
+ * @param {number[]}    orderArr  - engine's `learnedSpellOrder`
  * @param {object}      snap
  */
 export function restoreLearnedSpells(idsSet, orderArr, snap) {

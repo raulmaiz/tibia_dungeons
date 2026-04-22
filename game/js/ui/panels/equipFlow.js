@@ -1,12 +1,12 @@
 // Async equipment flows. Two public entry points:
 //
-//   • equipBagByArticleId(articleId)  — BAG slot. Fetches the item from the
+//   • equipBagByArticleId(articleId)  - BAG slot. Fetches the item from the
 //     catalog, validates it's a Container, rewrites the bag slot visuals,
 //     adjusts capacity, and re-renders the loot grid. Backpacks are proxied
 //     through the canonical `bag` template so stored-item renderers don't
 //     have to special-case colored/variant backpacks.
 //
-//   • equipItemInSlot(slotKey, articleId) — any other slot. Validates the
+//   • equipItemInSlot(slotKey, articleId) - any other slot. Validates the
 //     item matches the slot rules (type/class/secondary), then delegates to
 //     setEquippedSlotVisual. Used by market purchases and the boot-time
 //     restore path (both live in bootFlow.js).

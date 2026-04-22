@@ -3,8 +3,8 @@
 // done via bindTooltip() (hover) or showTouchLootTooltip() (tap).
 //
 // Cross-module calls go through panelState.helpers:
-//   - resolveEquipSlotForItem — to decide "Equip" vs "Use" action label
-//   - resolveSellUnitPrice    — to show "Sell (N gp)" on the touch sheet
+//   - resolveEquipSlotForItem - to decide "Equip" vs "Use" action label
+//   - resolveSellUnitPrice    - to show "Sell (N gp)" on the touch sheet
 
 import { averageMagicWeaponHitPreview } from '../../mechanics/progression.js';
 import { panelState } from './state.js';

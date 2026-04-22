@@ -45,7 +45,7 @@ export function startAccessoryTimer(slotKey, item) {
     if (slotLabel) slotLabel.textContent = formatLabel(Math.max(0, secondsLeft));
     if (secondsLeft <= 0) {
       stopAccessoryTimer(slotKey);
-      // Cross-module calls go through panelState.helpers — wired once by
+      // Cross-module calls go through panelState.helpers - wired once by
       // the orchestrator in inventoryPanel.js at setup time.
       if (panelState.helpers.clearEquippedSlotVisual) {
         panelState.helpers.clearEquippedSlotVisual(slotKey, `${item.title} has expired.`);

@@ -1,4 +1,4 @@
-// Market shop — Phase 4 extraction from game.engine.js.
+// Market shop - Phase 4 extraction from game.engine.js.
 //
 // Self-contained module that owns the #marketOverlay UI: category tree,
 // item grid, item detail pane, buy splash, gold/capacity HUD, banner, and
@@ -6,12 +6,12 @@
 // market instance per page.
 //
 // Engine surface:
-//   setupMarket(scene, deps) — wires DOM listeners + `coins-changed`.
+//   setupMarket(scene, deps) - wires DOM listeners + `coins-changed`.
 //                              Must be called once at scene create.
-//   updateOpenMarketButton()  — called when creatures die/spawn so the
+//   updateOpenMarketButton()  - called when creatures die/spawn so the
 //                              Open Market button reflects the room state.
-//   updateMarketBanner()      — called in the same spots so the "combat
-//                              started — market closed" banner stays in
+//   updateMarketBanner()      - called in the same spots so the "combat
+//                              started - market closed" banner stays in
 //                              sync when the market is open mid-combat.
 //
 // deps: {
@@ -24,7 +24,7 @@
 // The market reads gold + stores loot via the inventory panel's
 // `window.debugInventory` bridge so the buy flow survives closure
 // isolation. lastLootRejectReason is the live binding from playerSession
-// — the inventory panel writes to it; we read it on capacity-reject.
+// - the inventory panel writes to it; we read it on capacity-reject.
 
 import { imageUrl } from '../../dataService.js';
 import { lastLootRejectReason } from '../../state/playerSession.js';
@@ -36,12 +36,12 @@ import { bindItemShopTooltip } from './ItemsShop.js';
 /**
  * @typedef {object} MarketDeps
  * @property {() => Item[]} getCatalog
- * @property {string} playerClassKey              — 'knight' | 'paladin' | 'sorcerer' | 'druid'
+ * @property {string} playerClassKey              - 'knight' | 'paladin' | 'sorcerer' | 'druid'
  * @property {() => number} getAliveCreaturesCount
  * @property {() => void} onHudRefresh
  */
 
-// Whitelist for Light Sources — the catalog contains many state-derived
+// Whitelist for Light Sources - the catalog contains many state-derived
 // entries (Lit / Burnt Down / stub variants) that shouldn't be purchasable
 // separately. Only the "fresh" ids are sold.
 const LIGHT_SOURCES_WHITELIST = new Set([1396, 1671, 3517, 3519]);
@@ -444,7 +444,7 @@ function performMarketBuy(item, qty, _anchorEl) {
     addCombatLog(`Bought item: ${item.title} x${qty} for ${totalPrice} gp.`);
     spawnMarketBuySplash(item, qty, totalPrice);
   } else {
-    // Bulk failed — refund and try buying one at a time
+    // Bulk failed - refund and try buying one at a time
     const bulkReason = lastLootRejectReason;
     inv.addGold(totalPrice);
     let bought = 0;
@@ -458,16 +458,16 @@ function performMarketBuy(item, qty, _anchorEl) {
     }
     if (bought > 0) {
       const skipMsg = bought < qty
-        ? (lastLootRejectReason === 'capacity' ? ` — not enough carrying capacity` : ` — loot bag is full`)
+        ? (lastLootRejectReason === 'capacity' ? ` - not enough carrying capacity` : ` - loot bag is full`)
         : '';
       addCombatLog(`Bought item: ${item.title} x${bought} for ${price * bought} gp.${skipMsg}`);
       spawnMarketBuySplash(item, bought, price * bought);
-      if (bought < qty) flashMarketBanner(`Bought ${bought}/${qty} — ${lastLootRejectReason === 'capacity' ? 'not enough carrying capacity' : 'loot bag is full'}.`);
+      if (bought < qty) flashMarketBanner(`Bought ${bought}/${qty} - ${lastLootRejectReason === 'capacity' ? 'not enough carrying capacity' : 'loot bag is full'}.`);
     } else {
       const reason = (bulkReason || lastLootRejectReason) === 'capacity'
         ? 'Not enough carrying capacity'
         : 'Loot bag is full';
-      flashMarketBanner(`${reason} — cannot buy ${item.title}.`);
+      flashMarketBanner(`${reason} - cannot buy ${item.title}.`);
       renderMarketDetail();
       return;
     }
@@ -503,7 +503,7 @@ function flashMarketBanner(msg) {
   marketEls.banner.textContent = msg;
   marketEls.banner.dataset.show = 'true';
   _bannerTimeout = setTimeout(() => {
-    marketEls.banner.textContent = 'Combat started — market closed';
+    marketEls.banner.textContent = 'Combat started - market closed';
     updateMarketBanner();
     _bannerTimeout = null;
   }, 2500);

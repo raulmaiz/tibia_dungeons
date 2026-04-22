@@ -54,18 +54,18 @@ export const panelState = {
     setEquippedSlotVisual: null,
     clearEquippedSlotVisual: null,
 
-    // Loot bag rendering — consumed by tooltip action buttons + any
+    // Loot bag rendering - consumed by tooltip action buttons + any
     // flow that changes bag contents without going through this panel.
     renderLootSlots: null,
 
-    // Auto-equip checks — used by anything that stages loot before
+    // Auto-equip checks - used by anything that stages loot before
     // dropping it into the bag.
     tryAutoEquipArmorUpgrade: null,
     tryAutoEquipShieldUpgrade: null,
     tryAutoEquipWeaponUpgrade: null,
     tryAutoEquipAccessory: null,
 
-    // Coin management — anything outside the panel that mints / spends
+    // Coin management - anything outside the panel that mints / spends
     // gold goes through these.
     ensureCoinTemplatesLoaded: null,
     normalizeCoinStacks: null,

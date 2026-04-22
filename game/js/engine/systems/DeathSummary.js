@@ -1,4 +1,4 @@
-// Death-summary + Hall of Fame overlays — Phase 4 extraction.
+// Death-summary + Hall of Fame overlays - Phase 4 extraction.
 //
 // Two full-screen overlays that live outside the Phaser canvas:
 //
@@ -14,8 +14,15 @@
 //       top-100 table. Accessible from the start screen too (for a
 //       peek before committing to a run).
 
+/**
+ * @typedef {object} DeathSummaryDeps
+ * @property {() => void} onPlayAgain   - engine destroys the Phaser game + resets
+ */
+
+/** @type {DeathSummaryDeps | null} */
 let deps = null;
 
+/** @param {DeathSummaryDeps} _deps */
 export function setupDeathSummary(_deps) {
   deps = _deps;
 }
@@ -46,7 +53,7 @@ function fmtDate(ts) {
 
 async function saveRun(run) {
   // Hall of Fame submissions are now authenticated (Level 4 security plan).
-  // Guests silently skip posting — their run still stays on their screen but
+  // Guests silently skip posting - their run still stays on their screen but
   // doesn't land on the leaderboard.
   //
   // In the OFFLINE build there is no real leaderboard to pollute; every run
@@ -56,7 +63,7 @@ async function saveRun(run) {
   if (!OFFLINE_BUILD) {
     const loggedIn = window.tdAuth.isLoggedIn && window.tdAuth.isLoggedIn();
     if (!loggedIn) return;
-    // Admins play for testing — their deaths should never pollute the board,
+    // Admins play for testing - their deaths should never pollute the board,
     // even though god mode is available to them.
     if (window.tdAuth.isAdmin && window.tdAuth.isAdmin()) return;
   }
@@ -66,7 +73,7 @@ async function saveRun(run) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(run),
     });
-  } catch { /* silent — offline */ }
+  } catch { /* silent - offline */ }
 }
 
 function escHtml(str) {

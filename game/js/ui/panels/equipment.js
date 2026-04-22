@@ -4,8 +4,8 @@
 // loot an upgrade?" heuristics triggered by addLootItemToBag.
 //
 // Cross-module calls go through `panelState.helpers.*`:
-//   • addLootItemToBag    — lootBag.js (for swap-to-loot flows)
-//   • renderLootSlots     — lootBag.js (called after applyCapacityForLevel)
+//   • addLootItemToBag    - lootBag.js (for swap-to-loot flows)
+//   • renderLootSlots     - lootBag.js (called after applyCapacityForLevel)
 //
 // Directly imports `bindTooltip` from itemTooltip.js because tooltip binding
 // is pure DOM and doesn't touch panel-shared state beyond the tooltip itself.

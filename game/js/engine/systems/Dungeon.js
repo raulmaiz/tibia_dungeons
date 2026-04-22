@@ -1,4 +1,4 @@
-// Dungeon generator — Phase 4 extraction from game.engine.js.
+// Dungeon generator - Phase 4 extraction from game.engine.js.
 //
 // Pure: given the target width/height + the fixed start tile, returns a
 // { map, stairs } tuple. The engine decides when to regenerate (at
@@ -6,7 +6,7 @@
 //
 // map format: Array<string> of length H; each string is W chars of
 //             '#' (wall) or '.' (floor).
-// stairs:     { gx, gy } — where the staircase-down lands on this floor.
+// stairs:     { gx, gy } - where the staircase-down lands on this floor.
 
 import { MAP_W, MAP_H, START_TILE } from '../../config/game.config.js';
 

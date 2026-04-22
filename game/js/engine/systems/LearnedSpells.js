@@ -1,4 +1,4 @@
-// Learned-spells panel — Phase 4 extraction.
+// Learned-spells panel - Phase 4 extraction.
 //
 // The "Learned" sidebar panel. Each row shows one spell the player owns,
 // with a slot-number badge (1..9,0) if it's in the hotbar, plus drag and
@@ -6,8 +6,8 @@
 // `learnedSpellOrder` array in place.
 //
 // Engine surface:
-//   setupLearnedSpells(deps) — once on create
-//   renderLearnedSpells()    — called when learned-set changes
+//   setupLearnedSpells(deps) - once on create
+//   renderLearnedSpells()    - called when learned-set changes
 //
 // deps: {
 //   getCatalog:             () => spellsCatalog,
@@ -23,8 +23,23 @@ import { bindSpellTooltip, hideSpellTooltip } from './SpellTooltip.js';
 import { invalidateSpellShopCache } from './SpellShop.js';
 import { isBlockedSpellTitle } from '../../entities/Spell/filters.js';
 
+/** @typedef {import('../../types.js').Spell} Spell */
+
+/**
+ * @typedef {object} LearnedSpellsDeps
+ * @property {() => Spell[]} getCatalog
+ * @property {Set<number>} learnedSpellIds
+ * @property {number[]} learnedSpellOrder      - mutated in place on reorder
+ * @property {() => void} onOrderChanged       - engine clears spell-bar cache
+ * @property {() => void} onPanelsResync       - syncXxxPanelPosition x 3
+ * @property {() => void} onSpellBarRefresh
+ * @property {() => void} onConsumableBarRefresh
+ */
+
+/** @type {LearnedSpellsDeps | null} */
 let deps = null;
 
+/** @param {LearnedSpellsDeps} _deps */
 export function setupLearnedSpells(_deps) {
   deps = _deps;
 }
@@ -82,7 +97,7 @@ export function renderLearnedSpells() {
   };
 
   // Swap two spells' positions in the master order array. This single
-  // swap handles every case — both in hotkey slots, both unslotted, or
+  // swap handles every case - both in hotkey slots, both unslotted, or
   // one of each (the hotkey "label" automatically follows positions).
   const applyDrop = (fromId, toId) => {
     if (fromId === toId) return;
@@ -141,7 +156,7 @@ export function renderLearnedSpells() {
     info.appendChild(metaEl);
     row.appendChild(info);
 
-    // Reorder arrows (touch / tablet / mobile — hidden via CSS on desktop)
+    // Reorder arrows (touch / tablet / mobile - hidden via CSS on desktop)
     const arrows = document.createElement('div');
     arrows.className = 'ls-reorder-arrows';
     const upBtn = document.createElement('button');

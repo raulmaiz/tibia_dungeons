@@ -1,4 +1,4 @@
-// Hunger indicator. Tiny DOM helper — toggles the `.sated` class on the
+// Hunger indicator. Tiny DOM helper - toggles the `.sated` class on the
 // indicator and updates its tooltip text. Exposed on `window.setHungryUi`
 // because the engine reads hunger state but the DOM lives with the panel.
 

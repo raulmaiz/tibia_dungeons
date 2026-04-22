@@ -5,11 +5,11 @@
 // Cross-module calls (via helpers) go ONE-WAY into equipFlow for bag
 // re-equip (because lootBag triggers an async bag swap when the user
 // clicks a container). Auto-equip side of the fence uses direct imports
-// from equipment.js — equipment.js already reaches back via
+// from equipment.js - equipment.js already reaches back via
 // `panelState.helpers.addLootItemToBag` so there is no circular load.
 //
 // The context menu holds one closure variable (`lootContextIndex`)
-// shared between show/hide/discard — exposed via setupLootBagContextMenu.
+// shared between show/hide/discard - exposed via setupLootBagContextMenu.
 
 import { imageUrl } from '../../dataService.js';
 import {

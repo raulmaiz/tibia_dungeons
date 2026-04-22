@@ -1,5 +1,5 @@
 // Developer debug API. Exposes `window.debugInventory` so we can poke at
-// inventory state from the browser console — equip by article_id, dump the
+// inventory state from the browser console - equip by article_id, dump the
 // current state, add/spend gold, find/consume items.
 //
 // Not used by game logic. Kept out of the orchestrator so the hot path

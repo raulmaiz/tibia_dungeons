@@ -11,10 +11,10 @@ import {
 /**
  * Slot-matching rules. Keyed by slot name (armor, shield, …).
  * Each entry describes:
- *   - id           DOM suffix — element is `#slot<Id>Img` / `#slot<Id>Label`
+ *   - id           DOM suffix - element is `#slot<Id>Img` / `#slot<Id>Label`
  *   - iconDefault  4-char placeholder text shown when slot is empty
  *   - requireType  item_type the slot accepts (matched case-insensitive)
- *   - requireTypeAlt / requireSecondaryType — alternatives for items whose
+ *   - requireTypeAlt / requireSecondaryType - alternatives for items whose
  *                   primary type differs from the strict match
  *   - requireClass the item_class required (used for weapons to avoid
  *                   accepting "Shields" into the hand slot)

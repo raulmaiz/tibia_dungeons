@@ -1,12 +1,12 @@
-// Spell hotbar + consumable hotbar — Phase 4 extraction.
+// Spell hotbar + consumable hotbar - Phase 4 extraction.
 //
 // Two strips at the bottom of the screen:
 //
-//   spellBarSlots     — 10 hotkey slots (keys 1..9, 0). Each slot renders
+//   spellBarSlots     - 10 hotkey slots (keys 1..9, 0). Each slot renders
 //                       whichever spell sits at that index of
 //                       learnedSpellOrder. Cooldown overlay + countdown
 //                       text driven by spellCooldownUntil.
-//   consumableBarSlots — 3 slots for Food (F), Mana (G), Health (H).
+//   consumableBarSlots - 3 slots for Food (F), Mana (G), Health (H).
 //                       Uses window.debugInventory.findConsumable().
 //
 // Pending-slot state lives here and the engine's update tick drains it
@@ -16,12 +16,12 @@
 // wrote to them.
 //
 // Engine surface:
-//   setupSpellBar(deps)          — once at create time
-//   renderSpellBar()             — call when learnedSpellOrder/Ids change
-//   renderConsumableBar()        — call when inventory changes
-//   invalidateSpellBarCache()    — learned-spell reorder path
-//   consumePendingSpellSlot()    — returns 1..10 (or 0) + clears the flag
-//   consumePendingConsumable()   — returns 'food'/'mana'/'health' or ''
+//   setupSpellBar(deps)          - once at create time
+//   renderSpellBar()             - call when learnedSpellOrder/Ids change
+//   renderConsumableBar()        - call when inventory changes
+//   invalidateSpellBarCache()    - learned-spell reorder path
+//   consumePendingSpellSlot()    - returns 1..10 (or 0) + clears the flag
+//   consumePendingConsumable()   - returns 'food'/'mana'/'health' or ''
 //
 // deps: {
 //   getCatalog:             () => spellsCatalog,
@@ -38,11 +38,11 @@ import { bindSpellBarTooltip } from './SpellTooltip.js';
 
 /**
  * @typedef {object} SpellBarDeps
- * @property {() => Spell[]} getCatalog               — the engine's spellsCatalog
- * @property {Set<number>} learnedSpellIds            — article_ids the player owns
- * @property {number[]} learnedSpellOrder             — first 10 = hotkey slots
- * @property {Map<number,number>} spellCooldownUntil  — spellId → epoch-ms when cd ends
- * @property {Map<number,number>} spellCdDurations    — spellId → cooldown length in seconds
+ * @property {() => Spell[]} getCatalog               - the engine's spellsCatalog
+ * @property {Set<number>} learnedSpellIds            - article_ids the player owns
+ * @property {number[]} learnedSpellOrder             - first 10 = hotkey slots
+ * @property {Map<number,number>} spellCooldownUntil  - spellId → epoch-ms when cd ends
+ * @property {Map<number,number>} spellCdDurations    - spellId → cooldown length in seconds
  */
 
 /** @type {SpellBarDeps | null} */
@@ -55,7 +55,7 @@ let _pendingConsumable = '';
 /** @param {SpellBarDeps} _deps */
 export function setupSpellBar(_deps) {
   deps = _deps;
-  // Expose triggers globally — some legacy call sites in auth/login flows
+  // Expose triggers globally - some legacy call sites in auth/login flows
   // poke these to simulate a hotkey press. Match the pre-extraction API.
   window._triggerSpellSlot = (slot) => { _pendingSpellSlot = slot; };
   window._triggerConsumable = (type) => { _pendingConsumable = type; };
@@ -94,7 +94,7 @@ export function renderSpellBar() {
   const slotsEl = document.getElementById('spellBarSlots');
   if (!slotsEl) return;
   const { learnedSpellOrder, learnedSpellIds } = deps;
-  // Skip rebuild if slot assignments haven't changed — prevents per-frame flicker
+  // Skip rebuild if slot assignments haven't changed - prevents per-frame flicker
   const barKey = learnedSpellOrder.slice(0, 10).join(',') + '|' + [...learnedSpellIds].sort((a, b) => a - b).join(',');
   if (barKey === _lastSpellBarKey) return;
   _lastSpellBarKey = barKey;

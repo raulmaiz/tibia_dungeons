@@ -1,4 +1,4 @@
-// Minimap — Phase 4 extraction from game.engine.js.
+// Minimap - Phase 4 extraction from game.engine.js.
 //
 // Owns the #minimapCanvas 2D rendering (base layer + dynamic overlay).
 // Module-level state because there is exactly one minimap per page; the
@@ -8,7 +8,7 @@
 // Two public functions:
 //
 //   drawMinimapBase({ map, dungeonW, dungeonH, stairsTile, startTile })
-//     Full repaint. Called on every descendLevel() — the dungeon layout,
+//     Full repaint. Called on every descendLevel() - the dungeon layout,
 //     stairs and start tile change per floor. Captures the finished base
 //     into an ImageData snapshot so the per-frame overlay is fast.
 //
@@ -18,7 +18,7 @@
 //     minimap is a navigation aid, not a combat tracker.
 //
 // `initMinimap()` grabs the DOM refs. Must be called once before the
-// draw functions — the engine does this at scene `create` time.
+// draw functions - the engine does this at scene `create` time.
 
 const PAD = 5;
 
@@ -92,7 +92,7 @@ export function drawMinimapBase({ map, dungeonW, dungeonH, stairsTile, startTile
 export function drawMinimapDynamic({ creatures, gridX, gridY }) {
   if (!ctx2d || !baseImageData) return;
   ctx2d.putImageData(baseImageData, 0, 0);
-  // Convinced/summoned allies — green dots so the player can locate
+  // Convinced/summoned allies - green dots so the player can locate
   // them when they wander out of sight.
   if (Array.isArray(creatures)) {
     ctx2d.fillStyle = '#22c55e';

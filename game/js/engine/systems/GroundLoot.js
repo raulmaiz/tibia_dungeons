@@ -1,4 +1,4 @@
-// Ground loot — Phase 4 extraction.
+// Ground loot - Phase 4 extraction.
 //
 // Tile-keyed Map of piles of items dropped by dying creatures. Each pile
 // renders a marker: first item's image if its texture is already loaded,
@@ -6,11 +6,11 @@
 // background. A small counter badge shows the item count when > 1.
 //
 // API:
-//   setupGroundLoot(deps)          — once at scene create
-//   dropItemOnGround(gx, gy, item) — called by combat when a creature dies
-//   pickupGroundLootAtPlayer()     — called by movement when the player
+//   setupGroundLoot(deps)          - once at scene create
+//   dropItemOnGround(gx, gy, item) - called by combat when a creature dies
+//   pickupGroundLootAtPlayer()     - called by movement when the player
 //                                    steps onto (or interacts with) a pile
-//   clearGroundLoot()              — descendLevel() flush
+//   clearGroundLoot()              - descendLevel() flush
 //
 // deps: {
 //   scene, tileSize, centerX, centerY,
@@ -21,13 +21,30 @@
 import { imageUrl } from '../../dataService.js';
 import { addCombatLog } from './CombatLog.js';
 
+/** @typedef {import('../../types.js').Item} Item */
+/** @typedef {import('../../types.js').GroundLootEntry} GroundLootEntry */
+
+/**
+ * @typedef {object} GroundLootDeps
+ * @property {any} scene                         - Phaser scene (`this` at create)
+ * @property {number} tileSize
+ * @property {(gx: number) => number} centerX
+ * @property {(gy: number) => number} centerY
+ * @property {() => { gx: number, gy: number }} getPlayerPos
+ * @property {() => void} onHudRefresh
+ */
+
+/** @type {GroundLootDeps | null} */
 let deps = null;
+
+/** @type {Map<string, GroundLootEntry>} */
 const groundLootByTile = new Map();
 
 const groundTileKey = (gx, gy) => `${gx},${gy}`;
 const groundLootTextureKey = (imagePath) =>
   `ground_loot_${String(imagePath || '').replace(/[^a-zA-Z0-9_]/g, '_')}`;
 
+/** @param {GroundLootDeps} _deps */
 export function setupGroundLoot(_deps) {
   deps = _deps;
 }

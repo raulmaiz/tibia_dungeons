@@ -1,4 +1,4 @@
-// Spell-shop sidebar panel — Phase 4 extraction from game.engine.js.
+// Spell-shop sidebar panel - Phase 4 extraction from game.engine.js.
 //
 // The sidebar panel that lists every spell the player's class can learn
 // at their current level, plus the "Buy Spell" flow. Symmetric with
@@ -7,21 +7,21 @@
 // reading gold through the inventory bridge (window.debugInventory).
 //
 // Module-level state:
-//   _lastSpellShopKey — "[level]|[gold]|[roomCleared]|[learnedIds]" cache
+//   _lastSpellShopKey - "[level]|[gold]|[roomCleared]|[learnedIds]" cache
 //                       key. Skip the full DOM rebuild when nothing
 //                       observably changed.
 //
 // Engine surface:
-//   setupSpellShop(deps)  — wires coins-changed. Once on create.
-//   renderSpellShop()     — public so updateHud() can refresh on level-up
+//   setupSpellShop(deps)  - wires coins-changed. Once on create.
+//   renderSpellShop()     - public so updateHud() can refresh on level-up
 //                           or after a manual spell learn.
 //
 // deps: {
 //   playerClassKey,
 //   getCatalog:             () => spellsCatalog,
 //   getPlayerLevel:         () => playerLevel,
-//   learnedSpellIds:        Set<number>  (mutable — we .add to it on buy),
-//   learnedSpellOrder:      number[]     (mutable — we .push to it on buy),
+//   learnedSpellIds:        Set<number>  (mutable - we .add to it on buy),
+//   learnedSpellOrder:      number[]     (mutable - we .push to it on buy),
 //   getAliveCreaturesCount: () => number,
 //   onHudRefresh:           () => void,
 //   onLearnedSpellsRefresh: () => void,
@@ -31,16 +31,31 @@ import { addCombatLog } from './CombatLog.js';
 import { bindSpellTooltip } from './SpellTooltip.js';
 import { isBlockedSpellTitle } from '../../entities/Spell/filters.js';
 
-// Light-family spells are universally available regardless of class — they're
+/** @typedef {import('../../types.js').Spell} Spell */
+
+/**
+ * @typedef {object} SpellShopDeps
+ * @property {string} playerClassKey
+ * @property {() => Spell[]} getCatalog
+ * @property {() => number} getPlayerLevel
+ * @property {Set<number>} learnedSpellIds            - mutated on buy
+ * @property {number[]} learnedSpellOrder             - mutated on buy
+ * @property {() => number} getAliveCreaturesCount
+ * @property {() => void} onHudRefresh
+ * @property {() => void} onLearnedSpellsRefresh
+ */
+
+// Light-family spells are universally available regardless of class - they're
 // a core utility for the darkness / light system.
 const UNIVERSAL_SPELL_IDS = new Set([797, 805, 1952]);
 
+/** @type {SpellShopDeps | null} */
 let deps = null;
 let _lastSpellShopKey = '';
 
 // Clear the cache key so the next renderSpellShop() rebuilds the DOM
 // unconditionally. The learned-spells drag-reorder in the engine calls
-// this after swapping positions — reordering doesn't change the sorted
+// this after swapping positions - reordering doesn't change the sorted
 // learned-ids, so without the invalidation the shop would short-circuit.
 export function invalidateSpellShopCache() {
   _lastSpellShopKey = '';
@@ -139,7 +154,7 @@ export function renderSpellShop() {
         learnedSpellIds.add(boughtId);
         learnedSpellOrder.push(boughtId);
         if (learnedSpellOrder.length > 10) {
-          addCombatLog(`Learned ${spell.title} — use ▲/▼ in Learned Spells to bring it into a hotkey slot.`);
+          addCombatLog(`Learned ${spell.title} - use ▲/▼ in Learned Spells to bring it into a hotkey slot.`);
         }
         addCombatLog(`Bought spell: ${spell.title} for ${price} gp.`);
         // The inventory redraws itself inside spendGoldFromInventory.
@@ -151,7 +166,7 @@ export function renderSpellShop() {
         if (ev.button !== 0) return;
         buySpell(ev);
       });
-      // Touch: only trigger the buy if the finger didn't move — this
+      // Touch: only trigger the buy if the finger didn't move - this
       // way, dragging from the button scrolls the panel instead of
       // forcing a purchase.
       let btStartX = 0;
@@ -206,6 +221,7 @@ export function renderSpellShop() {
   deps.onLearnedSpellsRefresh();
 }
 
+/** @param {SpellShopDeps} _deps */
 export function setupSpellShop(_deps) {
   deps = _deps;
   window.addEventListener('coins-changed', renderSpellShop);

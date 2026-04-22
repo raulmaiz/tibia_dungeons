@@ -1,4 +1,4 @@
-// Items-shop sidebar panel — Phase 4 extraction from game.engine.js.
+// Items-shop sidebar panel - Phase 4 extraction from game.engine.js.
 //
 // The always-open search panel in the left sidebar (matches items by
 // title substring, minimum 3 chars, capped at 10 results). Shares the
@@ -6,16 +6,16 @@
 // one tooltip is visible at a time.
 //
 // Module-level state because there is one items-shop per page:
-//   itemsShopQuery      — last search string, survives re-renders
-//   _lastItemsShopKey   — cache key for "nothing changed, skip render"
+//   itemsShopQuery      - last search string, survives re-renders
+//   _lastItemsShopKey   - cache key for "nothing changed, skip render"
 //
 // Engine surface:
-//   setupItemsShop(deps)    — wires search input + coins-changed +
+//   setupItemsShop(deps)    - wires search input + coins-changed +
 //                             outside-click. Once on create.
-//   renderItemsShop(query?) — public so updateHud() can refresh after
+//   renderItemsShop(query?) - public so updateHud() can refresh after
 //                             level-ups / gold changes that weren't
 //                             coins-changed events.
-//   bindItemShopTooltip(el, item) — exported so Market.js can hover
+//   bindItemShopTooltip(el, item) - exported so Market.js can hover
 //                             market cards without re-implementing the
 //                             tooltip plumbing.
 //

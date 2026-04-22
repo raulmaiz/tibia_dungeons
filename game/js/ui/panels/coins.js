@@ -5,9 +5,9 @@
 // so market-shop UIs and any future HUD piece can react without polling.
 //
 // State read/written on `panelState`:
-//   • bagLootItems        — mutated in place when coin stacks are added/rebalanced
-//   • coinTemplateById    — Map<articleId, template> populated on first flow
-//   • currentBagCapacity  — read when refreshing loot slots after a spend
+//   • bagLootItems        - mutated in place when coin stacks are added/rebalanced
+//   • coinTemplateById    - Map<articleId, template> populated on first flow
+//   • currentBagCapacity  - read when refreshing loot slots after a spend
 //
 // Cross-module call: `panelState.helpers.renderLootSlots` (wired by the
 // orchestrator in inventoryPanel.js).

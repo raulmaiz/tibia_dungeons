@@ -1,4 +1,4 @@
-// Combat log — 5-line ring buffer rendered into #gameLog0..#gameLog4.
+// Combat log - 5-line ring buffer rendered into #gameLog0..#gameLog4.
 //
 // Used by the engine (combat/damage/ally events) and the inventory panel
 // via the `setOnPanelLog(addCombatLog)` bridge in playerSession. Extracted
@@ -7,7 +7,7 @@
 //
 // One instance per page. initCombatLog() MUST be called once at scene
 // create time before any addCombatLog(). Safe to call addCombatLog()
-// before init — it just no-ops until the DOM refs are grabbed.
+// before init - it just no-ops until the DOM refs are grabbed.
 
 export const LOG_COLORS = {
   DEFAULT: '#e8f0ff',
