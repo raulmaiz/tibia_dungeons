@@ -172,7 +172,8 @@ export function renderLearnedSpells() {
       if (nextId != null) applyDrop(spellId, nextId);
     });
     row.addEventListener('click', (ev) => {
-      if (ev.target.closest('.ls-reorder-arrows')) return;
+      const target = /** @type {Element | null} */ (ev.target);
+      if (target && target.closest('.ls-reorder-arrows')) return;
       ev.stopPropagation();
     });
     arrows.appendChild(upBtn);

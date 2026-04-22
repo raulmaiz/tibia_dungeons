@@ -1,3 +1,9 @@
+// @ts-nocheck
+// ^ 5 500-line engine closure with many dynamic DOM shapes. Remove this
+//   pragma once the Player / Creature / RunState classes land — at that
+//   point per-file narrow types become feasible and the DOM noise
+//   diminishes. The engine/systems/ modules extracted from here ARE
+//   type-checked.
 import {
   getCreatureTypeProgressionGroups,
   getItemByArticleId,

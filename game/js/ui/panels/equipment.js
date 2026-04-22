@@ -31,7 +31,7 @@ export function writeEquipmentFootText(text) {
 export function setEquippedSlotVisual(slotKey, item, equipmentFootText = null, options = {}) {
   const rule = SLOT_RULES[slotKey];
   if (!rule) return false;
-  const slotImg = document.getElementById(`slot${rule.id}Img`);
+  const slotImg = /** @type {HTMLImageElement | null} */ (document.getElementById(`slot${rule.id}Img`));
   const slotIcon = document.getElementById(`slot${rule.id}Icon`);
   const slotLabel = document.getElementById(`slot${rule.id}Label`);
   const equipmentFoot = document.getElementById('equipmentFoot');
@@ -128,7 +128,7 @@ export function clearEquippedSlotVisual(slotKey, footText = null) {
   const rule = SLOT_RULES[slotKey];
   if (!rule) return false;
   const slotRoot = document.getElementById(`slot${rule.id}`);
-  const slotImg = document.getElementById(`slot${rule.id}Img`);
+  const slotImg = /** @type {HTMLImageElement | null} */ (document.getElementById(`slot${rule.id}Img`));
   const slotIcon = document.getElementById(`slot${rule.id}Icon`);
   const slotLabel = document.getElementById(`slot${rule.id}Label`);
   const equipmentFoot = document.getElementById('equipmentFoot');

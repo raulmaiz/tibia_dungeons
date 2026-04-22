@@ -3,7 +3,8 @@
  * reflows panels automatically when accordions open/close, so no manual
  * position updates are needed. The API is kept for backwards compatibility.
  */
-export function wirePanelLayoutSync() {
+// Legacy signature accepts a DOM refs bag from pre-flex callers; now ignored.
+export function wirePanelLayoutSync(_els) {
   const noop = () => {};
   return {
     syncLootPanelPosition: noop,

@@ -116,7 +116,7 @@ export function setupInventoryPanel(deps) {
   document.addEventListener('click', (ev) => {
     // Don't dismiss touch-mode tooltip when clicking inside it (action buttons)
     const tt = document.getElementById('itemTooltip');
-    if (tt && tt.classList.contains('touch-mode') && tt.contains(ev.target)) return;
+    if (tt && tt.classList.contains('touch-mode') && tt.contains(/** @type {Node} */ (ev.target))) return;
     hideItemTooltip();
   });
 

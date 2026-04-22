@@ -2,7 +2,7 @@
 // indicator and updates its tooltip text. Exposed on `window.setHungryUi`
 // because the engine reads hunger state but the DOM lives with the panel.
 
-export function setHungryUi(isHungry /* , secondsLeft = 0 */) {
+export function setHungryUi(isHungry, _secondsLeft = 0) {
   const hungryIndicator = document.getElementById('hungryIndicator');
   const hungryLabel = document.getElementById('hungryLabel');
   if (!hungryIndicator || !hungryLabel) return;

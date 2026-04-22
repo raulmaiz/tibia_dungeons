@@ -34,12 +34,25 @@
 import { imageUrl } from '../../dataService.js';
 import { bindSpellBarTooltip } from './SpellTooltip.js';
 
+/** @typedef {import('../../types.js').Spell} Spell */
+
+/**
+ * @typedef {object} SpellBarDeps
+ * @property {() => Spell[]} getCatalog               — the engine's spellsCatalog
+ * @property {Set<number>} learnedSpellIds            — article_ids the player owns
+ * @property {number[]} learnedSpellOrder             — first 10 = hotkey slots
+ * @property {Map<number,number>} spellCooldownUntil  — spellId → epoch-ms when cd ends
+ * @property {Map<number,number>} spellCdDurations    — spellId → cooldown length in seconds
+ */
+
+/** @type {SpellBarDeps | null} */
 let deps = null;
 let _lastSpellBarKey = '';
 let _lastConsumableKey = '';
 let _pendingSpellSlot = 0;
 let _pendingConsumable = '';
 
+/** @param {SpellBarDeps} _deps */
 export function setupSpellBar(_deps) {
   deps = _deps;
   // Expose triggers globally — some legacy call sites in auth/login flows
@@ -118,7 +131,7 @@ export function renderSpellBar() {
         const durSec = (remMs / 1000).toFixed(2);
         cdOverlay.style.setProperty('--cd-dur', `${durSec}s`);
         cdOverlay.classList.add('cd-active');
-        cdText.textContent = Math.ceil(remMs / 1000);
+        cdText.textContent = String(Math.ceil(remMs / 1000));
       }
     }
     return imgWrap;

@@ -31,8 +31,8 @@ import { clearEquippedSlotVisual } from './equipment.js';
 
 export function setupBootFlow(deps) {
   const { startGame } = deps;
-  const startBtn = document.getElementById('startBtn');
-  const playerNameInput = document.getElementById('playerName');
+  const startBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('startBtn'));
+  const playerNameInput = /** @type {HTMLInputElement | null} */ (document.getElementById('playerName'));
 
   let _starting = false;
   // Save id of the currently-active run, so subsequent in-game "Save"
@@ -119,7 +119,7 @@ export function setupBootFlow(deps) {
 
   if (startBtn) {
     startBtn.addEventListener('click', () => {
-      const playerName = (playerNameInput.value || '').trim() || 'Adventurer';
+      const playerName = ((playerNameInput && playerNameInput.value) || '').trim() || 'Adventurer';
       bootGame({ name: playerName, sex: panelState.selectedSex, classKey: panelState.selectedClass });
     });
   }
@@ -128,7 +128,7 @@ export function setupBootFlow(deps) {
     playerNameInput.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') {
         event.preventDefault();
-        if (!startBtn.disabled && !_starting) startBtn.click();
+        if (startBtn && !startBtn.disabled && !_starting) startBtn.click();
       }
     });
   }

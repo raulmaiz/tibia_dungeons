@@ -24,7 +24,7 @@ import { bindTooltip } from './itemTooltip.js';
 import { renderLootSlots } from './lootBag.js';
 
 export async function equipBagByArticleId(articleId) {
-  const bagImg = document.getElementById('slotBagImg');
+  const bagImg = /** @type {HTMLImageElement | null} */ (document.getElementById('slotBagImg'));
   const bagIcon = document.getElementById('slotBagIcon');
   const bagLabel = document.getElementById('slotBagLabel');
   const bagRoot = document.getElementById('slotBag');

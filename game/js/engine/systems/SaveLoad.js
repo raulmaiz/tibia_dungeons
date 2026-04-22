@@ -8,33 +8,42 @@
 // mutate ~20 closure `let` bindings and call Phaser scene methods. It will
 // move here in a later slice once those bindings become object fields.
 
+/** @typedef {import('../../types.js').SaveSnapshot} SaveSnapshot */
+
+/**
+ * Read-only snapshot of the engine closure fed to `captureSaveSnapshot`.
+ *
+ * @typedef {object} SnapshotCtx
+ * @property {{ name: string, sex: string } | null} configPlayer
+ * @property {string} playerClassKey
+ * @property {number} playerLevel
+ * @property {number} playerXp
+ * @property {number} playerHp
+ * @property {number} playerMana
+ * @property {number} playerMaxHp
+ * @property {number} playerMaxMana
+ * @property {number} playerMagicLevel
+ * @property {number} playerFistLevel
+ * @property {number} playerShieldingLevel
+ * @property {Map<string,number>} weaponSkillLevelByType
+ * @property {number} currentLevel
+ * @property {number} gridX
+ * @property {number} gridY
+ * @property {number} hungerSecondsLeft
+ * @property {number} runKills
+ * @property {Set<number>} learnedSpellIds
+ * @property {number[]} learnedSpellOrder
+ * @property {{ startedAt: number, nextTickAt: number, tickIndex: number } | null} burnState
+ * @property {{ startedAt: number, nextTickAt: number, tickIndex: number } | null} poisonState
+ * @property {{ startedAt: number, nextTickAt: number, tickIndex: number } | null} electrifiedState
+ */
+
 /**
  * Capture everything needed to resume a run on another device.
  * Map tiles are regenerated per floor, so they are intentionally NOT included.
  *
- * @param {object} ctx - read-only snapshot of the engine closure
- * @param {object} ctx.configPlayer      — { name, sex } fed to startGame()
- * @param {string} ctx.playerClassKey    — 'knight' | 'paladin' | 'sorcerer' | 'druid'
- * @param {number} ctx.playerLevel
- * @param {number} ctx.playerXp
- * @param {number} ctx.playerHp
- * @param {number} ctx.playerMana
- * @param {number} ctx.playerMaxHp
- * @param {number} ctx.playerMaxMana
- * @param {number} ctx.playerMagicLevel
- * @param {number} ctx.playerFistLevel
- * @param {number} ctx.playerShieldingLevel
- * @param {Map<string,number>} ctx.weaponSkillLevelByType
- * @param {number} ctx.currentLevel       — active floor (1-indexed)
- * @param {number} ctx.gridX
- * @param {number} ctx.gridY
- * @param {number} ctx.hungerSecondsLeft
- * @param {number} ctx.runKills
- * @param {Set<number>} ctx.learnedSpellIds
- * @param {number[]}    ctx.learnedSpellOrder  — authoritative; first 10 = hotkeys
- * @param {object|null} ctx.burnState
- * @param {object|null} ctx.poisonState
- * @param {object|null} ctx.electrifiedState
+ * @param {SnapshotCtx} ctx
+ * @returns {SaveSnapshot}
  */
 export function captureSaveSnapshot(ctx) {
   // Pull inventory state through the debugInventory bridge — the
@@ -47,6 +56,7 @@ export function captureSaveSnapshot(ctx) {
   } catch { invState = null; }
   const goldAmount = window.debugInventory && typeof window.debugInventory.getGold === 'function'
     ? Math.max(0, Number(window.debugInventory.getGold() || 0)) : 0;
+  /** @type {Record<string, number>} */
   const weaponSkills = {};
   if (ctx.weaponSkillLevelByType && typeof ctx.weaponSkillLevelByType.entries === 'function') {
     for (const [k, v] of ctx.weaponSkillLevelByType.entries()) weaponSkills[k] = Number(v) || 0;

@@ -1,0 +1,37 @@
+{
+  "//": "Type-checking for a JS project. We do NOT compile TS. esbuild still owns the build.",
+  "//2": "Run `npx tsc --noEmit` (or `npm run typecheck`) to surface errors in CI.",
+  "//3": "VS Code picks this up automatically and shows red squiggles in .js files.",
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "noImplicitThis": false,
+
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": []
+  },
+  "include": [
+    "game/js/**/*.js",
+    "game/js/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "game/dist",
+    "game/offline-api.js",
+    "game/sw.js"
+  ]
+}

@@ -31,8 +31,19 @@ import { averageMagicWeaponHitPreview } from '../../mechanics/progression.js';
 import { addCombatLog } from './CombatLog.js';
 import { esc, ttRow, hasRealHover, hideSpellTooltip } from './SpellTooltip.js';
 
+/** @typedef {import('../../types.js').Item} Item */
+
+/**
+ * @typedef {object} ItemsShopDeps
+ * @property {() => Item[]} getCatalog
+ * @property {string} playerClassKey
+ * @property {() => number} getAliveCreaturesCount
+ * @property {() => void} onHudRefresh
+ */
+
 let itemsShopQuery = '';
 let _lastItemsShopKey = '';
+/** @type {ItemsShopDeps | null} */
 let deps = null;
 
 function formatItemShopTooltip(item) {
@@ -290,10 +301,11 @@ export function renderItemsShop(queryRaw = itemsShopQuery) {
     : `Clear room to buy | Results: ${matches.length} | Gold: ${currentGold}`;
 }
 
+/** @param {ItemsShopDeps} _deps */
 export function setupItemsShop(_deps) {
   deps = _deps;
-  const searchInputEl = document.getElementById('itemsShopSearchInput');
-  const accordionEl = document.getElementById('itemsShopAccordion');
+  const searchInputEl = /** @type {HTMLInputElement | null} */ (document.getElementById('itemsShopSearchInput'));
+  const accordionEl = /** @type {HTMLDetailsElement | null} */ (document.getElementById('itemsShopAccordion'));
   const panelEl = document.getElementById('itemsShopPanel');
 
   window.addEventListener('coins-changed', () => renderItemsShop(itemsShopQuery));
@@ -305,7 +317,7 @@ export function setupItemsShop(_deps) {
   // Close items shop and return focus to game when clicking outside the panel.
   document.addEventListener('mousedown', (e) => {
     if (!accordionEl || !accordionEl.open) return;
-    if (panelEl && panelEl.contains(e.target)) return;
+    if (panelEl && panelEl.contains(/** @type {Node} */ (e.target))) return;
     accordionEl.open = false;
     if (searchInputEl) {
       searchInputEl.value = '';

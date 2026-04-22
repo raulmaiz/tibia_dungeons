@@ -208,7 +208,8 @@ export function bindTooltip(el, item) {
 }
 
 /** Touch-friendly tooltip with action buttons for loot items. */
-export function showTouchLootTooltip(el, item /* , lootIndex (caller dispatches via simulated events) */) {
+export function showTouchLootTooltip(el, item, _lootIndex) {
+  // _lootIndex is passed by callers but unused here; actions dispatch via simulated events on `el`.
   const itemTooltip = document.getElementById('itemTooltip');
   if (!el || !itemTooltip || !item) return;
   if (_activeTouchSlotCleanup) { _activeTouchSlotCleanup(); _activeTouchSlotCleanup = null; }

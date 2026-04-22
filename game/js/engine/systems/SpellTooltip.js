@@ -172,15 +172,19 @@ export function setupSpellTooltipDismissers() {
   document.addEventListener('pointerdown', (ev) => {
     const ttEl = tooltipEl();
     if (!ttEl || ttEl.style.display === 'none') return;
-    if (ttEl.contains(ev.target)) return;
-    if (ev.target.closest && ev.target.closest(TOOLTIP_KEEP_ALIVE_SELECTOR)) return;
+    const target = /** @type {Element | null} */ (ev.target);
+    if (!target) return;
+    if (ttEl.contains(target)) return;
+    if (target.closest && target.closest(TOOLTIP_KEEP_ALIVE_SELECTOR)) return;
     hideSpellTooltip();
   }, true);
   document.addEventListener('click', (ev) => {
     const ttEl = tooltipEl();
     if (!ttEl || ttEl.style.display === 'none') return;
-    if (ttEl.contains(ev.target)) return;
-    if (ev.target.closest && ev.target.closest(TOOLTIP_KEEP_ALIVE_SELECTOR)) return;
+    const target = /** @type {Element | null} */ (ev.target);
+    if (!target) return;
+    if (ttEl.contains(target)) return;
+    if (target.closest && target.closest(TOOLTIP_KEEP_ALIVE_SELECTOR)) return;
     hideSpellTooltip();
   });
 }

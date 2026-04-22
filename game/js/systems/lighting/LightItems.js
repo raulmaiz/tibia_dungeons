@@ -27,6 +27,7 @@ import {
 
 let _currentLightItemState = null;
 let _knownItemImages = null;
+/** @type {(radiusTiles: number, durationMs: number, elapsedMs: number) => void} */
 let _setEquipmentLight = () => {}; // wired by attachAtmosphereLightSink
 
 /**
@@ -177,7 +178,7 @@ export function getCurrentLightElapsedMs() {
 }
 
 export function updateEquippedLightSlotImage() {
-  const slotImg = document.getElementById('slotLightImg');
+  const slotImg = /** @type {HTMLImageElement | null} */ (document.getElementById('slotLightImg'));
   if (!slotImg || !_currentLightItemState) return;
   const cur = _currentLightItemState;
   const elapsed = getCurrentLightElapsedMs();

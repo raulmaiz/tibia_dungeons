@@ -2,13 +2,15 @@
   "name": "tibia-dungeons",
   "private": true,
   "scripts": {
-    "dev":       "node scripts/dev-server.js",
-    "build":     "node scripts/build.js --prod",
-    "build:itch":"node scripts/build-itch.js",
-    "push":      "node scripts/bump-patch.js && git add game/js/data/version.js && git commit -m \"chore: bump patch version\" && git push",
-    "release":   "node scripts/bump-minor.js && git add game/js/data/version.js && git commit -m \"chore: release minor version\" && git push"
+    "dev": "node scripts/dev-server.js",
+    "build": "node scripts/build.js --prod",
+    "build:itch": "node scripts/build-itch.js",
+    "push": "node scripts/bump-patch.js && git add game/js/data/version.js && git commit -m \"chore: bump patch version\" && git push",
+    "release": "node scripts/bump-minor.js && git add game/js/data/version.js && git commit -m \"chore: release minor version\" && git push",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.0",
+    "typescript": "^6.0.3"
   }
 }

@@ -31,6 +31,16 @@ import { lastLootRejectReason } from '../../state/playerSession.js';
 import { addCombatLog } from './CombatLog.js';
 import { bindItemShopTooltip } from './ItemsShop.js';
 
+/** @typedef {import('../../types.js').Item} Item */
+
+/**
+ * @typedef {object} MarketDeps
+ * @property {() => Item[]} getCatalog
+ * @property {string} playerClassKey              — 'knight' | 'paladin' | 'sorcerer' | 'druid'
+ * @property {() => number} getAliveCreaturesCount
+ * @property {() => void} onHudRefresh
+ */
+
 // Whitelist for Light Sources — the catalog contains many state-derived
 // entries (Lit / Burnt Down / stub variants) that shouldn't be purchasable
 // separately. Only the "fresh" ids are sold.
@@ -64,6 +74,7 @@ const MARKET_HIDDEN_TYPES = new Set([
 
 // ── module state ───────────────────────────────────────────────────────
 let marketEls = null;
+/** @type {MarketDeps | null} */
 let deps = null;
 let marketOpen = false;
 let marketBuySplashEl = null;
@@ -281,7 +292,7 @@ function renderMarketDetail() {
     for (const [k, v] of statsRows) {
       const keyEl = document.createElement('div');
       keyEl.className = 'stat-k';
-      keyEl.textContent = k;
+      keyEl.textContent = String(k);
       const valEl = document.createElement('div');
       valEl.textContent = String(v);
       stats.appendChild(keyEl);
@@ -393,7 +404,7 @@ function flashMarketGold() {
   setTimeout(() => marketEls.gold && marketEls.gold.classList.remove('spent'), 540);
 }
 
-function performMarketBuy(item, qty/* , anchorEl */) {
+function performMarketBuy(item, qty, _anchorEl) {
   if (deps.getAliveCreaturesCount() > 0) {
     addCombatLog('Clear all creatures on this floor before buying items.');
     updateMarketBanner();
@@ -538,6 +549,7 @@ export function updateOpenMarketButton() {
 }
 
 // ── setup ──────────────────────────────────────────────────────────────
+/** @param {MarketDeps} _deps */
 export function setupMarket(_deps) {
   deps = _deps;
   marketEls = {
