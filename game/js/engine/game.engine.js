@@ -1,9 +1,3 @@
-// @ts-nocheck
-// ^ 5 500-line engine closure with many dynamic DOM shapes. Remove this
-//   pragma once the Player / Creature / RunState classes land — at that
-//   point per-file narrow types become feasible and the DOM noise
-//   diminishes. The engine/systems/ modules extracted from here ARE
-//   type-checked.
 import {
   getCreatureTypeProgressionGroups,
   getItemByArticleId,
@@ -295,7 +289,12 @@ import {
   resolveConjuredArrowItem as _resolveConjuredArrowItem,
   placeConjuredArrow as _placeConjuredArrow,
 } from './systems/ConjureAmmo.js';
-import { setupStatusEffects } from './systems/StatusEffects.js';
+import {
+  setupStatusEffects,
+  BURN_TICK_INTERVAL_MS,
+  POISON_TICK_INTERVAL_MS,
+  ELECTRIFIED_TICK_INTERVAL_MS,
+} from './systems/StatusEffects.js';
 import {
   showPlayerPoisonedEffect as _showPlayerPoisonedEffect,
   showPlayerElectrifiedEffect as _showPlayerElectrifiedEffect,
@@ -572,7 +571,7 @@ function startGame(configPlayer) {
             const type = String(input.type || 'text').toLowerCase();
             return type !== 'checkbox' && type !== 'radio' && type !== 'button' && type !== 'submit';
           }
-          return Boolean(el.isContentEditable);
+          return Boolean(/** @type {HTMLElement} */ (el).isContentEditable);
         };
         const syncGameKeyboardEnabled = () => {
           // Guard: focusin/focusout are document-level. After `game.destroy()`
@@ -1602,13 +1601,13 @@ function startGame(configPlayer) {
         // hook. setupMarket() wires the overlay's DOM listeners internally.
         setupItemsShop({
           getCatalog:             () => itemsShopCatalog,
-          classKey: playerState.classKey,
+          playerClassKey:         playerState.classKey,
           getAliveCreaturesCount: () => aliveCreatures().length,
           onHudRefresh:           () => updateHud(),
         });
         setupSpellShop({
-          classKey: playerState.classKey,
           getCatalog:             () => spellsCatalog,
+          playerClassKey:         playerState.classKey,
           getPlayerLevel:         () => playerState.level,
           learnedSpellIds: playerState.learnedSpellIds,
           learnedSpellOrder: playerState.learnedSpellOrder,
@@ -1618,11 +1617,11 @@ function startGame(configPlayer) {
         });
         setupMarket({
           getCatalog:             () => itemsShopCatalog,
-          classKey: playerState.classKey,
+          playerClassKey:         playerState.classKey,
           getAliveCreaturesCount: () => aliveCreatures().length,
           onHudRefresh:           () => updateHud(),
         });
-        const saveGameBtnEl = document.getElementById('saveGameBtn');
+        const saveGameBtnEl = /** @type {HTMLButtonElement | null} */ (document.getElementById('saveGameBtn'));
         // Offline build: no cloud saves, and the itch.io audience expects
         // a simple pick-up-and-play experience. Hide the button entirely.
         if (OFFLINE_BUILD && saveGameBtnEl) saveGameBtnEl.style.display = 'none';
@@ -1684,7 +1683,7 @@ function startGame(configPlayer) {
         updateSaveGameButton();
 
         // ── Game Settings: zoom slider (persisted in localStorage) ──
-        const zoomSlider = document.getElementById('gameZoomSlider');
+        const zoomSlider = /** @type {HTMLInputElement | null} */ (document.getElementById('gameZoomSlider'));
         const zoomValueEl = document.getElementById('gameZoomValue');
         if (zoomSlider) {
           const baseW = game.scale.width;
