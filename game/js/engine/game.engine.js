@@ -129,6 +129,11 @@ import {
 } from '../state/playerSession.js';
 import { setupInventoryPanel } from '../ui/inventoryPanel.js';
 import { setLoadingProgress } from '../ui/loadingScreen.js';
+import {
+  captureSaveSnapshot,
+  restoreWeaponSkills,
+  restoreLearnedSpells,
+} from './systems/SaveLoad.js';
 
 // Expose the bus for debugging / browser console listeners.
 if (typeof window !== 'undefined') window.tdEvents = bus;
@@ -3460,76 +3465,17 @@ function startGame(configPlayer) {
           saveGameBtnEl.disabled = !clear;
           saveGameBtnEl.title = clear ? '' : 'Clear all creatures first';
         };
-        // Capture everything that's needed to resume the run on another
-        // device: character meta, progression stats, full inventory, learned
-        // spells, active DoT timers, the current floor and the player's
-        // position on it. The map tiles themselves are regenerated per
-        // floor, so we intentionally don't snapshot those.
-        const captureSaveSnapshot = () => {
-          // Pull inventory state through the debugInventory bridge — the
-          // underlying equippedSlots / bagLootItems live in a different
-          // closure (setupSelectorUI) and aren't directly reachable here.
-          let invState = null;
-          try {
-            invState = (window.debugInventory && typeof window.debugInventory.state === 'function')
-              ? window.debugInventory.state() : null;
-          } catch { invState = null; }
-          const goldAmount = window.debugInventory && typeof window.debugInventory.getGold === 'function'
-            ? Math.max(0, Number(window.debugInventory.getGold() || 0)) : 0;
-          const weaponSkills = {};
-          if (weaponSkillLevelByType && typeof weaponSkillLevelByType.entries === 'function') {
-            for (const [k, v] of weaponSkillLevelByType.entries()) weaponSkills[k] = Number(v) || 0;
-          }
-          return {
-            version: 1,
-            // Character identity
-            name:             String((configPlayer && configPlayer.name) || ''),
-            classKey:         String(playerClassKey || 'knight'),
-            sex:              (configPlayer && configPlayer.sex === 'female') ? 'female' : 'male',
-            // Progression
-            playerLevel:      Number(playerLevel) || 1,
-            playerXp:         Number(playerXp) || 0,
-            playerHp:         Number(playerHp) || 0,
-            playerMana:       Number(playerMana) || 0,
-            playerMaxHp:      Number(playerMaxHp) || 0,
-            playerMaxMana:    Number(playerMaxMana) || 0,
-            playerMagicLevel: Number(playerMagicLevel) || 0,
-            playerFistLevel:  Number(playerFistLevel) || 0,
-            playerShieldingLevel: Number(playerShieldingLevel) || 0,
-            weaponSkillLevels: weaponSkills,
-            // Run state
-            currentLevel:     Number(currentLevel) || 1,
-            gridX:            Number(gridX) || 0,
-            gridY:            Number(gridY) || 0,
-            hungerSecondsLeft: Number(hungerSecondsLeft) || 0,
-            runKills:         Number(runKills) || 0,
-            gold:             goldAmount,
-            // Inventory snapshot (via bridge so this survives scope isolation).
-            bagArticleId:     (invState && invState.bag && invState.bag.article_id) || null,
-            bagSlots:         (invState && invState.bagSlots) || 0,
-            equippedSlots:    invState && invState.equipped
-              ? Object.fromEntries(Object.entries(invState.equipped).map(([k, v]) => [k, v || null]))
-              : {},
-            bagLootItems:     (invState && Array.isArray(invState.items))
-              ? invState.items.map((i) => ({ ...i })) : [],
-            // Spells — learnedSpellOrder is the new authoritative order
-            // (first 10 are hotkeys, rest are unslotted). The legacy
-            // learnedSpellSlots field is preserved for old clients/saves.
-            learnedSpellIds:   Array.from(learnedSpellIds || []),
-            learnedSpellOrder: Array.from(learnedSpellOrder || []),
-            learnedSpellSlots: (() => {
-              const slots = Array.from({ length: 10 }, () => null);
-              for (let i = 0; i < 10 && i < learnedSpellOrder.length; i += 1) {
-                slots[i] = learnedSpellOrder[i];
-              }
-              return slots;
-            })(),
-            // DoT statuses (if any)
-            burnState:        burnState ? { ...burnState } : null,
-            poisonState:      poisonState ? { ...poisonState } : null,
-            electrifiedState: electrifiedState ? { ...electrifiedState } : null,
-          };
-        };
+        // Build the ctx object that SaveLoad.js expects. Kept as a single
+        // callable so we don't rebuild the scaffold on every save click.
+        const snapshotCtx = () => ({
+          configPlayer, playerClassKey,
+          playerLevel, playerXp, playerHp, playerMana,
+          playerMaxHp, playerMaxMana, playerMagicLevel,
+          playerFistLevel, playerShieldingLevel, weaponSkillLevelByType,
+          currentLevel, gridX, gridY, hungerSecondsLeft, runKills,
+          learnedSpellIds, learnedSpellOrder,
+          burnState, poisonState, electrifiedState,
+        });
         if (saveGameBtnEl) {
           saveGameBtnEl.addEventListener('click', () => {
             if (aliveCreatures().length > 0) return;
@@ -3538,7 +3484,7 @@ function startGame(configPlayer) {
             // keep the snapshot in sessionStorage and are routed to the
             // registration form first (auth.js picks this up).
             try {
-              const snapshot = captureSaveSnapshot();
+              const snapshot = captureSaveSnapshot(snapshotCtx());
               const existingId = (window.tdGame && typeof window.tdGame.getCurrentSaveId === 'function')
                 ? window.tdGame.getCurrentSaveId() : null;
               sessionStorage.setItem('td.pendingSnapshot', JSON.stringify(snapshot));
@@ -7012,12 +6958,7 @@ function startGame(configPlayer) {
           playerMagicLevel     = Math.max(0, Number(resumeSnap.playerMagicLevel) || 0);
           playerFistLevel      = Math.max(10, Number(resumeSnap.playerFistLevel) || 10);
           playerShieldingLevel = Math.max(10, Number(resumeSnap.playerShieldingLevel) || 10);
-          if (weaponSkillLevelByType && typeof weaponSkillLevelByType.clear === 'function') {
-            weaponSkillLevelByType.clear();
-            for (const [k, v] of Object.entries(resumeSnap.weaponSkillLevels || {})) {
-              weaponSkillLevelByType.set(k, Math.max(10, Number(v) || 10));
-            }
-          }
+          restoreWeaponSkills(weaponSkillLevelByType, resumeSnap);
           playerHp     = Phaser.Math.Clamp(Number(resumeSnap.playerHp)   || playerMaxHp, 1, playerMaxHp);
           playerMana   = Phaser.Math.Clamp(Number(resumeSnap.playerMana) || playerMaxMana, 0, playerMaxMana);
           hungerSecondsLeft = Math.max(0, Number(resumeSnap.hungerSecondsLeft) || MAX_FOOD_SECONDS);
@@ -7030,35 +6971,7 @@ function startGame(configPlayer) {
           while (currentLevel < savedFloor) descendLevel(true);
 
           // Learned spells (IDs + hotkey slots).
-          if (learnedSpellIds && typeof learnedSpellIds.clear === 'function') {
-            learnedSpellIds.clear();
-            for (const id of (resumeSnap.learnedSpellIds || [])) {
-              const n = Number(id);
-              if (Number.isFinite(n) && n > 0) learnedSpellIds.add(n);
-            }
-          }
-          // Prefer the new learnedSpellOrder; fall back to legacy
-          // learnedSpellSlots for saves made before the unified order.
-          learnedSpellOrder.length = 0;
-          if (Array.isArray(resumeSnap.learnedSpellOrder) && resumeSnap.learnedSpellOrder.length > 0) {
-            for (const v of resumeSnap.learnedSpellOrder) {
-              const n = Number(v);
-              if (Number.isFinite(n) && n > 0) learnedSpellOrder.push(n);
-            }
-          } else if (Array.isArray(resumeSnap.learnedSpellSlots)) {
-            for (const v of resumeSnap.learnedSpellSlots) {
-              if (v == null) continue;
-              const n = Number(v);
-              if (Number.isFinite(n) && n > 0) learnedSpellOrder.push(n);
-            }
-          }
-          // Backfill any learned IDs that aren't already in the order (older
-          // saves may have learned spells without any slot assignment).
-          for (const id of learnedSpellIds) {
-            if (!learnedSpellOrder.some((v) => Number(v) === Number(id))) {
-              learnedSpellOrder.push(Number(id));
-            }
-          }
+          restoreLearnedSpells(learnedSpellIds, learnedSpellOrder, resumeSnap);
           try { renderLearnedSpells(); } catch { /* best effort */ }
 
           // DoT statuses — retime their tick schedule to the current clock.
