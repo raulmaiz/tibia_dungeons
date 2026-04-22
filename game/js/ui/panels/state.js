@@ -5,18 +5,19 @@
 //
 // Why a shared object instead of per-binding `let` exports with setters
 // (the playerSession.js pattern)? The panel has ~10 pieces of state and
-// ~10 cross-module helpers. One object reference keeps imports tidy and
-// makes "everything the panel shares" visible in one place. playerSession
-// uses the let-binding pattern because it has only a handful of values
-// and zero cross-module function calls.
+// a handful of helpers that'd otherwise be circular imports. One object
+// reference keeps imports tidy and makes "everything shared across panel
+// sub-modules" visible in one place.
+//
+// Only entries that would cause a circular import go in `helpers`. If two
+// modules can resolve each other with a direct import, they should —
+// helpers is the escape hatch, not the default.
 
 export const panelState = {
   // ── run-time mutable state ───────────────────────────────────────────
   selectedSex: 'male',
   selectedClass: 'knight',
   playerConfig: null,
-  _starting: false,
-  currentSaveId: null,
 
   currentBagCapacity: 0,
   currentBagItem: null,
@@ -34,59 +35,43 @@ export const panelState = {
   /** Lookup for coin templates by article_id. Populated on first coin-related flow. */
   coinTemplateById: new Map(),
 
-  // ── injected refs (wired by inventoryPanel.js at setup) ──────────────
-  // These are cross-module calls the orchestrator passes in instead of
-  // each sub-module importing from every other sub-module (which would
-  // create a circular-import soup).
+  // ── helpers wired by the orchestrator ────────────────────────────────
+  // Declared as null here so every cross-module path is visible in one
+  // place. The orchestrator populates them in setupInventoryPanel().
   helpers: {
-    /** Engine entry — called after bootGame finishes loading + equipping. */
-    startGame: null,
+    // equipment.js → lootBag.js (swap-to-bag on two-handed weapon equip)
+    addLootItemToBag: null,
+    // lootBag.js → equipFlow.js (left-click on a container in the bag)
+    equipBagByArticleId: null,
 
-    /** Equipment resolution (used by tooltip + lootBag). */
+    // Equipment resolution exposed so itemTooltip can render the right
+    // action buttons without importing from equipment.js directly.
     resolveEquipSlotForItem: null,
     resolveSellUnitPrice: null,
     canEquipItemInSlot: null,
 
-    /** Slot visual mutation (used by accessoryTimers + lootBag + equipFlow). */
+    // Slot visual mutation (accessoryTimers + tooltip action buttons).
     setEquippedSlotVisual: null,
     clearEquippedSlotVisual: null,
 
-    /** Loot bag rendering (used by equipment + accessoryTimers + coins). */
+    // Loot bag rendering — consumed by tooltip action buttons + any
+    // flow that changes bag contents without going through this panel.
     renderLootSlots: null,
 
-    /** Auto-equip checks (used by lootBag on incoming loot). */
+    // Auto-equip checks — used by anything that stages loot before
+    // dropping it into the bag.
     tryAutoEquipArmorUpgrade: null,
     tryAutoEquipShieldUpgrade: null,
     tryAutoEquipWeaponUpgrade: null,
     tryAutoEquipAccessory: null,
 
-    /** Tooltip binding (used by lootBag + equipment). */
-    bindTooltip: null,
-    showTouchLootTooltip: null,
-    hideItemTooltip: null,
-
-    /** Loot context menu (used by lootBag). */
-    showLootContextMenu: null,
-    hideLootContextMenu: null,
-
-    /** Item manipulation (used by equipFlow + bootFlow). */
-    addLootItemToBag: null,
-    equipItemInSlot: null,
-    equipBagByArticleId: null,
-
-    /** Coin management (used by equipFlow + bootFlow + lootBag). */
+    // Coin management — anything outside the panel that mints / spends
+    // gold goes through these.
+    ensureCoinTemplatesLoaded: null,
+    normalizeCoinStacks: null,
     addCoinsToInventory: null,
     getTotalGoldInInventory: null,
     setCoinsFromTotalGold: null,
     spendGoldFromInventory: null,
-    normalizeCoinStacks: null,
-    ensureCoinTemplatesLoaded: null,
-
-    /** Hunger UI (used by engine via window.setHungryUi). */
-    setHungryUi: null,
-
-    /** Accessory expiration timers (ring / amulet) — used by equipment. */
-    startAccessoryTimer: null,
-    stopAccessoryTimer: null,
   },
 };

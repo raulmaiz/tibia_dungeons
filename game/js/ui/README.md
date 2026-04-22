@@ -4,14 +4,14 @@ Everything that touches the DOM. Panels are mounted at boot and live for the ent
 
 ## Files
 
-- [`inventoryPanel.js`](inventoryPanel.js) — orchestrator for the character-select / inventory / loot / equip / boot flow. **~1.3k lines** after Phase 3a carved out six sub-modules; Phase 3b will reduce it to ~150 as the stateful core moves to [`panels/`](panels/).
+- [`inventoryPanel.js`](inventoryPanel.js) — orchestrator for the character-select / inventory / loot / equip / boot flow. **~130 lines** of pure wiring after Phase 3b; every piece of panel logic lives in [`panels/`](panels/).
 - [`loadingScreen.js`](loadingScreen.js) — single `setLoadingProgress(pct, label)` function that updates the `#loadingBar` / `#loadingLabel` / `#loadingPct` DOM nodes. Imported by both engine (preload) and panel (bootGame).
 - [`panelLayout.js`](panelLayout.js) — Phaser↔DOM panel sync wiring (sidebar widths, toggle buttons).
 - [`auth.js`](auth.js) — login + character-select shell. Routes through `offline-api.js` when `OFFLINE_BUILD`.
 
 ## Subfolders
 
-- [`panels/`](panels/) — inventory-panel sub-modules (`state`, `constants`, `characterSelect`, `hunger`, `accessoryTimers`, `itemTooltip`, and the Phase 3b additions). See [`panels/README.md`](panels/README.md).
+- [`panels/`](panels/) — inventory-panel sub-modules (`state`, `constants`, `characterSelect`, `hunger`, `accessoryTimers`, `itemTooltip`, `coins`, `equipment`, `lootBag`, `equipFlow`, `bootFlow`, `debugApi`). See [`panels/README.md`](panels/README.md).
 
 ## The `setupInventoryPanel(deps)` orchestrator
 
