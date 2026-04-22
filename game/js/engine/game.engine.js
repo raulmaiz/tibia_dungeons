@@ -139,6 +139,11 @@ import {
   drawMinimapBase,
   drawMinimapDynamic,
 } from './systems/Minimap.js';
+import {
+  initCombatLog,
+  addCombatLog,
+  LOG_COLORS,
+} from './systems/CombatLog.js';
 
 // Expose the bus for debugging / browser console listeners.
 if (typeof window !== 'undefined') window.tdEvents = bus;
@@ -355,25 +360,7 @@ function startGame(configPlayer) {
         const _isMobileView = () => window.innerWidth < 1200;
         const capitalise = (s) => String(s || '').charAt(0).toUpperCase() + String(s || '').slice(1);
 
-        const LOG_COLORS = {
-          DEFAULT: '#e8f0ff',
-          HIT: '#cbd5e1',
-          CRIT: '#fde047',
-          SPELL: '#7dd3fc',
-        };
-        const gameLogEls = [0, 1, 2, 3, 4].map((i) => document.getElementById(`gameLog${i}`));
-        const combatLogLines = [];
-        const addCombatLog = (msg, color = LOG_COLORS.DEFAULT) => {
-          combatLogLines.push({ msg, color });
-          if (combatLogLines.length > 5) combatLogLines.shift();
-          for (let i = 0; i < gameLogEls.length; i += 1) {
-            const el = gameLogEls[i];
-            if (!el) continue;
-            const line = combatLogLines[i];
-            el.textContent = line ? String(line.msg) : '';
-            el.style.color = line ? line.color : LOG_COLORS.DEFAULT;
-          }
-        };
+        initCombatLog();
         setOnPanelLog(addCombatLog);
         addCombatLog('Combat ready.');
 
