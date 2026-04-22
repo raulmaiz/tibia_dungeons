@@ -150,6 +150,8 @@ import {
   bindSpellBarTooltip,
   setupSpellTooltipDismissers,
   hasRealHover,
+  esc,
+  ttRow,
 } from './systems/SpellTooltip.js';
 import {
   showEatEffect,

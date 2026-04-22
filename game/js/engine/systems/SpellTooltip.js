@@ -21,8 +21,8 @@
 // refresh or replace the tooltip on tap without a frame flicker.
 const TOOLTIP_KEEP_ALIVE_SELECTOR = '.learned-spell-row, .spell-row, .item-shop-row, .market-card';
 
-const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const ttRow = (label, value) => `<div class="tt-row"><span class="tt-label">${esc(label)}</span><span class="tt-value">${esc(String(value))}</span></div>`;
+export const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+export const ttRow = (label, value) => `<div class="tt-row"><span class="tt-label">${esc(label)}</span><span class="tt-value">${esc(String(value))}</span></div>`;
 export const hasRealHover = () => !!(window.matchMedia && window.matchMedia('(hover: hover)').matches);
 
 function tooltipEl() {

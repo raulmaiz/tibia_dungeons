@@ -29,7 +29,10 @@ let baseImageData = null;
 
 export function initMinimap() {
   canvasEl = /** @type {HTMLCanvasElement|null} */ (document.getElementById('minimapCanvas'));
-  ctx2d = canvasEl ? canvasEl.getContext('2d') : null;
+  // `willReadFrequently: true` tells the browser we plan to call getImageData
+  // often (for the dynamic overlay) and picks a CPU-backed canvas so the
+  // readback doesn't stall round-tripping from the GPU.
+  ctx2d = canvasEl ? canvasEl.getContext('2d', { willReadFrequently: true }) : null;
   mmTile = 3;
   baseImageData = null;
 }
