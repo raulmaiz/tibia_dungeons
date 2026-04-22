@@ -194,6 +194,26 @@ import {
 } from './systems/GroundLoot.js';
 import { createPlayer } from '../entities/Player/Player.js';
 import {
+  getEquippedHandWeapon,
+  getEquippedAmmo,
+  getEquippedShield,
+  isMagicRangedWeapon,
+  isThrowableWeapon,
+  isClassicDistanceWeapon,
+  isDistanceWeapon,
+  magicWeaponDamageTypeSuffix,
+  magicWeaponDamageTypeRaw,
+  magicWeaponManaCost,
+  ammoKindForWeapon,
+  ammoKindForItem,
+  isAmmoCompatibleWithWeapon,
+  requiresAmmoForWeapon,
+  hasAmmoForWeapon,
+  ammoAttackBonus,
+  rangeFromAttributes,
+  effectiveWeaponRange,
+} from './systems/Weapons.js';
+import {
   setupLearnedSpells,
   renderLearnedSpells,
 } from './systems/LearnedSpells.js';
@@ -1889,24 +1909,6 @@ function startGame(configPlayer) {
           const hardCap = Math.min(byCreature, byFloor);
           return Phaser.Math.Clamp(raw, 1, hardCap);
         };
-        const getEquippedHandWeapon = () => {
-          const state = window.debugInventory && typeof window.debugInventory.state === 'function'
-            ? window.debugInventory.state()
-            : null;
-          return state && state.equipped ? state.equipped.hand : null;
-        };
-        const getEquippedAmmo = () => {
-          const state = window.debugInventory && typeof window.debugInventory.state === 'function'
-            ? window.debugInventory.state()
-            : null;
-          return state && state.equipped ? state.equipped.ammunition : null;
-        };
-        const getEquippedShield = () => {
-          const state = window.debugInventory && typeof window.debugInventory.state === 'function'
-            ? window.debugInventory.state()
-            : null;
-          return state && state.equipped ? state.equipped.shield : null;
-        };
         const applyShieldingReduction = (incomingDamage) => {
           const raw = Math.max(1, Math.floor(Number(incomingDamage) || 1));
           const readAttrValue = (it, attrName) => {
@@ -1965,42 +1967,11 @@ function startGame(configPlayer) {
           }
           return reduced;
         };
-        const ammoAttackBonus = (weapon = null) => {
-          const ammo = getEquippedAmmo();
-          if (!ammo) return 0;
-          if (weapon && !isAmmoCompatibleWithWeapon(weapon, ammo)) return 0;
-          return Math.max(0, Number((ammo && ammo.attack_value) || 0));
-        };
-        const isMagicRangedWeapon = (item) => {
-          if (!item) return false;
-          const t = String(item.item_type || '').toLowerCase();
-          return t === 'rods' || t === 'wands';
-        };
         const canStrafeCastMagicWeapon = (weapon) => {
           if (!weapon) return false;
           if (isMagicRangedWeapon(weapon)) return playerState.classKey === 'druid' || playerState.classKey === 'sorcerer';
           if (isClassicDistanceWeapon(weapon)) return true;
           return false;
-        };
-        const magicWeaponDamageTypeSuffix = (weapon) => {
-          if (!weapon || !isMagicRangedWeapon(weapon)) return '';
-          const attrs = Array.isArray(weapon.attributes) ? weapon.attributes : [];
-          const row = attrs.find((a) => a && String(a.name || '').toLowerCase() === 'damage_type');
-          const v = row ? String(row.value || '').trim() : '';
-          return v ? ` (${v})` : '';
-        };
-        const magicWeaponDamageTypeRaw = (weapon) => {
-          if (!weapon || !isMagicRangedWeapon(weapon)) return '';
-          const attrs = Array.isArray(weapon.attributes) ? weapon.attributes : [];
-          const row = attrs.find((a) => a && String(a.name || '').toLowerCase() === 'damage_type');
-          return row ? String(row.value || '').trim() : '';
-        };
-        const magicWeaponManaCost = (weapon) => {
-          if (!weapon || !isMagicRangedWeapon(weapon)) return 0;
-          const attrs = Array.isArray(weapon.attributes) ? weapon.attributes : [];
-          const row = attrs.find((a) => a && String(a.name || '').toLowerCase() === 'mana_cost');
-          const n = row ? Number(row.value) : 0;
-          return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
         };
         const hasEnoughManaForMagicWeapon = (weapon) => {
           const cost = magicWeaponManaCost(weapon);
@@ -2119,50 +2090,6 @@ function startGame(configPlayer) {
           const scaledWeaponAttack = Math.floor(weaponAttack * 1.35);
           return Math.max(2, playerBaseDamage + weaponBaseBonus + scaledWeaponAttack + rangedAmmoBonus + weaponSkillBonus);
         };
-        const isThrowableWeapon = (item) => {
-          if (!item) return false;
-          if (item.throwable) return true;
-          return String(item.type_secondary || '').toLowerCase() === 'throwing weapons';
-        };
-        const isClassicDistanceWeapon = (item) => (
-          item
-          && String(item.item_class || '').toLowerCase() === 'weapons'
-          && String(item.item_type || '').toLowerCase() === 'distance weapons'
-        );
-        const isDistanceWeapon = (item) => isClassicDistanceWeapon(item) || isMagicRangedWeapon(item);
-        const ammoKindForWeapon = (weapon) => {
-          const secondary = String((weapon && weapon.type_secondary) || '').toLowerCase();
-          if (secondary.includes('crossbow')) return 'bolt';
-          if (secondary.includes('bow')) return 'arrow';
-          return null;
-        };
-        const ammoKindForItem = (ammoItem) => {
-          if (!ammoItem) return null;
-          if (String(ammoItem.item_type || '').toLowerCase() !== 'ammunition') return null;
-          const title = String(ammoItem.title || '').toLowerCase();
-          if (title.includes('bolt')) return 'bolt';
-          if (title.includes('arrow')) return 'arrow';
-          return null;
-        };
-        const isAmmoCompatibleWithWeapon = (weapon, ammoItem) => {
-          const needed = ammoKindForWeapon(weapon);
-          if (!needed) return true;
-          const has = ammoKindForItem(ammoItem);
-          return has === needed;
-        };
-        const requiresAmmoForWeapon = (item) => Boolean(
-          item
-          && isClassicDistanceWeapon(item)
-          && !isThrowableWeapon(item)
-        );
-        const hasAmmoForWeapon = (item) => {
-          if (!requiresAmmoForWeapon(item)) return true;
-          const ammo = getEquippedAmmo();
-          if (!ammo) return false;
-          const count = Math.max(0, Number(ammo.count || 0));
-          if (count <= 0) return false;
-          return isAmmoCompatibleWithWeapon(item, ammo);
-        };
         const spendOneAmmo = (weapon) => {
           if (!requiresAmmoForWeapon(weapon)) return true;
           const ammo = getEquippedAmmo();
@@ -2179,28 +2106,6 @@ function startGame(configPlayer) {
             inventoryClearEquippedSlotVisual('ammunition', 'Out of ammunition.');
           }
           return true;
-        };
-        const rangeFromAttributes = (item) => {
-          const attrs = Array.isArray(item && item.attributes) ? item.attributes : [];
-          const row = attrs.find((a) => a && String(a.name || '').toLowerCase() === 'range');
-          if (!row) return null;
-          const n = Number(row.value);
-          return Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
-        };
-        const effectiveWeaponRange = (item) => {
-          if (!item) return 1;
-          if (isMagicRangedWeapon(item)) {
-            const fromAttrs = rangeFromAttributes(item);
-            return fromAttrs != null ? fromAttrs : 5;
-          }
-          const fromAttrs = rangeFromAttributes(item);
-          if (fromAttrs != null) return fromAttrs;
-          const raw = Number(item.range_value || 1);
-          if (Number.isFinite(raw) && raw > 0) return Math.floor(raw);
-          if (isDistanceWeapon(item)) {
-            return isThrowableWeapon(item) ? 4 : 5;
-          }
-          return 1;
         };
         const findRangedTargetInDirection = (dx, dy, rangeTiles) => {
           const maxRange = Math.max(1, Math.floor(Number(rangeTiles) || 1));
