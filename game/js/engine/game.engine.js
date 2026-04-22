@@ -144,6 +144,13 @@ import {
   addCombatLog,
   LOG_COLORS,
 } from './systems/CombatLog.js';
+import {
+  hideSpellTooltip,
+  bindSpellTooltip,
+  bindSpellBarTooltip,
+  setupSpellTooltipDismissers,
+  hasRealHover,
+} from './systems/SpellTooltip.js';
 
 // Expose the bus for debugging / browser console listeners.
 if (typeof window !== 'undefined') window.tdEvents = bus;
@@ -1915,7 +1922,6 @@ function startGame(configPlayer) {
             return this.goToFloor(Math.max(1, currentLevel - 1));
           },
         };
-        const spellTooltipEl = document.getElementById('itemTooltip');
         const equipmentPanelEl = document.querySelector('.equipment-panel');
         const equipmentAccordionEl = document.getElementById('equipmentAccordion');
         const lootPanelEl = document.querySelector('.loot-panel');
@@ -1926,164 +1932,7 @@ function startGame(configPlayer) {
         const itemsShopPanelEl = document.getElementById('itemsShopPanel');
         const itemsShopAccordionEl = document.getElementById('itemsShopAccordion');
         const itemsShopSearchInputEl = document.getElementById('itemsShopSearchInput');
-        const hideSpellTooltip = () => {
-          if (!spellTooltipEl) return;
-          spellTooltipEl.style.display = 'none';
-          spellTooltipEl.innerHTML = '';
-        };
-        const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        const ttRow = (label, value) => `<div class="tt-row"><span class="tt-label">${esc(label)}</span><span class="tt-value">${esc(String(value))}</span></div>`;
-        const formatSpellTooltip = (spell) => {
-          if (!spell) return '';
-          const raw = spell.raw && typeof spell.raw === 'object' ? spell.raw : {};
-          const effect = String(raw.effect || '').trim();
-          let h = `<div class="tt-header">`;
-          h += `<div class="tt-title">${esc(spell.title || 'Unknown Spell')}</div>`;
-          if (spell.words) h += `<div class="tt-words">${esc(spell.words)}</div>`;
-          h += `</div><div class="tt-body">`;
-          h += `<div class="tt-section">Info</div>`;
-          h += ttRow('Type', spell.spell_type || '—');
-          h += ttRow('Group', spell.group_spell || '—');
-          h += `<div class="tt-sep"></div>`;
-          h += `<div class="tt-section">Requirements</div>`;
-          h += ttRow('Level', Math.max(0, Number(spell.level || 0)));
-          h += ttRow('Mana', Math.max(0, Number(spell.mana || 0)));
-          h += `<div class="tt-sep"></div>`;
-          h += `<div class="tt-section">Shop</div>`;
-          h += ttRow('Price', `${Math.max(0, Number(spell.price || 0))} gp`);
-          if (effect) {
-            h += `<div class="tt-sep"></div>`;
-            h += `<div class="tt-effect">${esc(effect)}</div>`;
-          }
-          h += `</div>`;
-          return h;
-        };
-        const formatSpellBarTooltip = (spell, slotLabel) => {
-          if (!spell) return '';
-          const raw = spell.raw && typeof spell.raw === 'object' ? spell.raw : {};
-          const effect = String(raw.effect || '').trim();
-          const title = slotLabel ? `${esc(slotLabel)} ${esc(spell.title || '')}` : esc(spell.title || '');
-          let h = `<div class="tt-header"><div class="tt-title">${title}</div>`;
-          if (spell.words) h += `<div class="tt-words">${esc(spell.words)}</div>`;
-          h += `</div><div class="tt-body">`;
-          if (effect) h += `<div class="tt-desc">${esc(effect)}</div><div class="tt-sep"></div>`;
-          h += `<div class="tt-row"><span class="tt-label">Mana</span><span class="tt-value">${Math.max(0, Number(spell.mana || 0))}</span></div>`;
-          h += `</div>`;
-          return h;
-        };
-        const showTooltipHtml = (html, ev, maxW = 260) => {
-          if (!spellTooltipEl) return;
-          spellTooltipEl.innerHTML = html;
-          spellTooltipEl.style.display = 'block';
-          spellTooltipEl.style.maxWidth = `${maxW}px`;
-          const pad = 14;
-          const x = Math.min(window.innerWidth - maxW - 8, ev.clientX + pad);
-          const y = Math.min(window.innerHeight - 260, ev.clientY + pad);
-          spellTooltipEl.style.left = `${Math.max(6, x)}px`;
-          spellTooltipEl.style.top = `${Math.max(6, y)}px`;
-        };
-        const _hasRealHover = () => !!(window.matchMedia && window.matchMedia('(hover: hover)').matches);
-        const bindSpellTooltip = (el, spell, opts = {}) => {
-          if (!el || !spellTooltipEl) return;
-          const touchShow = opts.touchShow !== false; // default: show on tap
-          const place = (ev) => {
-            const pad = 14;
-            const x = Math.min(window.innerWidth - 270, ev.clientX + pad);
-            const y = Math.min(window.innerHeight - 260, ev.clientY + pad);
-            spellTooltipEl.style.left = `${Math.max(6, x)}px`;
-            spellTooltipEl.style.top = `${Math.max(6, y)}px`;
-          };
-          const showAt = (ev) => {
-            spellTooltipEl.innerHTML = formatSpellTooltip(spell);
-            spellTooltipEl.style.display = 'block';
-            spellTooltipEl.style.maxWidth = '260px';
-            place(ev);
-          };
-          // Hover handlers only on true hover-capable devices — on touch,
-          // synthesized mouseenter/leave fires at the end of a tap and would
-          // hide the tooltip immediately after our pointerup shows it.
-          if (_hasRealHover()) {
-            el.addEventListener('mouseenter', showAt);
-            el.addEventListener('mousemove', place);
-            el.addEventListener('mouseleave', hideSpellTooltip);
-          }
-          // Unified tap-to-show via pointer events — works for mouse, touch,
-          // and pen. Filters out taps on child buttons/reorder arrows so their
-          // own handlers (reorder / buy) don't get masked by tooltip logic.
-          // Callers can pass { touchShow: false } to opt out (e.g. Spells
-          // Shop uses a dedicated "Info" button instead of a tap anywhere).
-          if (touchShow) {
-            let _pttX = 0;
-            let _pttY = 0;
-            let _pttMoved = false;
-            let _pttActive = false;
-            el.addEventListener('pointerdown', (ev) => {
-              _pttX = ev.clientX;
-              _pttY = ev.clientY;
-              _pttMoved = false;
-              _pttActive = true;
-            });
-            el.addEventListener('pointermove', (ev) => {
-              if (!_pttActive || _pttMoved) return;
-              if (Math.abs(ev.clientX - _pttX) > 10 || Math.abs(ev.clientY - _pttY) > 10) {
-                _pttMoved = true;
-              }
-            });
-            const pointerFinish = (ev) => {
-              if (!_pttActive) return;
-              _pttActive = false;
-              if (_pttMoved) return;
-              if (ev.pointerType === 'mouse') return; // mouse uses mouseenter
-              if (ev.target.closest && ev.target.closest('.ls-reorder-arrows, button')) return;
-              showAt(ev);
-            };
-            el.addEventListener('pointerup', pointerFinish);
-            el.addEventListener('pointercancel', () => { _pttActive = false; });
-          }
-          return showAt;
-        };
-        const bindSpellBarTooltip = (el, spell, slotLabel) => {
-          if (!el || !spellTooltipEl) return;
-          const html = formatSpellBarTooltip(spell, slotLabel);
-          const place = (ev) => {
-            const pad = 14;
-            const x = Math.min(window.innerWidth - 220, ev.clientX + pad);
-            const y = Math.min(window.innerHeight - 160, ev.clientY + pad);
-            spellTooltipEl.style.left = `${Math.max(6, x)}px`;
-            spellTooltipEl.style.top = `${Math.max(6, y)}px`;
-          };
-          el.addEventListener('mouseenter', (ev) => {
-            spellTooltipEl.innerHTML = html;
-            spellTooltipEl.style.display = 'block';
-            spellTooltipEl.style.maxWidth = '220px';
-            place(ev);
-          });
-          el.addEventListener('mousemove', place);
-          el.addEventListener('mouseleave', hideSpellTooltip);
-        };
-        window.addEventListener('blur', hideSpellTooltip);
-        document.addEventListener('visibilitychange', () => {
-          if (document.hidden) hideSpellTooltip();
-        });
-        document.addEventListener('keydown', hideSpellTooltip);
-        // Outside-tap dismissal. Runs in the capture phase so it fires even
-        // when a child handler calls stopPropagation (row taps, arrows, etc.).
-        // If the tap lands inside the tooltip itself or on a spell row
-        // (Learned Spells or Spell Shop — each shows/refreshes its own
-        // tooltip on tap), we let those flows run and don't force-hide here.
-        const TOOLTIP_KEEP_ALIVE_SELECTOR = '.learned-spell-row, .spell-row, .item-shop-row, .market-card';
-        document.addEventListener('pointerdown', (ev) => {
-          if (!spellTooltipEl || spellTooltipEl.style.display === 'none') return;
-          if (spellTooltipEl.contains(ev.target)) return;
-          if (ev.target.closest && ev.target.closest(TOOLTIP_KEEP_ALIVE_SELECTOR)) return;
-          hideSpellTooltip();
-        }, true);
-        document.addEventListener('click', (ev) => {
-          if (!spellTooltipEl || spellTooltipEl.style.display === 'none') return;
-          if (spellTooltipEl.contains(ev.target)) return;
-          if (ev.target.closest && ev.target.closest(TOOLTIP_KEEP_ALIVE_SELECTOR)) return;
-          hideSpellTooltip();
-        });
+        setupSpellTooltipDismissers();
         // Update cooldown countdown text every 250ms
         setInterval(() => {
           const now2 = Date.now();
@@ -2673,21 +2522,22 @@ function startGame(configPlayer) {
           return h;
         };
         const bindItemShopTooltip = (el, item) => {
-          if (!el || !spellTooltipEl) return;
+          const tt = document.getElementById('itemTooltip');
+          if (!el || !tt) return;
           const place = (ev) => {
             const padX = 36; const padY = 52;
             const x = Math.min(window.innerWidth - 270, ev.clientX + padX);
             const y = Math.min(window.innerHeight - 300, ev.clientY + padY);
-            spellTooltipEl.style.left = `${Math.max(6, x)}px`;
-            spellTooltipEl.style.top = `${Math.max(6, y)}px`;
+            tt.style.left = `${Math.max(6, x)}px`;
+            tt.style.top = `${Math.max(6, y)}px`;
           };
           const showAt = (ev) => {
-            spellTooltipEl.innerHTML = formatItemShopTooltip(item);
-            spellTooltipEl.style.display = 'block';
-            spellTooltipEl.style.maxWidth = '260px';
+            tt.innerHTML = formatItemShopTooltip(item);
+            tt.style.display = 'block';
+            tt.style.maxWidth = '260px';
             place(ev);
           };
-          if (_hasRealHover()) {
+          if (hasRealHover()) {
             el.addEventListener('mouseenter', showAt);
             el.addEventListener('mousemove', place);
             el.addEventListener('mouseleave', hideSpellTooltip);
