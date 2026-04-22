@@ -151,6 +151,13 @@ import {
   setupSpellTooltipDismissers,
   hasRealHover,
 } from './systems/SpellTooltip.js';
+import {
+  showEatEffect,
+  showDrinkEffect,
+  showFullFoodEffect,
+  showLevelUpText,
+  showSkillLevelUpText,
+} from './systems/FloatingEffects.js';
 
 // Expose the bus for debugging / browser console listeners.
 if (typeof window !== 'undefined') window.tdEvents = bus;
@@ -532,40 +539,6 @@ function startGame(configPlayer) {
           // Much faster skill progression requested by user.
           return Math.max(6, Math.floor(4 + dl * 0.75));
         };
-        const showSkillLevelUpText = (label, level) => {
-          const txt = this.add.text(this.scale.width / 2, 88, `${label} +1 (Lv ${level})`, {
-            color: '#bbf7d0',
-            fontSize: '22px',
-            fontStyle: 'bold',
-            fontFamily: 'Segoe UI, system-ui, sans-serif',
-          });
-          txt.setOrigin(0.5, 0.5);
-          txt.setScrollFactor(0);
-          txt.setDepth(620);
-          txt.setStroke('#052e16', 5);
-          txt.setShadow(0, 0, '#34d399', 14, true, true);
-          const glow = this.add.circle(this.scale.width / 2, 88, 40, 0x34d399, 0.18);
-          glow.setScrollFactor(0);
-          glow.setDepth(619);
-          this.tweens.add({
-            targets: glow,
-            alpha: 0,
-            scaleX: 2.1,
-            scaleY: 2.1,
-            duration: 520,
-            ease: 'Sine.easeOut',
-            onComplete: () => glow.destroy(),
-          });
-          radialSparkBurst(this, this.scale.width / 2, 88, 0x34d399, 12);
-          this.tweens.add({
-            targets: txt,
-            y: txt.y - 16,
-            alpha: 0,
-            duration: 760,
-            ease: 'Cubic.easeOut',
-            onComplete: () => txt.destroy(),
-          });
-        };
         const weaponSkillTypeKey = (item) => {
           if (!item) return null;
           if (String(item.item_class || '').toLowerCase() !== 'weapons') return null;
@@ -610,7 +583,7 @@ function startGame(configPlayer) {
           weaponSkillLevelByType.set(typeKey, level);
           if (leveled) {
             addCombatLog(`${weaponSkillLabel(typeKey)} fighting advanced to ${level}.`);
-            showSkillLevelUpText(`${weaponSkillLabel(typeKey)} Fighting`, level);
+            showSkillLevelUpText(this,`${weaponSkillLabel(typeKey)} Fighting`, level);
           }
         };
         const gainFistSkillUse = (amount = 1) => {
@@ -625,7 +598,7 @@ function startGame(configPlayer) {
           }
           if (leveled) {
             addCombatLog(`Fist Fighting advanced to ${playerFistLevel}.`);
-            showSkillLevelUpText('Fist Fighting', playerFistLevel);
+            showSkillLevelUpText(this,'Fist Fighting', playerFistLevel);
           }
         };
         const gainShieldingSkillUse = (amount = 1) => {
@@ -640,7 +613,7 @@ function startGame(configPlayer) {
           }
           if (leveled) {
             addCombatLog(`Shielding advanced to ${playerShieldingLevel}.`);
-            showSkillLevelUpText('Shielding', playerShieldingLevel);
+            showSkillLevelUpText(this,'Shielding', playerShieldingLevel);
           }
         };
         const updatePlayerTimingsByLevel = () => {
@@ -655,43 +628,6 @@ function startGame(configPlayer) {
             PLAYER_ACTION_DELAY_MIN_MS,
             PLAYER_ACTION_DELAY_MAX_MS,
           );
-        };
-        const showLevelUpText = () => {
-          const cx = this.scale.width / 2;
-          const cy = this.scale.height / 2;
-          const glow = this.add.circle(cx, cy, 80, 0xfbbf24, 0.12);
-          glow.setScrollFactor(0);
-          glow.setDepth(600);
-          this.tweens.add({
-            targets: glow,
-            alpha: 0,
-            scaleX: 2.2,
-            scaleY: 2.2,
-            duration: 700,
-            ease: 'Sine.easeOut',
-            onComplete: () => glow.destroy(),
-          });
-          const txt = this.add.text(cx, cy, 'LEVEL UP!', {
-            color: '#fffbeb',
-            fontSize: '58px',
-            fontStyle: 'bold',
-            fontFamily: 'Segoe UI Black, Segoe UI, system-ui, sans-serif',
-          });
-          txt.setOrigin(0.5, 0.5);
-          txt.setStroke('#78350f', 10);
-          txt.setShadow(0, 0, '#fbbf24', 28, true, true);
-          txt.setScrollFactor(0);
-          txt.setDepth(601);
-          this.tweens.add({
-            targets: txt,
-            y: txt.y - 36,
-            alpha: 0,
-            scaleX: 1.12,
-            scaleY: 1.12,
-            duration: 1000,
-            ease: 'Cubic.easeOut',
-            onComplete: () => txt.destroy(),
-          });
         };
         const grantPlayerXp = (amount) => {
           const raw = Number(amount);
@@ -713,7 +649,7 @@ function startGame(configPlayer) {
             playerMana = playerMaxMana;
             updatePlayerTimingsByLevel();
             addCombatLog(`You reached level ${playerLevel}.`);
-            showLevelUpText();
+            showLevelUpText(this);
             updatePlayerBar();
           }
         };
@@ -966,125 +902,12 @@ function startGame(configPlayer) {
           isHungry = hungry;
           if (typeof window.setHungryUi === 'function') window.setHungryUi(hungry, secondsLeft);
         };
-        const showEatEffect = (label) => {
-          if (playerDead || gameOver) return;
-          shockwaveRing(this, player.x, player.y, 0x4ade80, { startR: 8, endScale: 2.1, duration: 280 });
-          radialSparkBurst(this, player.x, player.y - 2, 0x86efac, 16);
-          player.setTint(0x86efac);
-          this.tweens.add({
-            targets: player,
-            scaleX: basePlayerScaleX * 1.08,
-            scaleY: basePlayerScaleY * 1.08,
-            yoyo: true,
-            duration: 120,
-            ease: 'Sine.easeOut',
-            onComplete: () => {
-              if (!playerDead) player.setScale(basePlayerScaleX, basePlayerScaleY);
-              player.clearTint();
-            },
-          });
-          for (let i = 0; i < 7; i += 1) {
-            const spark = this.add.circle(
-              player.x + Phaser.Math.Between(-10, 10),
-              player.y - tileSize * 0.55 + Phaser.Math.Between(-8, 8),
-              Phaser.Math.Between(2, 5),
-              0xa7f3d0,
-              0.92
-            );
-            spark.setDepth(120);
-            this.tweens.add({
-              targets: spark,
-              y: spark.y - Phaser.Math.Between(16, 28),
-              alpha: 0,
-              duration: 420,
-              ease: 'Cubic.easeOut',
-              onComplete: () => spark.destroy(),
-            });
-          }
-          const txt = this.add.text(player.x, player.y - tileSize * 0.95, `EAT ${label || ''}`.trim(), {
-            color: '#bbf7d0',
-            fontSize: '14px',
-            fontStyle: 'bold',
-          });
-          txt.setOrigin(0.5, 0.5);
-          txt.setDepth(121);
-          txt.setStroke('#14532d', 3);
-          this.tweens.add({
-            targets: txt,
-            y: txt.y - 18,
-            alpha: 0,
-            duration: 560,
-            ease: 'Sine.easeOut',
-            onComplete: () => txt.destroy(),
-          });
-        };
-        const showDrinkEffect = (label, color = '#7dd3fc') => {
-          if (playerDead || gameOver) return;
-          shockwaveRing(this, player.x, player.y, 0x38bdf8, { startR: 6, endScale: 2.4, duration: 300 });
-          radialSparkBurst(this, player.x, player.y, 0x7dd3fc, 12);
-          player.setTintFill(0x60a5fa);
-          this.tweens.add({
-            targets: player,
-            alpha: 0.85,
-            yoyo: true,
-            duration: 100,
-            repeat: 1,
-            ease: 'Sine.easeOut',
-            onComplete: () => {
-              player.setAlpha(1);
-              player.clearTint();
-            },
-          });
-          const txt = this.add.text(player.x, player.y - tileSize * 0.95, label, {
-            color,
-            fontSize: '14px',
-            fontStyle: 'bold',
-          });
-          txt.setOrigin(0.5, 0.5);
-          txt.setDepth(121);
-          txt.setStroke('#0c4a6e', 3);
-          this.tweens.add({
-            targets: txt,
-            y: txt.y - 18,
-            alpha: 0,
-            duration: 580,
-            ease: 'Sine.easeOut',
-            onComplete: () => txt.destroy(),
-          });
-        };
-        const showFullFoodEffect = () => {
-          if (playerDead || gameOver) return;
-          player.setTint(0xfbbf24);
-          this.tweens.add({
-            targets: player,
-            scaleX: basePlayerScaleX * 1.1,
-            scaleY: basePlayerScaleY * 1.1,
-            yoyo: true,
-            repeat: 1,
-            duration: 90,
-            ease: 'Sine.easeOut',
-            onComplete: () => {
-              if (!playerDead) player.setScale(basePlayerScaleX, basePlayerScaleY);
-              player.clearTint();
-            },
-          });
-          const full = this.add.text(player.x, player.y - tileSize * 0.95, 'FULL', {
-            color: '#fde047',
-            fontSize: '16px',
-            fontStyle: 'bold',
-          });
-          full.setOrigin(0.5, 0.5);
-          full.setDepth(121);
-          full.setStroke('#713f12', 4);
-          full.setShadow(0, 0, '#fbbf24', 12, true, true);
-          this.tweens.add({
-            targets: full,
-            y: full.y - 22,
-            alpha: 0,
-            duration: 680,
-            ease: 'Cubic.easeOut',
-            onComplete: () => full.destroy(),
-          });
+        // Ctx passed to FloatingEffects for eat/drink/fullFood — bundles
+        // the player sprite refs + an alive-check so the effects don't
+        // overwrite the death pose if the player dies mid-tween.
+        const floatingFxCtx = {
+          player, tileSize, basePlayerScaleX, basePlayerScaleY,
+          isActive: () => !playerDead,
         };
         setHungryState(true, 0);
         if (typeof onPlayerLevelStatsUpdate === 'function') onPlayerLevelStatsUpdate(playerLevel);
@@ -1093,13 +916,13 @@ function startGame(configPlayer) {
           const nextSatiety = hungerSecondsLeft + Math.floor(foodSeconds);
           if (hungerSecondsLeft >= MAX_FOOD_SECONDS || nextSatiety > MAX_FOOD_SECONDS) {
             addCombatLog('You are too full to eat more.');
-            showFullFoodEffect();
+            showFullFoodEffect(this, floatingFxCtx);
             return false;
           }
           hungerSecondsLeft = nextSatiety;
           setHungryState(false, hungerSecondsLeft);
           addCombatLog(`You eat ${itemTitle}.`);
-          showEatEffect(itemTitle);
+          showEatEffect(this, floatingFxCtx, itemTitle);
           return true;
         });
         setOnUseLiquid((item) => {
@@ -1132,13 +955,13 @@ function startGame(configPlayer) {
           const restored = playerMana - prevMp;
           if (healed > 0 && restored > 0) {
             addCombatLog(`You drink ${item.title}: +${healed} HP, +${restored} MP.`);
-            showDrinkEffect(`+${healed}HP +${restored}MP`, '#7dd3fc');
+            showDrinkEffect(this, floatingFxCtx, `+${healed}HP +${restored}MP`, '#7dd3fc');
           } else if (healed > 0) {
             addCombatLog(`You drink ${item.title}: +${healed} HP.`);
-            showDrinkEffect(`+${healed}HP`, '#86efac');
+            showDrinkEffect(this, floatingFxCtx, `+${healed}HP`, '#86efac');
           } else if (restored > 0) {
             addCombatLog(`You drink ${item.title}: +${restored} MP.`);
-            showDrinkEffect(`+${restored}MP`, '#93c5fd');
+            showDrinkEffect(this, floatingFxCtx, `+${restored}MP`, '#93c5fd');
           } else {
             addCombatLog(`You drink ${item.title}, but no stats were restored.`);
           }
@@ -4510,7 +4333,7 @@ function startGame(configPlayer) {
             playerHp = Math.min(playerMaxHp, playerHp + heal);
             const playerGained = playerHp - prevPlayerHp;
             showSpellAuraEffect(player.x, player.y, spell, 1.1);
-            if (playerGained > 0) showDrinkEffect(`+${playerGained} HP`, '#60a5fa');
+            if (playerGained > 0) showDrinkEffect(this, floatingFxCtx, `+${playerGained} HP`, '#60a5fa');
             // Heal all allies
             const allies = aliveAllies();
             let allyHealLog = '';
@@ -4551,7 +4374,7 @@ function startGame(configPlayer) {
             const gained = target.hp - prevHp;
             updateCreatureBar(target);
             showSpellAuraEffect(target.sprite.x, target.sprite.y, spell, 1.1);
-            showDrinkEffect(`+${gained} HP`, '#4ade80');
+            showDrinkEffect(this, floatingFxCtx, `+${gained} HP`, '#4ade80');
             floatingCombatText(this, target.sprite.x, target.sprite.y - tileSize * 0.65, `+${gained}`, {
               color: '#4ade80', fontSize: '17px',
             });
@@ -4580,7 +4403,7 @@ function startGame(configPlayer) {
             const gained = Math.max(0, playerHp - prev);
             addCombatLog(`Cast [${slotNumber}] ${spell.title}: +${gained} HP.`, LOG_COLORS.SPELL);
             showSpellAuraEffect(player.x, player.y, spell, 1.1);
-            showDrinkEffect(`+${gained} HP`, '#60a5fa');
+            showDrinkEffect(this, floatingFxCtx, `+${gained} HP`, '#60a5fa');
           } else if (group === 'attack') {
             if (castPatternAttackSpell(spell, slotNumber)) {
               updatePlayerBar();
