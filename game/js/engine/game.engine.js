@@ -192,6 +192,7 @@ import {
   pickupGroundLootAtPlayer,
   clearGroundLoot,
 } from './systems/GroundLoot.js';
+import { createPlayer } from '../entities/Player/Player.js';
 import {
   setupLearnedSpells,
   renderLearnedSpells,
@@ -445,7 +446,7 @@ function startGame(configPlayer) {
           map: currentMap, dungeonW, dungeonH,
           stairsTile: currentStairsTile, startTile: START_TILE,
         });
-        const redrawMinimapDynamic = () => drawMinimapDynamic({ creatures, gridX, gridY });
+        const redrawMinimapDynamic = () => drawMinimapDynamic({ creatures, gridX: playerState.gridX, gridY: playerState.gridY });
 
         this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
         this.cameras.main.startFollow(player, true, 0.15, 0.15);
@@ -538,43 +539,24 @@ function startGame(configPlayer) {
           this.time.delayedCall(0, syncGameKeyboardEnabled);
         }, true);
         syncGameKeyboardEnabled();
-        const playerClassKey = String(configPlayer.classKey || 'knight').toLowerCase();
-        const lvl1Stats = progressionStatsForLevel(1, playerClassKey);
-        let gridX = START_TILE.gx;
-        let gridY = START_TILE.gy;
-        let playerFacingFrame = 0; // 0 S, 1 E, 2 N, 3 W
-        let moving = false;
-        let playerMoveDurationMs = PLAYER_MOVE_DURATION_BASE_MS;
-        let playerActionDelayMs = PLAYER_ACTION_DELAY_BASE_MS;
-        let nextPlayerActionAt = 0;
-        let nextMagicWeaponShotAt = 0;
-        let playerHp = lvl1Stats.maxHp;
-        let playerMaxHp = lvl1Stats.maxHp;
-        let playerMana = lvl1Stats.maxMana;
-        let playerMaxMana = lvl1Stats.maxMana;
-        let hungerSecondsLeft = 0;
-        let isHungry = true;
+        const lvl1Stats = progressionStatsForLevel(1, String(configPlayer.classKey || 'knight').toLowerCase());
+        // All player-scoped mutable state in one object. Every field is
+        // written through `player.X`; systems modules receive the player
+        // reference directly instead of a deps bag of getters.
+        // Authoritative user-chosen display/reorder order of learned spells
+        // lives on `playerState.learnedSpellOrder`; the first 10 entries are
+        // the hotkey slots (1-9, then 0 for index 9). Named `playerState` to
+        // avoid colliding with the Phaser sprite `player` created above.
+        const playerState = createPlayer(configPlayer, lvl1Stats, {
+          fistLevel: PLAYER_INITIAL_FIST_LEVEL,
+          shieldingLevel: PLAYER_INITIAL_SHIELDING_LEVEL,
+          moveDurationBase: PLAYER_MOVE_DURATION_BASE_MS,
+          actionDelayBase: PLAYER_ACTION_DELAY_BASE_MS,
+        });
+        playerState.gridX = START_TILE.gx;
+        playerState.gridY = START_TILE.gy;
         const playerBaseDamage = PLAYER_BASE_DAMAGE;
-        let playerLevel = 1;
-        let playerMagicLevel = Math.max(0, Number(lvl1Stats.magicLevel || 0));
-        const weaponSkillLevelByType = new Map();
-        const weaponSkillUsesByType = new Map();
-        let playerFistLevel = PLAYER_INITIAL_FIST_LEVEL;
-        let playerFistUses = 0;
-        let playerShieldingLevel = PLAYER_INITIAL_SHIELDING_LEVEL;
-        let playerShieldingUses = 0;
-        let playerXp = 0;
-        const learnedSpellIds = new Set();
-        // Authoritative user-chosen display/reorder order of learned spells.
-        // The first 10 entries are the hotkey slots (1-9, then 0 for index 9);
-        // entries beyond index 9 are unslotted but still user-reorderable.
-        const learnedSpellOrder = [];
-        const spellCooldownUntil = new Map();
-        const spellCdDurations = new Map();
         let gameOver = false;
-        let playerDead = false;
-        let runKills = 0;
-        let godModeEnabled = false;
         let currentLevel = 1;
         let currentLevelGroup = null;
         let currentFloorCreatureLabel = '';
@@ -619,14 +601,14 @@ function startGame(configPlayer) {
         const getWeaponSkillLevelByType = (typeKey) => {
           const key = String(typeKey || '').toLowerCase();
           if (!key) return 10;
-          if (!weaponSkillLevelByType.has(key)) weaponSkillLevelByType.set(key, 10);
-          return Math.max(10, Number(weaponSkillLevelByType.get(key) || 10));
+          if (!playerState.weaponSkillLevelByType.has(key)) playerState.weaponSkillLevelByType.set(key, 10);
+          return Math.max(10, Number(playerState.weaponSkillLevelByType.get(key) || 10));
         };
         const getWeaponSkillUsesByType = (typeKey) => {
           const key = String(typeKey || '').toLowerCase();
           if (!key) return 0;
-          if (!weaponSkillUsesByType.has(key)) weaponSkillUsesByType.set(key, 0);
-          return Math.max(0, Number(weaponSkillUsesByType.get(key) || 0));
+          if (!playerState.weaponSkillUsesByType.has(key)) playerState.weaponSkillUsesByType.set(key, 0);
+          return Math.max(0, Number(playerState.weaponSkillUsesByType.get(key) || 0));
         };
         const gainWeaponSkillUse = (item, amount = 1) => {
           const typeKey = weaponSkillTypeKey(item);
@@ -641,8 +623,8 @@ function startGame(configPlayer) {
             level += 1;
             leveled = true;
           }
-          weaponSkillUsesByType.set(typeKey, uses);
-          weaponSkillLevelByType.set(typeKey, level);
+          playerState.weaponSkillUsesByType.set(typeKey, uses);
+          playerState.weaponSkillLevelByType.set(typeKey, level);
           if (leveled) {
             addCombatLog(`${weaponSkillLabel(typeKey)} fighting advanced to ${level}.`);
             showSkillLevelUpText(this,`${weaponSkillLabel(typeKey)} Fighting`, level);
@@ -651,42 +633,42 @@ function startGame(configPlayer) {
         const gainFistSkillUse = (amount = 1) => {
           const add = Math.max(0, Math.floor(Number(amount) || 0)) * 3;
           if (add <= 0) return;
-          playerFistUses += add;
+          playerState.fistUses += add;
           let leveled = false;
-          while (playerFistUses >= weaponUsesToNextLevel(playerFistLevel)) {
-            playerFistUses -= weaponUsesToNextLevel(playerFistLevel);
-            playerFistLevel += 1;
+          while (playerState.fistUses >= weaponUsesToNextLevel(playerState.fistLevel)) {
+            playerState.fistUses -= weaponUsesToNextLevel(playerState.fistLevel);
+            playerState.fistLevel += 1;
             leveled = true;
           }
           if (leveled) {
-            addCombatLog(`Fist Fighting advanced to ${playerFistLevel}.`);
-            showSkillLevelUpText(this,'Fist Fighting', playerFistLevel);
+            addCombatLog(`Fist Fighting advanced to ${playerState.fistLevel}.`);
+            showSkillLevelUpText(this,'Fist Fighting', playerState.fistLevel);
           }
         };
         const gainShieldingSkillUse = (amount = 1) => {
           const add = Math.max(0, Math.floor(Number(amount) || 0)) * 3;
           if (add <= 0) return;
-          playerShieldingUses += add;
+          playerState.shieldingUses += add;
           let leveled = false;
-          while (playerShieldingUses >= weaponUsesToNextLevel(playerShieldingLevel)) {
-            playerShieldingUses -= weaponUsesToNextLevel(playerShieldingLevel);
-            playerShieldingLevel += 1;
+          while (playerState.shieldingUses >= weaponUsesToNextLevel(playerState.shieldingLevel)) {
+            playerState.shieldingUses -= weaponUsesToNextLevel(playerState.shieldingLevel);
+            playerState.shieldingLevel += 1;
             leveled = true;
           }
           if (leveled) {
-            addCombatLog(`Shielding advanced to ${playerShieldingLevel}.`);
-            showSkillLevelUpText(this,'Shielding', playerShieldingLevel);
+            addCombatLog(`Shielding advanced to ${playerState.shieldingLevel}.`);
+            showSkillLevelUpText(this,'Shielding', playerState.shieldingLevel);
           }
         };
         const updatePlayerTimingsByLevel = () => {
           // Progresion gradual por nivel del personaje (arranque mas lento).
-          playerMoveDurationMs = Phaser.Math.Clamp(
-            PLAYER_MOVE_DURATION_BASE_MS - (playerLevel - 1) * 2,
+          playerState.moveDurationMs = Phaser.Math.Clamp(
+            PLAYER_MOVE_DURATION_BASE_MS - (playerState.level - 1) * 2,
             PLAYER_MOVE_DURATION_MIN_MS,
             PLAYER_MOVE_DURATION_MAX_MS,
           );
-          playerActionDelayMs = Phaser.Math.Clamp(
-            PLAYER_ACTION_DELAY_BASE_MS - (playerLevel - 1) * 5,
+          playerState.actionDelayMs = Phaser.Math.Clamp(
+            PLAYER_ACTION_DELAY_BASE_MS - (playerState.level - 1) * 5,
             PLAYER_ACTION_DELAY_MIN_MS,
             PLAYER_ACTION_DELAY_MAX_MS,
           );
@@ -694,23 +676,23 @@ function startGame(configPlayer) {
         const grantPlayerXp = (amount) => {
           const raw = Number(amount);
           const add = Number.isFinite(raw) ? Math.max(0, raw) : 0;
-          playerXp = (Number.isFinite(playerXp) ? playerXp : 0) + add;
+          playerState.xp = (Number.isFinite(playerState.xp) ? playerState.xp : 0) + add;
           let leveled = false;
-          while (playerXp >= xpToNextLevel(playerLevel)) {
-            playerXp -= xpToNextLevel(playerLevel);
-            playerLevel += 1;
-            const nextStats = progressionStatsForLevel(playerLevel, playerClassKey);
-            playerMaxHp = nextStats.maxHp;
-            playerMaxMana = nextStats.maxMana;
-            playerMagicLevel = Math.max(0, Number(nextStats.magicLevel || playerMagicLevel || 0));
-            if (typeof onPlayerLevelStatsUpdate === 'function') onPlayerLevelStatsUpdate(playerLevel);
+          while (playerState.xp >= xpToNextLevel(playerState.level)) {
+            playerState.xp -= xpToNextLevel(playerState.level);
+            playerState.level += 1;
+            const nextStats = progressionStatsForLevel(playerState.level, playerState.classKey);
+            playerState.maxHp = nextStats.maxHp;
+            playerState.maxMana = nextStats.maxMana;
+            playerState.magicLevel = Math.max(0, Number(nextStats.magicLevel || playerState.magicLevel || 0));
+            if (typeof onPlayerLevelStatsUpdate === 'function') onPlayerLevelStatsUpdate(playerState.level);
             leveled = true;
           }
           if (leveled) {
-            playerHp = playerMaxHp;
-            playerMana = playerMaxMana;
+            playerState.hp = playerState.maxHp;
+            playerState.mana = playerState.maxMana;
             updatePlayerTimingsByLevel();
-            addCombatLog(`You reached level ${playerLevel}.`);
+            addCombatLog(`You reached level ${playerState.level}.`);
             showLevelUpText(this);
             updatePlayerBar();
           }
@@ -719,12 +701,12 @@ function startGame(configPlayer) {
           const xp = Number((creature && creature.experience) || 0);
           if (Number.isFinite(xp) && xp > 0) return Math.max(1, Math.floor(xp));
           // Fallback: monsters with 0 XP grant scaling XP based on player level.
-          const lv = Number.isFinite(playerLevel) ? playerLevel : 1;
+          const lv = Number.isFinite(playerState.level) ? playerState.level : 1;
           return Math.max(1, Math.floor((5 + (lv * 3)) * 2));
         };
         const fallbackGoldFromLevel = () => {
           // Baseline gold reward when a monster drops no items.
-          return Math.max(1, Math.floor(2 + (playerLevel * 2)));
+          return Math.max(1, Math.floor(2 + (playerState.level * 2)));
         };
 
         const creatures = [];
@@ -732,7 +714,7 @@ function startGame(configPlayer) {
           scene: this,
           tileSize,
           centerX, centerY,
-          getPlayerPos: () => ({ gx: gridX, gy: gridY }),
+          getPlayerPos: () => ({ gx: playerState.gridX, gy: playerState.gridY }),
           onHudRefresh: () => updateHud(),
         });
 
@@ -793,13 +775,13 @@ function startGame(configPlayer) {
             const ny = gy + dy;
             if (!isWalkableTile(nx, ny)) continue;
             if (creatureAt(nx, ny)) continue;
-            if (nx === gridX && ny === gridY) continue;
+            if (nx === playerState.gridX && ny === playerState.gridY) continue;
             return { gx: nx, gy: ny };
           }
           return null;
         };
         const isOccupiedByActor = (gx, gy) => {
-          if (gx === gridX && gy === gridY) return true;
+          if (gx === playerState.gridX && gy === playerState.gridY) return true;
           return Boolean(creatureAt(gx, gy));
         };
         const orientCreatureSprite = (creature, dx, dy) => {
@@ -827,7 +809,7 @@ function startGame(configPlayer) {
           // SUR
           return;
         };
-        const inAggroRange = (creature) => Math.abs(gridX - creature.gx) <= 4 && Math.abs(gridY - creature.gy) <= 4;
+        const inAggroRange = (creature) => Math.abs(playerState.gridX - creature.gx) <= 4 && Math.abs(playerState.gridY - creature.gy) <= 4;
         const hasAggro = (creature) => creature.aggroLocked || inAggroRange(creature);
         const actionDelayFromSpeed = (speed) => {
           const s = Math.max(1, Number(speed || 100));
@@ -838,11 +820,11 @@ function startGame(configPlayer) {
           placeHealthBar(playerBar, player.x, player.y - tileSize * 0.62);
           placeHealthBar(playerManaBar, player.x, player.y - tileSize * 0.48);
           playerNameTag.setPosition(player.x, player.y - tileSize * 0.8);
-          const ratio = playerHp / playerMaxHp;
-          const manaRatio = playerMaxMana > 0 ? (playerMana / playerMaxMana) : 0;
+          const ratio = playerState.hp / playerState.maxHp;
+          const manaRatio = playerState.maxMana > 0 ? (playerState.mana / playerState.maxMana) : 0;
           setHealthBarRatio(playerBar, ratio);
           setHealthBarRatio(playerManaBar, manaRatio);
-          if (playerHp <= 0) {
+          if (playerState.hp <= 0) {
             playerNameTag.setColor('#000000');
             playerBar.fill.setFillStyle(0x000000, 1);
             playerManaBar.fill.setFillStyle(0x000000, 1);
@@ -853,7 +835,7 @@ function startGame(configPlayer) {
           }
         };
         const setHungryState = (hungry, secondsLeft = 0) => {
-          isHungry = hungry;
+          playerState.isHungry = hungry;
           if (typeof window.setHungryUi === 'function') window.setHungryUi(hungry, secondsLeft);
         };
         // Ctx passed to FloatingEffects for eat/drink/fullFood — bundles
@@ -861,26 +843,26 @@ function startGame(configPlayer) {
         // overwrite the death pose if the player dies mid-tween.
         const floatingFxCtx = {
           player, tileSize, basePlayerScaleX, basePlayerScaleY,
-          isActive: () => !playerDead,
+          isActive: () => !playerState.dead,
         };
         setHungryState(true, 0);
-        if (typeof onPlayerLevelStatsUpdate === 'function') onPlayerLevelStatsUpdate(playerLevel);
+        if (typeof onPlayerLevelStatsUpdate === 'function') onPlayerLevelStatsUpdate(playerState.level);
         setOnConsumeFood((foodSeconds, itemTitle) => {
-          if (!Number.isFinite(foodSeconds) || foodSeconds <= 0 || playerDead || gameOver) return false;
-          const nextSatiety = hungerSecondsLeft + Math.floor(foodSeconds);
-          if (hungerSecondsLeft >= MAX_FOOD_SECONDS || nextSatiety > MAX_FOOD_SECONDS) {
+          if (!Number.isFinite(foodSeconds) || foodSeconds <= 0 || playerState.dead || gameOver) return false;
+          const nextSatiety = playerState.hungerSecondsLeft + Math.floor(foodSeconds);
+          if (playerState.hungerSecondsLeft >= MAX_FOOD_SECONDS || nextSatiety > MAX_FOOD_SECONDS) {
             addCombatLog('You are too full to eat more.');
             showFullFoodEffect(this, floatingFxCtx);
             return false;
           }
-          hungerSecondsLeft = nextSatiety;
-          setHungryState(false, hungerSecondsLeft);
+          playerState.hungerSecondsLeft = nextSatiety;
+          setHungryState(false, playerState.hungerSecondsLeft);
           addCombatLog(`You eat ${itemTitle}.`);
           showEatEffect(this, floatingFxCtx, itemTitle);
           return true;
         });
         setOnUseLiquid((item) => {
-          if (!item || playerDead || gameOver) return false;
+          if (!item || playerState.dead || gameOver) return false;
           const title = String(item.title || '').toLowerCase();
           let hpGain = 0;
           let mpGain = 0;
@@ -901,12 +883,12 @@ function startGame(configPlayer) {
             addCombatLog(`${item.title}: no usable liquid effect.`);
             return false;
           }
-          const prevHp = playerHp;
-          const prevMp = playerMana;
-          playerHp = Math.min(playerMaxHp, playerHp + hpGain);
-          playerMana = Math.min(playerMaxMana, playerMana + mpGain);
-          const healed = playerHp - prevHp;
-          const restored = playerMana - prevMp;
+          const prevHp = playerState.hp;
+          const prevMp = playerState.mana;
+          playerState.hp = Math.min(playerState.maxHp, playerState.hp + hpGain);
+          playerState.mana = Math.min(playerState.maxMana, playerState.mana + mpGain);
+          const healed = playerState.hp - prevHp;
+          const restored = playerState.mana - prevMp;
           if (healed > 0 && restored > 0) {
             addCombatLog(`You drink ${item.title}: +${healed} HP, +${restored} MP.`);
             showDrinkEffect(this, floatingFxCtx, `+${healed}HP +${restored}MP`, '#7dd3fc');
@@ -939,7 +921,7 @@ function startGame(configPlayer) {
           return true;
         };
         setOnUseTool((item) => {
-          if (!item || playerDead || gameOver) return false;
+          if (!item || playerState.dead || gameOver) return false;
           if (Number(item.id) !== 2253) return false;
           return tryClimbUpFloor(item.title || 'item 2253');
         });
@@ -967,8 +949,8 @@ function startGame(configPlayer) {
           for (let i = 0; i < creatures.length; i += 1) {
             const c = creatures[i];
             if (!c.alive) continue;
-            const dx = c.gx - gridX;
-            const dy = c.gy - gridY;
+            const dx = c.gx - playerState.gridX;
+            const dy = c.gy - playerState.gridY;
             const absdx = dx < 0 ? -dx : dx;
             const absdy = dy < 0 ? -dy : dy;
             if ((absdx > absdy ? absdx : absdy) > CULL_RANGE_TILES) continue;
@@ -1114,8 +1096,8 @@ function startGame(configPlayer) {
           if (recentGroupIndices.length > 5) recentGroupIndices.shift();
           return typeProgressionGroups[chosen];
         };
-        const hasStairsAtPlayer = () => gridX === currentStairsTile.gx && gridY === currentStairsTile.gy;
-        const hasRopeUpAtPlayer = () => gridX === START_TILE.gx && gridY === START_TILE.gy;
+        const hasStairsAtPlayer = () => playerState.gridX === currentStairsTile.gx && playerState.gridY === currentStairsTile.gy;
+        const hasRopeUpAtPlayer = () => playerState.gridX === START_TILE.gx && playerState.gridY === START_TILE.gy;
         const refreshMapVisuals = () => {
           floorAtmosphere.rebuildAll(
             currentMap,
@@ -1551,10 +1533,10 @@ function startGame(configPlayer) {
           const canRopeUp = currentLevel > 1;
           floorAtmosphere.showRopeAnchor(canRopeUp);
           spawnCreaturesForLevel(currentLevel);
-          gridX = START_TILE.gx;
-          gridY = START_TILE.gy;
-          player.x = centerX(gridX);
-          player.y = centerY(gridY);
+          playerState.gridX = START_TILE.gx;
+          playerState.gridY = START_TILE.gy;
+          player.x = centerX(playerState.gridX);
+          player.y = centerY(playerState.gridY);
           updatePlayerBar();
         };
         const isAdminUser = () => {
@@ -1567,19 +1549,19 @@ function startGame(configPlayer) {
             addCombatLog('God Mode is restricted to administrators.');
             return false;
           }
-          godModeEnabled = Boolean(enabled);
-          if (godModeEnabled) {
+          playerState.godMode = Boolean(enabled);
+          if (playerState.godMode) {
             gameOver = false;
-            playerDead = false;
-            playerHp = playerMaxHp;
-            playerMana = playerMaxMana;
+            playerState.dead = false;
+            playerState.hp = playerState.maxHp;
+            playerState.mana = playerState.maxMana;
             addCombatLog('God Mode enabled.');
           } else {
             addCombatLog('God Mode disabled.');
           }
           updatePlayerBar();
           updateHud();
-          return godModeEnabled;
+          return playerState.godMode;
         };
         const denyNonAdmin = () => {
           addCombatLog('debugGod is restricted to administrators.');
@@ -1595,10 +1577,10 @@ function startGame(configPlayer) {
             return setGodMode(false);
           },
           toggle() {
-            return setGodMode(!godModeEnabled);
+            return setGodMode(!playerState.godMode);
           },
           isEnabled() {
-            return Boolean(godModeEnabled);
+            return Boolean(playerState.godMode);
           },
           goToFloor(level) {
             if (!isAdminUser()) return denyNonAdmin();
@@ -1631,10 +1613,10 @@ function startGame(configPlayer) {
         setupSpellTooltipDismissers();
         setupSpellBar({
           getCatalog:          () => spellsCatalog,
-          learnedSpellIds,
-          learnedSpellOrder,
-          spellCooldownUntil,
-          spellCdDurations,
+          learnedSpellIds: playerState.learnedSpellIds,
+          learnedSpellOrder: playerState.learnedSpellOrder,
+          spellCooldownUntil: playerState.spellCooldownUntil,
+          spellCdDurations: playerState.spellCdDurations,
         });
         const lootAccordionEl = document.getElementById('lootAccordion');
         const {
@@ -1656,8 +1638,8 @@ function startGame(configPlayer) {
         });
         setupLearnedSpells({
           getCatalog:             () => spellsCatalog,
-          learnedSpellIds,
-          learnedSpellOrder,
+          learnedSpellIds: playerState.learnedSpellIds,
+          learnedSpellOrder: playerState.learnedSpellOrder,
           onOrderChanged:         invalidateSpellBarCache,
           onPanelsResync:         () => {
             syncLootPanelPosition();
@@ -1681,23 +1663,23 @@ function startGame(configPlayer) {
         // hook. setupMarket() wires the overlay's DOM listeners internally.
         setupItemsShop({
           getCatalog:             () => itemsShopCatalog,
-          playerClassKey,
+          classKey: playerState.classKey,
           getAliveCreaturesCount: () => aliveCreatures().length,
           onHudRefresh:           () => updateHud(),
         });
         setupSpellShop({
-          playerClassKey,
+          classKey: playerState.classKey,
           getCatalog:             () => spellsCatalog,
-          getPlayerLevel:         () => playerLevel,
-          learnedSpellIds,
-          learnedSpellOrder,
+          getPlayerLevel:         () => playerState.level,
+          learnedSpellIds: playerState.learnedSpellIds,
+          learnedSpellOrder: playerState.learnedSpellOrder,
           getAliveCreaturesCount: () => aliveCreatures().length,
           onHudRefresh:           () => updateHud(),
           onLearnedSpellsRefresh: () => renderLearnedSpells(),
         });
         setupMarket({
           getCatalog:             () => itemsShopCatalog,
-          playerClassKey,
+          classKey: playerState.classKey,
           getAliveCreaturesCount: () => aliveCreatures().length,
           onHudRefresh:           () => updateHud(),
         });
@@ -1714,13 +1696,28 @@ function startGame(configPlayer) {
         // Build the ctx object that SaveLoad.js expects. Kept as a single
         // callable so we don't rebuild the scaffold on every save click.
         const snapshotCtx = () => ({
-          configPlayer, playerClassKey,
-          playerLevel, playerXp, playerHp, playerMana,
-          playerMaxHp, playerMaxMana, playerMagicLevel,
-          playerFistLevel, playerShieldingLevel, weaponSkillLevelByType,
-          currentLevel, gridX, gridY, hungerSecondsLeft, runKills,
-          learnedSpellIds, learnedSpellOrder,
-          burnState, poisonState, electrifiedState,
+          configPlayer,
+          playerClassKey:       playerState.classKey,
+          playerLevel:          playerState.level,
+          playerXp:             playerState.xp,
+          playerHp:             playerState.hp,
+          playerMana:           playerState.mana,
+          playerMaxHp:          playerState.maxHp,
+          playerMaxMana:        playerState.maxMana,
+          playerMagicLevel:     playerState.magicLevel,
+          playerFistLevel:      playerState.fistLevel,
+          playerShieldingLevel: playerState.shieldingLevel,
+          weaponSkillLevelByType: playerState.weaponSkillLevelByType,
+          currentLevel,
+          gridX:             playerState.gridX,
+          gridY:             playerState.gridY,
+          hungerSecondsLeft: playerState.hungerSecondsLeft,
+          runKills:          playerState.runKills,
+          learnedSpellIds:   playerState.learnedSpellIds,
+          learnedSpellOrder: playerState.learnedSpellOrder,
+          burnState:         playerState.burnState,
+          poisonState:       playerState.poisonState,
+          electrifiedState:  playerState.electrifiedState,
         });
         if (saveGameBtnEl) {
           saveGameBtnEl.addEventListener('click', () => {
@@ -1772,11 +1769,11 @@ function startGame(configPlayer) {
           const statsFootEl = document.getElementById('statsFoot');
           if (!statsGridEl || !statsFootEl) return;
           const stats = [
-            { key: 'Magic Level', level: Math.max(0, Number(playerMagicLevel || 0)) },
-            { key: 'Fist Fighting', level: Math.max(10, Number(playerFistLevel || 10)) },
-            { key: 'Shielding', level: Math.max(10, Number(playerShieldingLevel || 10)) },
+            { key: 'Magic Level', level: Math.max(0, Number(playerState.magicLevel || 0)) },
+            { key: 'Fist Fighting', level: Math.max(10, Number(playerState.fistLevel || 10)) },
+            { key: 'Shielding', level: Math.max(10, Number(playerState.shieldingLevel || 10)) },
           ];
-          for (const [typeKey, level] of weaponSkillLevelByType.entries()) {
+          for (const [typeKey, level] of playerState.weaponSkillLevelByType.entries()) {
             stats.push({
               key: `${weaponSkillLabel(typeKey)} Fighting`,
               level: Math.max(10, Number(level || 10)),
@@ -1807,7 +1804,7 @@ function startGame(configPlayer) {
           const invState = window.debugInventory && typeof window.debugInventory.state === 'function'
             ? window.debugInventory.state()
             : null;
-          const capTotal = invState ? Number(invState.capacity || 0) : progressionStatsForLevel(playerLevel, playerClassKey).capacity;
+          const capTotal = invState ? Number(invState.capacity || 0) : progressionStatsForLevel(playerState.level, playerState.classKey).capacity;
           const capCurrent = invState ? Number(invState.carriedWeight || 0) : 0;
           const capCurrentText = Number.isFinite(capCurrent) ? capCurrent.toFixed(1) : '0.0';
           const capTotalText = Number.isFinite(capTotal) ? capTotal.toFixed(0) : '0';
@@ -1819,23 +1816,23 @@ function startGame(configPlayer) {
           const skillPct = skillNeed > 0 ? Math.floor((skillUses / skillNeed) * 100) : 0;
           const skillLabel = weaponSkillLabel(skillType || 'Unarmed');
           if (typeof window !== 'undefined') {
-            window.__gameHud = { ml: playerMagicLevel, pl: playerLevel };
+            window.__gameHud = { ml: playerState.magicLevel, pl: playerState.level };
           }
           // ── Stats bar HTML update ───────────────────────────────────────
-          if (sbCharName) sbCharName.textContent = `${configPlayer.name} (${capitalise(playerClassKey)})`;
-          if (sbLevel) sbLevel.textContent = String(playerLevel);
+          if (sbCharName) sbCharName.textContent = `${configPlayer.name} (${capitalise(playerState.classKey)})`;
+          if (sbLevel) sbLevel.textContent = String(playerState.level);
           if (sbFloor) sbFloor.textContent = String(currentLevel);
           if (sbCreatures) sbCreatures.textContent = `${typeName}  ${aliveCreatures().length}/${creaturesTargetCount}`;
-          const hpPct = playerMaxHp > 0 ? Phaser.Math.Clamp(playerHp / playerMaxHp, 0, 1) : 0;
-          const mpPct = playerMaxMana > 0 ? Phaser.Math.Clamp(playerMana / playerMaxMana, 0, 1) : 0;
+          const hpPct = playerState.maxHp > 0 ? Phaser.Math.Clamp(playerState.hp / playerState.maxHp, 0, 1) : 0;
+          const mpPct = playerState.maxMana > 0 ? Phaser.Math.Clamp(playerState.mana / playerState.maxMana, 0, 1) : 0;
           if (sbHpFill) sbHpFill.style.width = `${(hpPct * 100).toFixed(1)}%`;
-          if (sbHpText) sbHpText.textContent = `${playerHp}/${playerMaxHp}`;
+          if (sbHpText) sbHpText.textContent = `${playerState.hp}/${playerState.maxHp}`;
           if (sbMpFill) sbMpFill.style.width = `${(mpPct * 100).toFixed(1)}%`;
-          if (sbMpText) sbMpText.textContent = `${playerMana}/${playerMaxMana}`;
-          if (sbML) sbML.textContent = String(playerMagicLevel);
+          if (sbMpText) sbMpText.textContent = `${playerState.mana}/${playerState.maxMana}`;
+          if (sbML) sbML.textContent = String(playerState.magicLevel);
           if (sbSkill) sbSkill.textContent = `${skillLabel} ${skillLevel} (${skillPct}%)`;
           const fistFullLabel = skillType ? skillLabel.split(' ')[0] : 'Fist';
-          const fistDisplayLevel = skillType ? skillLevel : playerFistLevel;
+          const fistDisplayLevel = skillType ? skillLevel : playerState.fistLevel;
           const mobile = _isMobileView();
           if (sbFistLabel) sbFistLabel.textContent = mobile ? fistFullLabel.slice(0, 3) : fistFullLabel;
           if (sbFist) sbFist.textContent = String(fistDisplayLevel);
@@ -1852,7 +1849,7 @@ function startGame(configPlayer) {
             if (sbShield) sbShield.textContent = String(ammoCount);
           } else {
             if (sbShieldLabel) sbShieldLabel.textContent = mobile ? 'Shi' : 'Shield';
-            if (sbShield) sbShield.textContent = String(playerShieldingLevel);
+            if (sbShield) sbShield.textContent = String(playerState.shieldingLevel);
           }
           if (sbCap) {
             sbCap.textContent = `CAP ${capCurrentText}/${capTotalText}`;
@@ -1862,8 +1859,8 @@ function startGame(configPlayer) {
             const b = Math.round(240 - (240 - 113) * capRatio);
             sbCap.style.color = `rgb(${r},${g},${b})`;
           }
-          const xpNeeded = xpToNextLevel(playerLevel);
-          const safeXp = Number.isFinite(playerXp) ? playerXp : 0;
+          const xpNeeded = xpToNextLevel(playerState.level);
+          const safeXp = Number.isFinite(playerState.xp) ? playerState.xp : 0;
           const progress = xpNeeded > 0 && Number.isFinite(safeXp) ? safeXp / xpNeeded : 0;
           const safeProgress = Number.isFinite(progress) ? Phaser.Math.Clamp(progress, 0, 1) : 0;
           const xpBarFill = document.getElementById('gameXpBarFill');
@@ -1883,7 +1880,7 @@ function startGame(configPlayer) {
         const maxIncomingHitByFloor = () => {
           // Hard cap anti-spikes: grows with floor but avoids unfair one-shots.
           const floorFactor = Phaser.Math.Clamp(0.34 + ((currentLevel - 1) * 0.02), 0.34, 0.55);
-          return Math.max(18, Math.floor(playerMaxHp * floorFactor));
+          return Math.max(18, Math.floor(playerState.maxHp * floorFactor));
         };
         const clampIncomingCreatureDamage = (damage, creatureMaxDamage = 1) => {
           const raw = Math.max(1, Math.floor(Number(damage) || 1));
@@ -1941,7 +1938,7 @@ function startGame(configPlayer) {
             }, 0);
           const totalDefenseValue = shieldValue + handDefense + armorFromEquipment;
           if (totalDefenseValue <= 0) return raw;
-          const skillValue = Math.max(10, Number(playerShieldingLevel || 10));
+          const skillValue = Math.max(10, Number(playerState.shieldingLevel || 10));
           // Mitigacion total: escudo + defensa de arma + armor de equipo.
           const percentReduction = Phaser.Math.Clamp(
             0.08 + (totalDefenseValue * 0.009) + ((skillValue - 10) * 0.004),
@@ -1981,7 +1978,7 @@ function startGame(configPlayer) {
         };
         const canStrafeCastMagicWeapon = (weapon) => {
           if (!weapon) return false;
-          if (isMagicRangedWeapon(weapon)) return playerClassKey === 'druid' || playerClassKey === 'sorcerer';
+          if (isMagicRangedWeapon(weapon)) return playerState.classKey === 'druid' || playerState.classKey === 'sorcerer';
           if (isClassicDistanceWeapon(weapon)) return true;
           return false;
         };
@@ -2008,7 +2005,7 @@ function startGame(configPlayer) {
         const hasEnoughManaForMagicWeapon = (weapon) => {
           const cost = magicWeaponManaCost(weapon);
           if (cost <= 0) return true;
-          return playerMana >= cost;
+          return playerState.mana >= cost;
         };
         const defaultElementMods = () => ({
           physical: 100,
@@ -2088,8 +2085,8 @@ function startGame(configPlayer) {
           return Math.max(0, Math.floor(raw * mult));
         };
         const magicWeaponDamage = (weapon) => {
-          const ml = Math.max(0, Number(playerMagicLevel || 0));
-          const lv = Math.max(1, Number(playerLevel || 1));
+          const ml = Math.max(0, Number(playerState.magicLevel || 0));
+          const lv = Math.max(1, Number(playerState.level || 1));
           const attrs = Array.isArray(weapon && weapon.attributes) ? weapon.attributes : [];
           const drRow = attrs.find((a) => a && String(a.name || '').toLowerCase() === 'damage_range');
           const dr = drRow ? parseDamageRangeString(drRow.value) : null;
@@ -2110,8 +2107,8 @@ function startGame(configPlayer) {
           if (isMagicRangedWeapon(hand)) return magicWeaponDamage(hand);
           if (!hand) {
             // Keep unarmed damage clearly below weapon damage progression.
-            const fistBonus = Math.max(0, Math.floor((playerFistLevel - 10) * 0.6));
-            return Math.max(1, Math.floor(3 + playerLevel * 0.22 + fistBonus));
+            const fistBonus = Math.max(0, Math.floor((playerState.fistLevel - 10) * 0.6));
+            return Math.max(1, Math.floor(3 + playerState.level * 0.22 + fistBonus));
           }
           const weaponAttack = Math.max(0, Number((hand && hand.attack_value) || 0));
           const rangedAmmoBonus = requiresAmmoForWeapon(hand) ? ammoAttackBonus(hand) : 0;
@@ -2208,8 +2205,8 @@ function startGame(configPlayer) {
         const findRangedTargetInDirection = (dx, dy, rangeTiles) => {
           const maxRange = Math.max(1, Math.floor(Number(rangeTiles) || 1));
           for (let step = 1; step <= maxRange; step += 1) {
-            const tx = gridX + dx * step;
-            const ty = gridY + dy * step;
+            const tx = playerState.gridX + dx * step;
+            const ty = playerState.gridY + dy * step;
             if (!isWalkableTile(tx, ty)) break;
             if (isWallTile(tx, ty)) break;
             const c = enemyCreatureAt(tx, ty);
@@ -2235,13 +2232,13 @@ function startGame(configPlayer) {
           const maxRange = Math.max(1, Math.floor(Number(rangeTiles) || 1));
           const candidates = aliveCreatures()
             .filter((c) => {
-              const dist = Math.max(Math.abs(c.gx - gridX), Math.abs(c.gy - gridY));
+              const dist = Math.max(Math.abs(c.gx - playerState.gridX), Math.abs(c.gy - playerState.gridY));
               if (dist <= 0 || dist > maxRange) return false;
-              return hasRangedLineOfSight(gridX, gridY, c.gx, c.gy);
+              return hasRangedLineOfSight(playerState.gridX, playerState.gridY, c.gx, c.gy);
             })
             .sort((a, b) => {
-              const da = Math.max(Math.abs(a.gx - gridX), Math.abs(a.gy - gridY));
-              const db = Math.max(Math.abs(b.gx - gridX), Math.abs(b.gy - gridY));
+              const da = Math.max(Math.abs(a.gx - playerState.gridX), Math.abs(a.gy - playerState.gridY));
+              const db = Math.max(Math.abs(b.gx - playerState.gridX), Math.abs(b.gy - playerState.gridY));
               return da - db;
             });
           return candidates[0] || null;
@@ -2254,16 +2251,16 @@ function startGame(configPlayer) {
         };
         const inferHealingAmount = (spell) => {
           const title = String((spell && spell.title) || '').toLowerCase();
-          const ml = Math.max(0, Number(playerMagicLevel || 0));
-          if (title.includes('ultimate')) return Math.max(20, Math.floor(36 + playerLevel * 1.2 + ml * 6.2));
-          if (title.includes('intense')) return Math.max(14, Math.floor(24 + playerLevel * 1.0 + ml * 4.6));
-          if (title.includes('light')) return Math.max(8, Math.floor(12 + playerLevel * 0.7 + ml * 3.0));
-          return Math.max(10, Math.floor(16 + playerLevel * 0.9 + ml * 3.8));
+          const ml = Math.max(0, Number(playerState.magicLevel || 0));
+          if (title.includes('ultimate')) return Math.max(20, Math.floor(36 + playerState.level * 1.2 + ml * 6.2));
+          if (title.includes('intense')) return Math.max(14, Math.floor(24 + playerState.level * 1.0 + ml * 4.6));
+          if (title.includes('light')) return Math.max(8, Math.floor(12 + playerState.level * 0.7 + ml * 3.0));
+          return Math.max(10, Math.floor(16 + playerState.level * 0.9 + ml * 3.8));
         };
         const inferAttackDamage = (spell) => {
           const manaCost = Math.max(0, Number((spell && spell.mana) || 0));
-          const ml = Math.max(0, Number(playerMagicLevel || 0));
-          return Math.max(6, Math.floor(4 + playerLevel * 0.8 + ml * 3.4 + manaCost * 0.18));
+          const ml = Math.max(0, Number(playerState.magicLevel || 0));
+          return Math.max(6, Math.floor(4 + playerState.level * 0.8 + ml * 3.4 + manaCost * 0.18));
         };
         const isSingleTargetAttackPattern = (pattern) => {
           if (!pattern || typeof pattern !== 'object') return true;
@@ -2278,13 +2275,13 @@ function startGame(configPlayer) {
         const inferClassAdjustedSpellDamage = (spell, opts = {}) => {
           const baseSpellDamage = inferAttackDamage(spell);
           const spellTitle = String((spell && spell.title) || '').toLowerCase();
-          if (playerClassKey === 'paladin' && spellTitle === 'lesser ethereal spear') {
+          if (playerState.classKey === 'paladin' && spellTitle === 'lesser ethereal spear') {
             const equippedWeaponDamage = Math.max(1, Number(currentPlayerDamage()) || 1);
             const distanceFighting = Math.max(10, Number(getWeaponSkillLevelByType('distance weapons')) || 10);
             return Math.max(1, (equippedWeaponDamage + distanceFighting) * 10);
           }
-          if (playerClassKey === 'sorcerer') return Math.max(1, Math.floor(baseSpellDamage * 1.25));
-          if (playerClassKey !== 'knight') return baseSpellDamage;
+          if (playerState.classKey === 'sorcerer') return Math.max(1, Math.floor(baseSpellDamage * 1.25));
+          if (playerState.classKey !== 'knight') return baseSpellDamage;
           const currentWeaponDamage = Math.max(1, Number(currentPlayerDamage()) || 1);
           const area = Boolean(opts.area);
           if (area) {
@@ -2371,8 +2368,8 @@ function startGame(configPlayer) {
           let list = (tiles || []).filter((t) => isWalkableTile(t.gx, t.gy));
           if (order === 'beam') {
             list = list.slice().sort((a, b) => (
-              (Math.abs(a.gx - gridX) + Math.abs(a.gy - gridY))
-              - (Math.abs(b.gx - gridX) + Math.abs(b.gy - gridY))
+              (Math.abs(a.gx - playerState.gridX) + Math.abs(a.gy - playerState.gridY))
+              - (Math.abs(b.gx - playerState.gridX) + Math.abs(b.gy - playerState.gridY))
             ));
           }
           list.forEach((t, i) => {
@@ -2413,33 +2410,33 @@ function startGame(configPlayer) {
         };
         const frontSweepTiles = () => {
           // 3 impacted tiles in the row directly in front of player.
-          if (playerFacingFrame === 0) {
-            return [{ gx: gridX - 1, gy: gridY + 1 }, { gx: gridX, gy: gridY + 1 }, { gx: gridX + 1, gy: gridY + 1 }];
+          if (playerState.facingFrame === 0) {
+            return [{ gx: playerState.gridX - 1, gy: playerState.gridY + 1 }, { gx: playerState.gridX, gy: playerState.gridY + 1 }, { gx: playerState.gridX + 1, gy: playerState.gridY + 1 }];
           }
-          if (playerFacingFrame === 2) {
-            return [{ gx: gridX - 1, gy: gridY - 1 }, { gx: gridX, gy: gridY - 1 }, { gx: gridX + 1, gy: gridY - 1 }];
+          if (playerState.facingFrame === 2) {
+            return [{ gx: playerState.gridX - 1, gy: playerState.gridY - 1 }, { gx: playerState.gridX, gy: playerState.gridY - 1 }, { gx: playerState.gridX + 1, gy: playerState.gridY - 1 }];
           }
-          if (playerFacingFrame === 1) {
-            return [{ gx: gridX + 1, gy: gridY - 1 }, { gx: gridX + 1, gy: gridY }, { gx: gridX + 1, gy: gridY + 1 }];
+          if (playerState.facingFrame === 1) {
+            return [{ gx: playerState.gridX + 1, gy: playerState.gridY - 1 }, { gx: playerState.gridX + 1, gy: playerState.gridY }, { gx: playerState.gridX + 1, gy: playerState.gridY + 1 }];
           }
-          return [{ gx: gridX - 1, gy: gridY - 1 }, { gx: gridX - 1, gy: gridY }, { gx: gridX - 1, gy: gridY + 1 }];
+          return [{ gx: playerState.gridX - 1, gy: playerState.gridY - 1 }, { gx: playerState.gridX - 1, gy: playerState.gridY }, { gx: playerState.gridX - 1, gy: playerState.gridY + 1 }];
         };
         const frontSingleTile = () => {
-          if (playerFacingFrame === 0) return { gx: gridX, gy: gridY + 1 };
-          if (playerFacingFrame === 2) return { gx: gridX, gy: gridY - 1 };
-          if (playerFacingFrame === 1) return { gx: gridX + 1, gy: gridY };
-          return { gx: gridX - 1, gy: gridY };
+          if (playerState.facingFrame === 0) return { gx: playerState.gridX, gy: playerState.gridY + 1 };
+          if (playerState.facingFrame === 2) return { gx: playerState.gridX, gy: playerState.gridY - 1 };
+          if (playerState.facingFrame === 1) return { gx: playerState.gridX + 1, gy: playerState.gridY };
+          return { gx: playerState.gridX - 1, gy: playerState.gridY };
         };
         const frontConeTiles = (depth = 3) => {
           const tiles = [];
           for (let i = 1; i <= depth; i += 1) {
             const spread = Math.min(2, i - 1);
             for (let s = -spread; s <= spread; s += 1) {
-              let gx = gridX;
-              let gy = gridY;
-              if (playerFacingFrame === 0) { gx += s; gy += i; } // south
-              else if (playerFacingFrame === 2) { gx += s; gy -= i; } // north
-              else if (playerFacingFrame === 1) { gx += i; gy += s; } // east
+              let gx = playerState.gridX;
+              let gy = playerState.gridY;
+              if (playerState.facingFrame === 0) { gx += s; gy += i; } // south
+              else if (playerState.facingFrame === 2) { gx += s; gy -= i; } // north
+              else if (playerState.facingFrame === 1) { gx += i; gy += s; } // east
               else { gx -= i; gy += s; } // west
               tiles.push({ gx, gy });
             }
@@ -2449,11 +2446,11 @@ function startGame(configPlayer) {
         const frontBeamTiles = (len = 5) => {
           const tiles = [];
           for (let i = 1; i <= len; i += 1) {
-            let gx = gridX;
-            let gy = gridY;
-            if (playerFacingFrame === 0) gy += i;
-            else if (playerFacingFrame === 2) gy -= i;
-            else if (playerFacingFrame === 1) gx += i;
+            let gx = playerState.gridX;
+            let gy = playerState.gridY;
+            if (playerState.facingFrame === 0) gy += i;
+            else if (playerState.facingFrame === 2) gy -= i;
+            else if (playerState.facingFrame === 1) gx += i;
             else gx -= i;
             tiles.push({ gx, gy });
           }
@@ -2464,7 +2461,7 @@ function startGame(configPlayer) {
           for (let dy = -radius; dy <= radius; dy += 1) {
             for (let dx = -radius; dx <= radius; dx += 1) {
               if (dx === 0 && dy === 0) continue;
-              tiles.push({ gx: gridX + dx, gy: gridY + dy });
+              tiles.push({ gx: playerState.gridX + dx, gy: playerState.gridY + dy });
             }
           }
           return tiles;
@@ -2475,18 +2472,18 @@ function startGame(configPlayer) {
           for (let dy = -r; dy <= r; dy += 1) {
             for (let dx = -r; dx <= r; dx += 1) {
               if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
-              tiles.push({ gx: gridX + dx, gy: gridY + dy });
+              tiles.push({ gx: playerState.gridX + dx, gy: playerState.gridY + dy });
             }
           }
           return tiles;
         };
         const frontPlusTiles = (reach = 2) => {
-          let cx = gridX;
-          let cy = gridY;
+          let cx = playerState.gridX;
+          let cy = playerState.gridY;
           const rk = Math.max(1, Math.floor(Number(reach) || 1));
-          if (playerFacingFrame === 0) cy += rk;
-          else if (playerFacingFrame === 2) cy -= rk;
-          else if (playerFacingFrame === 1) cx += rk;
+          if (playerState.facingFrame === 0) cy += rk;
+          else if (playerState.facingFrame === 2) cy -= rk;
+          else if (playerState.facingFrame === 1) cx += rk;
           else cx -= rk;
           return [
             { gx: cx, gy: cy },
@@ -2503,11 +2500,11 @@ function startGame(configPlayer) {
           const half = Math.floor(w / 2);
           for (let row = 1; row <= d; row += 1) {
             for (let c = -half; c <= half; c += 1) {
-              let gx = gridX;
-              let gy = gridY;
-              if (playerFacingFrame === 0) { gx += c; gy += row; }
-              else if (playerFacingFrame === 2) { gx += c; gy -= row; }
-              else if (playerFacingFrame === 1) { gx += row; gy += c; }
+              let gx = playerState.gridX;
+              let gy = playerState.gridY;
+              if (playerState.facingFrame === 0) { gx += c; gy += row; }
+              else if (playerState.facingFrame === 2) { gx += c; gy -= row; }
+              else if (playerState.facingFrame === 1) { gx += row; gy += c; }
               else { gx -= row; gy += c; }
               tiles.push({ gx, gy });
             }
@@ -2585,7 +2582,7 @@ function startGame(configPlayer) {
             const base = inferClassAdjustedSpellDamage(spell, { area: isAreaPattern });
             const dmgRaw = crit ? applyCriticalDamage(base) : base;
             const dmgBase = applyIncomingElementalDamage(dmgRaw, target, spellElem);
-            const dmg = godModeEnabled ? Math.max(1, Number(target.hp || 1)) : dmgBase;
+            const dmg = playerState.godMode ? Math.max(1, Number(target.hp || 1)) : dmgBase;
             target.hp = Math.max(0, target.hp - dmg);
             showCreatureHitEffect(target, dmg);
             if (crit) showCritText(target.sprite.x, target.sprite.y);
@@ -2595,7 +2592,7 @@ function startGame(configPlayer) {
               playCreatureDeathEffect(target);
               updateCreatureBar(target);
               grantPlayerXp(effectiveXpFromCreature(target));
-              runKills += 1;
+              playerState.runKills += 1;
               killSummonsOf(target);
             }
           }
@@ -2609,8 +2606,8 @@ function startGame(configPlayer) {
         };
         const castLearnedSpell = (slotNumber, now) => {
           const slotIdx = slotNumber - 1;
-          const articleId = slotIdx >= 0 && slotIdx < 10 && slotIdx < learnedSpellOrder.length
-            ? learnedSpellOrder[slotIdx]
+          const articleId = slotIdx >= 0 && slotIdx < 10 && slotIdx < playerState.learnedSpellOrder.length
+            ? playerState.learnedSpellOrder[slotIdx]
             : null;
           if (!articleId) return false;
           const spell = (spellsCatalog || []).find((s) => Number(s.article_id) === Number(articleId));
@@ -2627,19 +2624,19 @@ function startGame(configPlayer) {
             return true;
           }
           const manaCost = Math.max(0, Number(spell.mana || 0));
-          if (playerMana < manaCost) {
+          if (playerState.mana < manaCost) {
             addCombatLog(`Not enough mana for ${spell.title}.`);
             return true;
           }
           const cdSec = Math.max(0, Number((spell.raw && spell.raw.cooldown) || 0));
-          const cdUntil = Number(spellCooldownUntil.get(articleId) || 0);
+          const cdUntil = Number(playerState.spellCooldownUntil.get(articleId) || 0);
           if (now < cdUntil) {
             addCombatLog(`${spell.title} is on cooldown.`);
             return true;
           }
-          playerMana = Math.max(0, playerMana - manaCost);
-          spellCooldownUntil.set(articleId, now + (cdSec * 1000));
-          if (cdSec > 0) spellCdDurations.set(articleId, cdSec);
+          playerState.mana = Math.max(0, playerState.mana - manaCost);
+          playerState.spellCooldownUntil.set(articleId, now + (cdSec * 1000));
+          if (cdSec > 0) playerState.spellCdDurations.set(articleId, cdSec);
           bus.emit(EVENTS.SPELL_CAST, {
             articleId,
             title: spell.title,
@@ -2701,7 +2698,7 @@ function startGame(configPlayer) {
             );
             if (foods.length === 0) {
               addCombatLog('No food items available to conjure.', LOG_COLORS.SPELL);
-              playerMana = Math.min(playerMaxMana, playerMana + manaCost);
+              playerState.mana = Math.min(playerState.maxMana, playerState.mana + manaCost);
               updatePlayerBar();
               return true;
             }
@@ -2732,25 +2729,25 @@ function startGame(configPlayer) {
             const target = isWalkableTile(front.gx, front.gy) ? enemyCreatureAt(front.gx, front.gy) : null;
             if (!target || !target.alive) {
               addCombatLog('No creature in front of you to convince.', LOG_COLORS.SPELL);
-              playerMana = Math.min(playerMaxMana, playerMana + manaCost);
+              playerState.mana = Math.min(playerState.maxMana, playerState.mana + manaCost);
               updatePlayerBar();
               return true;
             }
             const convinceCost = Math.max(0, Number(target.convinceCost || 0));
             if (convinceCost <= 0) {
               addCombatLog(`${target.title} cannot be convinced.`);
-              playerMana = Math.min(playerMaxMana, playerMana + manaCost);
+              playerState.mana = Math.min(playerState.maxMana, playerState.mana + manaCost);
               updatePlayerBar();
               return true;
             }
-            if (playerMana < convinceCost) {
+            if (playerState.mana < convinceCost) {
               addCombatLog(`Not enough mana to convince ${target.title} (need ${convinceCost} MP).`);
-              playerMana = Math.min(playerMaxMana, playerMana + manaCost);
+              playerState.mana = Math.min(playerState.maxMana, playerState.mana + manaCost);
               updatePlayerBar();
               return true;
             }
             // Deduct the convince cost
-            playerMana = Math.max(0, playerMana - convinceCost);
+            playerState.mana = Math.max(0, playerState.mana - convinceCost);
             // If at max allies, release the oldest one
             const currentAllies = aliveAllies();
             if (currentAllies.length >= MAX_CONVINCED) {
@@ -2787,7 +2784,7 @@ function startGame(configPlayer) {
               for (const c of (g.creatures || [])) {
                 const cost = Math.max(0, Number(c.summon_cost || 0));
                 if (cost <= 0) continue;
-                if (cost > playerMana) continue;
+                if (cost > playerState.mana) continue;
                 const texKey = `creature_${c.id}`;
                 if (!this.textures.exists(texKey)) continue;
                 candidates.push(c);
@@ -2795,7 +2792,7 @@ function startGame(configPlayer) {
             }
             if (candidates.length === 0) {
               addCombatLog('Not enough mana to summon any creature.', LOG_COLORS.SPELL);
-              playerMana = Math.min(playerMaxMana, playerMana + manaCost);
+              playerState.mana = Math.min(playerState.maxMana, playerState.mana + manaCost);
               updatePlayerBar();
               return true;
             }
@@ -2806,16 +2803,16 @@ function startGame(configPlayer) {
             // Find a free tile adjacent to the player
             const offsets = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]];
             const spawnTile = offsets
-              .map(([ox, oy]) => ({ gx: gridX + ox, gy: gridY + oy }))
+              .map(([ox, oy]) => ({ gx: playerState.gridX + ox, gy: playerState.gridY + oy }))
               .find(t => isWalkable(t.gx, t.gy) && !creatureAt(t.gx, t.gy));
             if (!spawnTile) {
               addCombatLog('No free space to summon a creature.', LOG_COLORS.SPELL);
-              playerMana = Math.min(playerMaxMana, playerMana + manaCost);
+              playerState.mana = Math.min(playerState.maxMana, playerState.mana + manaCost);
               updatePlayerBar();
               return true;
             }
             // Deduct mana
-            playerMana = Math.max(0, playerMana - summonCost);
+            playerState.mana = Math.max(0, playerState.mana - summonCost);
             // Release oldest ally if at max
             const currentAllies = aliveAllies();
             if (currentAllies.length >= MAX_CONVINCED) {
@@ -2868,7 +2865,7 @@ function startGame(configPlayer) {
             const range = 5;
             let taunted = 0;
             for (const c of aliveCreatures()) {
-              const dist = Math.max(Math.abs(c.gx - gridX), Math.abs(c.gy - gridY));
+              const dist = Math.max(Math.abs(c.gx - playerState.gridX), Math.abs(c.gy - playerState.gridY));
               if (dist > range) continue;
               c.aggroLocked = true;
               taunted++;
@@ -2895,14 +2892,14 @@ function startGame(configPlayer) {
             }
             if (title === 'heal party') {
               // HP regen: heal player + allies every 2s for 2 min
-              const healPerTick = Math.max(3, Math.floor(4 + playerMagicLevel * 0.5));
+              const healPerTick = Math.max(3, Math.floor(4 + playerState.magicLevel * 0.5));
               let ticks = 0;
               const maxTicks = Math.floor(PARTY_DURATION / 2000);
               const healTimer = this.time.addEvent({
                 delay: 2000, loop: true,
                 callback: () => {
                   if (++ticks >= maxTicks || gameOver) { healTimer.remove(); return; }
-                  playerHp = Math.min(playerMaxHp, playerHp + healPerTick);
+                  playerState.hp = Math.min(playerState.maxHp, playerState.hp + healPerTick);
                   for (const a of aliveAllies()) {
                     a.hp = Math.min(a.maxHp, a.hp + healPerTick);
                     updateCreatureBar(a);
@@ -2913,10 +2910,10 @@ function startGame(configPlayer) {
               addCombatLog(`Cast [${slotNumber}] ${spell.title}: +${healPerTick} HP/2s for 2 min (you + allies).`, LOG_COLORS.SPELL);
             } else if (title === 'train party') {
               // Boost fist/weapon skill by 3 for 2 min
-              playerFistLevel += 3;
+              playerState.fistLevel += 3;
               for (const a of allies) a.maxDamage = Math.floor(a.maxDamage * 1.25);
               this.time.delayedCall(PARTY_DURATION, () => {
-                playerFistLevel = Math.max(10, playerFistLevel - 3);
+                playerState.fistLevel = Math.max(10, playerState.fistLevel - 3);
                 for (const a of aliveAllies()) a.maxDamage = Math.max(1, Math.floor(a.maxDamage / 1.25));
                 addCombatLog('Train Party effect expired.');
                 updateHud();
@@ -2924,10 +2921,10 @@ function startGame(configPlayer) {
               addCombatLog(`Cast [${slotNumber}] ${spell.title}: fighting skills +3, allies +25% damage for 2 min.`, LOG_COLORS.SPELL);
             } else if (title === 'enchant party') {
               // +1 magic level for 2 min, allies +15% damage
-              playerMagicLevel += 1;
+              playerState.magicLevel += 1;
               for (const a of allies) a.maxDamage = Math.floor(a.maxDamage * 1.15);
               this.time.delayedCall(PARTY_DURATION, () => {
-                playerMagicLevel = Math.max(0, playerMagicLevel - 1);
+                playerState.magicLevel = Math.max(0, playerState.magicLevel - 1);
                 for (const a of aliveAllies()) a.maxDamage = Math.max(1, Math.floor(a.maxDamage / 1.15));
                 addCombatLog('Enchant Party effect expired.');
                 updateHud();
@@ -2935,10 +2932,10 @@ function startGame(configPlayer) {
               addCombatLog(`Cast [${slotNumber}] ${spell.title}: magic level +1, allies +15% damage for 2 min.`, LOG_COLORS.SPELL);
             } else if (title === 'protect party') {
               // +3 shielding for 2 min, allies take 20% less damage
-              playerShieldingLevel += 3;
+              playerState.shieldingLevel += 3;
               for (const a of allies) a._protectParty = true;
               this.time.delayedCall(PARTY_DURATION, () => {
-                playerShieldingLevel = Math.max(10, playerShieldingLevel - 3);
+                playerState.shieldingLevel = Math.max(10, playerState.shieldingLevel - 3);
                 for (const a of aliveAllies()) a._protectParty = false;
                 addCombatLog('Protect Party effect expired.');
                 updateHud();
@@ -2946,14 +2943,14 @@ function startGame(configPlayer) {
               addCombatLog(`Cast [${slotNumber}] ${spell.title}: shielding +3, allies take 20% less damage for 2 min.`, LOG_COLORS.SPELL);
             } else if (title === 'enlighten party') {
               // MP regen for player every 2s for 2 min
-              const manaPerTick = Math.max(5, Math.floor(6 + playerMagicLevel * 0.6));
+              const manaPerTick = Math.max(5, Math.floor(6 + playerState.magicLevel * 0.6));
               let ticks = 0;
               const maxTicks = Math.floor(PARTY_DURATION / 2000);
               const manaTimer = this.time.addEvent({
                 delay: 2000, loop: true,
                 callback: () => {
                   if (++ticks >= maxTicks || gameOver) { manaTimer.remove(); return; }
-                  playerMana = Math.min(playerMaxMana, playerMana + manaPerTick);
+                  playerState.mana = Math.min(playerState.maxMana, playerState.mana + manaPerTick);
                   updatePlayerBar();
                 },
               });
@@ -2969,9 +2966,9 @@ function startGame(configPlayer) {
           if (title === 'mass healing') {
             const heal = inferHealingAmount(spell);
             // Heal player
-            const prevPlayerHp = playerHp;
-            playerHp = Math.min(playerMaxHp, playerHp + heal);
-            const playerGained = playerHp - prevPlayerHp;
+            const prevPlayerHp = playerState.hp;
+            playerState.hp = Math.min(playerState.maxHp, playerState.hp + heal);
+            const playerGained = playerState.hp - prevPlayerHp;
             showSpellAuraEffect(player.x, player.y, spell, 1.1);
             if (playerGained > 0) showDrinkEffect(this, floatingFxCtx, `+${playerGained} HP`, '#60a5fa');
             // Heal all allies
@@ -3000,7 +2997,7 @@ function startGame(configPlayer) {
             const allies = aliveAllies();
             if (allies.length === 0) {
               addCombatLog('You have no allies to heal.', LOG_COLORS.SPELL);
-              playerMana = Math.min(playerMaxMana, playerMana + manaCost);
+              playerState.mana = Math.min(playerState.maxMana, playerState.mana + manaCost);
               updatePlayerBar();
               return true;
             }
@@ -3028,8 +3025,8 @@ function startGame(configPlayer) {
             // is removing the poison DoT — NOT restoring HP. Handle it here
             // so the generic healing branch below doesn't heal instead.
             showSpellAuraEffect(player.x, player.y, spell, 1.0);
-            if (poisonState) {
-              poisonState = null;
+            if (playerState.poisonState) {
+              playerState.poisonState = null;
               setPoisonIndicator(false);
               showPlayerCureEffect();
               addCombatLog(`Cast [${slotNumber}] ${spell.title}: poison removed.`, LOG_COLORS.SPELL);
@@ -3038,9 +3035,9 @@ function startGame(configPlayer) {
             }
           } else if (group === 'healing' || title.includes('healing') || title.includes('exura')) {
             const heal = inferHealingAmount(spell);
-            const prev = playerHp;
-            playerHp = Math.min(playerMaxHp, playerHp + heal);
-            const gained = Math.max(0, playerHp - prev);
+            const prev = playerState.hp;
+            playerState.hp = Math.min(playerState.maxHp, playerState.hp + heal);
+            const gained = Math.max(0, playerState.hp - prev);
             addCombatLog(`Cast [${slotNumber}] ${spell.title}: +${gained} HP.`, LOG_COLORS.SPELL);
             showSpellAuraEffect(player.x, player.y, spell, 1.1);
             showDrinkEffect(this, floatingFxCtx, `+${gained} HP`, '#60a5fa');
@@ -3064,7 +3061,7 @@ function startGame(configPlayer) {
                 const dmgRaw = crit ? applyCriticalDamage(base) : base;
                 const spellElem = inferSpellDamageElementKey(spell);
                 const dmgBase = applyIncomingElementalDamage(dmgRaw, frontTarget, spellElem);
-                const dmg = godModeEnabled ? Math.max(1, Number(frontTarget.hp || 1)) : dmgBase;
+                const dmg = playerState.godMode ? Math.max(1, Number(frontTarget.hp || 1)) : dmgBase;
                 frontTarget.hp = Math.max(0, frontTarget.hp - dmg);
                 showCreatureHitEffect(frontTarget, dmg);
                 if (crit) showCritText(frontTarget.sprite.x, frontTarget.sprite.y);
@@ -3098,7 +3095,7 @@ function startGame(configPlayer) {
               const dmgRaw = crit ? applyCriticalDamage(base) : base;
               const spellElem = inferSpellDamageElementKey(spell);
               const dmgBase = applyIncomingElementalDamage(dmgRaw, target, spellElem);
-              const dmg = godModeEnabled ? Math.max(1, Number(target.hp || 1)) : dmgBase;
+              const dmg = playerState.godMode ? Math.max(1, Number(target.hp || 1)) : dmgBase;
               target.hp = Math.max(0, target.hp - dmg);
               showCreatureHitEffect(target, dmg);
               if (crit) showCritText(target.sprite.x, target.sprite.y);
@@ -3108,7 +3105,7 @@ function startGame(configPlayer) {
                 playCreatureDeathEffect(target);
                 updateCreatureBar(target);
                 grantPlayerXp(effectiveXpFromCreature(target));
-                runKills += 1;
+                playerState.runKills += 1;
                 addCombatLog(`${target.title} dies from ${spell.title}.`);
                 killSummonsOf(target);
               }
@@ -3125,8 +3122,8 @@ function startGame(configPlayer) {
               floorAtmosphere.addLightSpell(articleIdNum, lightRadius, 5 * 60 * 1000);
               addCombatLog(`Cast [${slotNumber}] ${spell.title}: illumination radius ${lightRadius} tiles (5 min, fading).`, LOG_COLORS.SPELL);
             } else if (effect.includes('speed')) {
-              playerMoveDurationMs = Math.max(90, playerMoveDurationMs - 20);
-              playerActionDelayMs = Math.max(150, playerActionDelayMs - 30);
+              playerState.moveDurationMs = Math.max(90, playerState.moveDurationMs - 20);
+              playerState.actionDelayMs = Math.max(150, playerState.actionDelayMs - 30);
               this.time.delayedCall(10000, () => updatePlayerTimingsByLevel());
               addCombatLog(`Cast [${slotNumber}] ${spell.title}: speed boosted.`, LOG_COLORS.SPELL);
             } else {
@@ -3164,11 +3161,11 @@ function startGame(configPlayer) {
           if (activeWeapon && isMagicRangedWeapon(activeWeapon)) {
             const manaCost = magicWeaponManaCost(activeWeapon);
             if (manaCost > 0) {
-              if (playerMana < manaCost) {
+              if (playerState.mana < manaCost) {
                 addCombatLog(`Not enough mana for ${activeWeapon.title}. Attacking with base melee.`);
                 activeWeapon = null;
               } else {
-                playerMana = Math.max(0, playerMana - manaCost);
+                playerState.mana = Math.max(0, playerState.mana - manaCost);
                 updatePlayerBar();
               }
             }
@@ -3193,7 +3190,7 @@ function startGame(configPlayer) {
               elemKey = normalizeDamageTypeToModifierKey(magicWeaponDamageTypeRaw(activeWeapon)) || 'energy';
             }
             const dealtBase = applyIncomingElementalDamage(damage, targetCreature, elemKey);
-            const dealt = godModeEnabled ? Math.max(1, Number(targetCreature.hp || 1)) : dealtBase;
+            const dealt = playerState.godMode ? Math.max(1, Number(targetCreature.hp || 1)) : dealtBase;
             targetCreature.hp = Math.max(0, targetCreature.hp - dealt);
             showCreatureHitEffect(targetCreature, dealt);
             if (isCrit) {
@@ -3222,7 +3219,7 @@ function startGame(configPlayer) {
                   playCreatureDeathEffect(st);
                   updateCreatureBar(st);
                   grantPlayerXp(effectiveXpFromCreature(st));
-                  runKills += 1;
+                  playerState.runKills += 1;
                   addCombatLog(`${st.title} dies from the explosion.`);
                   killSummonsOf(st);
                 }
@@ -3253,7 +3250,7 @@ function startGame(configPlayer) {
               playCreatureDeathEffect(targetCreature);
               updateCreatureBar(targetCreature);
               grantPlayerXp(effectiveXpFromCreature(targetCreature));
-              runKills += 1;
+              playerState.runKills += 1;
               addCombatLog(
                 isCrit
                   ? `CRITICAL hit on ${targetCreature.title} for ${dealt}${dtHit}, and it dies.`
@@ -3351,16 +3348,16 @@ function startGame(configPlayer) {
             floorAtmosphere.showPit(true);
             addCombatLog(`You defeated all creatures on floor ${currentLevel}. Drop into the pit.`);
             if (canStrafeCastMagicWeapon(activeWeapon)) {
-              nextMagicWeaponShotAt = now + playerActionDelayMs;
+              playerState.nextMagicWeaponShotAt = now + playerState.actionDelayMs;
             } else {
-              nextPlayerActionAt = now + playerActionDelayMs;
+              playerState.nextActionAt = now + playerState.actionDelayMs;
             }
             return true;
           }
           if (canStrafeCastMagicWeapon(activeWeapon)) {
-            nextMagicWeaponShotAt = now + playerActionDelayMs;
+            playerState.nextMagicWeaponShotAt = now + playerState.actionDelayMs;
           } else {
-            nextPlayerActionAt = now + playerActionDelayMs;
+            playerState.nextActionAt = now + playerState.actionDelayMs;
           }
           return true;
         };
@@ -3512,7 +3509,7 @@ function startGame(configPlayer) {
           missEffect(this, x, y, tileSize);
         };
         const showPlayerHitEffect = (dmg) => {
-          if (playerDead) return;
+          if (playerState.dead) return;
           radialSparkBurst(this, player.x, player.y - 4, 0xff6b6b, 12);
           shockwaveRing(this, player.x, player.y, 0xff5555, { startR: 10, endScale: 2, duration: 220 });
           player.setTint(0xff4d4d);
@@ -3524,7 +3521,7 @@ function startGame(configPlayer) {
             duration: 80,
             ease: 'Sine.easeOut',
             onComplete: () => {
-              if (!playerDead) {
+              if (!playerState.dead) {
                 player.setScale(basePlayerScaleX, basePlayerScaleY);
               }
               player.clearTint();
@@ -3715,9 +3712,7 @@ function startGame(configPlayer) {
         const POISON_FIELD_STEP_DAMAGE = 5;
         const fireFields = new Map();
         const poisonFields = new Map();
-        let burnState = null; // { startedAt, nextTickAt, tickIndex }
-        let poisonState = null; // { startedAt, nextTickAt, tickIndex }
-        let electrifiedState = null; // { startedAt, nextTickAt, tickIndex }
+        // burnState / poisonState / electrifiedState initialized null by createPlayer()
         const POISON_TICK_INTERVAL_MS = 10 * 1000;
         const POISON_TICK_DAMAGES = [6, 5, 4, 3, 2, 1];
         const ELECTRIFIED_TICK_INTERVAL_MS = 10 * 1000;
@@ -3809,7 +3804,7 @@ function startGame(configPlayer) {
         const placeFireFieldAroundPlayer = () => {
           for (let dy = -1; dy <= 1; dy += 1) {
             for (let dx = -1; dx <= 1; dx += 1) {
-              addFireFieldTile(gridX + dx, gridY + dy);
+              addFireFieldTile(playerState.gridX + dx, playerState.gridY + dy);
             }
           }
           // The player is standing on the newly-placed centre tile, so apply
@@ -3862,32 +3857,32 @@ function startGame(configPlayer) {
             }
           }
         };
-        const playerOnPoisonField = () => poisonFields.has(fireFieldKey(gridX, gridY));
+        const playerOnPoisonField = () => poisonFields.has(fireFieldKey(playerState.gridX, playerState.gridY));
         const triggerPoisonStep = (casterTitle = 'Poison Field') => {
-          if (playerDead) return;
-          const dmg = godModeEnabled ? 0 : POISON_FIELD_STEP_DAMAGE;
+          if (playerState.dead) return;
+          const dmg = playerState.godMode ? 0 : POISON_FIELD_STEP_DAMAGE;
           applyFireDamage(dmg, casterTitle);
           floatingCombatText(this, player.x, player.y - tileSize * 0.5, `-${dmg} ☠`, {
             color: '#4ade80', fontSize: '16px',
           });
-          if (!godModeEnabled) triggerPoisonApply(casterTitle);
+          if (!playerState.godMode) triggerPoisonApply(casterTitle);
           updatePlayerBar();
           updateHud();
         };
         const placePoisonFieldAroundPlayer = () => {
           for (let dy = -1; dy <= 1; dy += 1) {
             for (let dx = -1; dx <= 1; dx += 1) {
-              addPoisonFieldTile(gridX + dx, gridY + dy);
+              addPoisonFieldTile(playerState.gridX + dx, playerState.gridY + dy);
             }
           }
           triggerPoisonStep();
         };
         const applyFireDamage = (dmg, killedByTitle) => {
-          if (godModeEnabled || playerDead) return;
-          playerHp = Math.max(0, playerHp - dmg);
-          if (playerHp <= 0 && !playerDead) {
+          if (playerState.godMode || playerState.dead) return;
+          playerState.hp = Math.max(0, playerState.hp - dmg);
+          if (playerState.hp <= 0 && !playerState.dead) {
             gameOver = true;
-            playerDead = true;
+            playerState.dead = true;
             if (window.tdGame && typeof window.tdGame.deleteCurrentSave === 'function') {
               window.tdGame.deleteCurrentSave();
             }
@@ -3907,8 +3902,8 @@ function startGame(configPlayer) {
                 classKey: configPlayer.classKey,
                 sex: configPlayer.sex || 'male',
                 floor: currentLevel,
-                kills: runKills,
-                playerLevel,
+                kills: playerState.runKills,
+                level: playerState.level,
                 gold: window.debugInventory ? window.debugInventory.getGold() : 0,
                 killedBy: killedByTitle || 'Fire',
               });
@@ -3916,10 +3911,10 @@ function startGame(configPlayer) {
           }
         };
         const triggerFireStep = () => {
-          if (playerDead) return;
-          const dmg = godModeEnabled ? 0 : FIRE_FIELD_STEP_DAMAGE;
+          if (playerState.dead) return;
+          const dmg = playerState.godMode ? 0 : FIRE_FIELD_STEP_DAMAGE;
           applyFireDamage(dmg, 'Fire Field');
-          burnState = {
+          playerState.burnState = {
             startedAt: this.time.now,
             nextTickAt: this.time.now + BURN_TICK_INTERVAL_MS,
             tickIndex: 0,
@@ -3933,30 +3928,30 @@ function startGame(configPlayer) {
           updateHud();
         };
         const tickBurn = (nowMs) => {
-          if (!burnState || playerDead) return;
-          if (nowMs < burnState.nextTickAt) return;
-          if (burnState.tickIndex >= BURN_TICK_DAMAGES.length) {
-            burnState = null;
+          if (!playerState.burnState || playerState.dead) return;
+          if (nowMs < playerState.burnState.nextTickAt) return;
+          if (playerState.burnState.tickIndex >= BURN_TICK_DAMAGES.length) {
+            playerState.burnState = null;
             setBurnIndicator(false);
             return;
           }
-          const dmg = BURN_TICK_DAMAGES[burnState.tickIndex];
+          const dmg = BURN_TICK_DAMAGES[playerState.burnState.tickIndex];
           applyFireDamage(dmg, 'Burn');
           floatingCombatText(this, player.x, player.y - tileSize * 0.5, `-${dmg} 🔥`, {
             color: '#ef4444', fontSize: '14px',
           });
-          burnState.tickIndex += 1;
-          burnState.nextTickAt = nowMs + BURN_TICK_INTERVAL_MS;
+          playerState.burnState.tickIndex += 1;
+          playerState.burnState.nextTickAt = nowMs + BURN_TICK_INTERVAL_MS;
           updatePlayerBar();
           updateHud();
         };
-        const playerOnFireField = () => fireFields.has(fireFieldKey(gridX, gridY));
+        const playerOnFireField = () => fireFields.has(fireFieldKey(playerState.gridX, playerState.gridY));
         // Poison mirrors burn: periodic ticks with diminishing damage. A new
         // hit with a poisoned ability restarts the schedule from the top.
         const triggerPoisonApply = (casterTitle) => {
-          if (playerDead) return;
-          const alreadyPoisoned = Boolean(poisonState);
-          poisonState = {
+          if (playerState.dead) return;
+          const alreadyPoisoned = Boolean(playerState.poisonState);
+          playerState.poisonState = {
             startedAt: this.time.now,
             nextTickAt: this.time.now + POISON_TICK_INTERVAL_MS,
             tickIndex: 0,
@@ -3971,25 +3966,25 @@ function startGame(configPlayer) {
           );
         };
         const tickPoison = (nowMs) => {
-          if (!poisonState || playerDead) return;
-          if (nowMs < poisonState.nextTickAt) return;
-          if (poisonState.tickIndex >= POISON_TICK_DAMAGES.length) {
-            poisonState = null;
+          if (!playerState.poisonState || playerState.dead) return;
+          if (nowMs < playerState.poisonState.nextTickAt) return;
+          if (playerState.poisonState.tickIndex >= POISON_TICK_DAMAGES.length) {
+            playerState.poisonState = null;
             setPoisonIndicator(false);
             return;
           }
-          const dmg = POISON_TICK_DAMAGES[poisonState.tickIndex];
+          const dmg = POISON_TICK_DAMAGES[playerState.poisonState.tickIndex];
           applyFireDamage(dmg, 'Poison');
           floatingCombatText(this, player.x, player.y - tileSize * 0.5, `-${dmg} ☠`, {
             color: '#4ade80', fontSize: '14px',
           });
-          poisonState.tickIndex += 1;
-          poisonState.nextTickAt = nowMs + POISON_TICK_INTERVAL_MS;
+          playerState.poisonState.tickIndex += 1;
+          playerState.poisonState.nextTickAt = nowMs + POISON_TICK_INTERVAL_MS;
           updatePlayerBar();
           updateHud();
         };
         const showPlayerPoisonedEffect = () => {
-          if (playerDead) return;
+          if (playerState.dead) return;
           radialSparkBurst(this, player.x, player.y - 4, 0x4ade80, 8);
           for (let i = 0; i < 6; i += 1) {
             const ox = (Math.random() - 0.5) * tileSize * 0.6;
@@ -4006,9 +4001,9 @@ function startGame(configPlayer) {
           }
         };
         const triggerElectrifiedApply = (casterTitle) => {
-          if (playerDead) return;
-          const already = Boolean(electrifiedState);
-          electrifiedState = {
+          if (playerState.dead) return;
+          const already = Boolean(playerState.electrifiedState);
+          playerState.electrifiedState = {
             startedAt: this.time.now,
             nextTickAt: this.time.now + ELECTRIFIED_TICK_INTERVAL_MS,
             tickIndex: 0,
@@ -4023,25 +4018,25 @@ function startGame(configPlayer) {
           );
         };
         const tickElectrified = (nowMs) => {
-          if (!electrifiedState || playerDead) return;
-          if (nowMs < electrifiedState.nextTickAt) return;
-          if (electrifiedState.tickIndex >= ELECTRIFIED_TICK_DAMAGES.length) {
-            electrifiedState = null;
+          if (!playerState.electrifiedState || playerState.dead) return;
+          if (nowMs < playerState.electrifiedState.nextTickAt) return;
+          if (playerState.electrifiedState.tickIndex >= ELECTRIFIED_TICK_DAMAGES.length) {
+            playerState.electrifiedState = null;
             setElectrifiedIndicator(false);
             return;
           }
-          const dmg = ELECTRIFIED_TICK_DAMAGES[electrifiedState.tickIndex];
+          const dmg = ELECTRIFIED_TICK_DAMAGES[playerState.electrifiedState.tickIndex];
           applyFireDamage(dmg, 'Shock');
           floatingCombatText(this, player.x, player.y - tileSize * 0.5, `-${dmg} ⚡`, {
             color: '#c084fc', fontSize: '14px',
           });
-          electrifiedState.tickIndex += 1;
-          electrifiedState.nextTickAt = nowMs + ELECTRIFIED_TICK_INTERVAL_MS;
+          playerState.electrifiedState.tickIndex += 1;
+          playerState.electrifiedState.nextTickAt = nowMs + ELECTRIFIED_TICK_INTERVAL_MS;
           updatePlayerBar();
           updateHud();
         };
         const showPlayerElectrifiedEffect = () => {
-          if (playerDead) return;
+          if (playerState.dead) return;
           radialSparkBurst(this, player.x, player.y - 4, 0x60a5fa, 10);
           // Jagged arc lines radiating from the player.
           for (let i = 0; i < 4; i += 1) {
@@ -4067,11 +4062,11 @@ function startGame(configPlayer) {
           player.setTint(0x60a5fa);
           this.tweens.add({
             targets: player, alpha: 0.8, yoyo: true, duration: 90,
-            onComplete: () => { if (!playerDead) { player.clearTint(); player.setAlpha(1); } },
+            onComplete: () => { if (!playerState.dead) { player.clearTint(); player.setAlpha(1); } },
           });
         };
         const showPlayerCureEffect = () => {
-          if (playerDead) return;
+          if (playerState.dead) return;
           // Soft cyan sparkles rising off the player.
           for (let i = 0; i < 10; i += 1) {
             const ox = (Math.random() - 0.5) * tileSize * 0.8;
@@ -4088,7 +4083,7 @@ function startGame(configPlayer) {
           }
         };
         const showPlayerLifeDrainEffect = (amount, casterSprite) => {
-          if (playerDead) return;
+          if (playerState.dead) return;
           radialSparkBurst(this, player.x, player.y - 4, 0xb91c1c, 10);
           const tx = casterSprite ? casterSprite.x : player.x;
           const ty = casterSprite ? casterSprite.y : player.y - 24;
@@ -4111,7 +4106,7 @@ function startGame(configPlayer) {
           });
         };
         const showPlayerManaDrainEffect = (amount, casterSprite) => {
-          if (playerDead) return;
+          if (playerState.dead) return;
           radialSparkBurst(this, player.x, player.y - 4, 0x60a5fa, 10);
           const tx = casterSprite ? casterSprite.x : player.x;
           const ty = casterSprite ? casterSprite.y : player.y - 24;
@@ -4130,11 +4125,11 @@ function startGame(configPlayer) {
             });
           }
           // Brief cyan pulse on the player sprite.
-          if (!playerDead) {
+          if (!playerState.dead) {
             player.setTint(0x60a5fa);
             this.tweens.add({
               targets: player, alpha: 0.75, yoyo: true, duration: 120,
-              onComplete: () => { if (!playerDead) { player.clearTint(); player.setAlpha(1); } },
+              onComplete: () => { if (!playerState.dead) { player.clearTint(); player.setAlpha(1); } },
             });
           }
           floatingCombatText(this, player.x, player.y - tileSize * 0.5, `-${amount} MP`, {
@@ -4315,8 +4310,8 @@ function startGame(configPlayer) {
         };
         const lineToPlayerFromCreature = (creature, maxLen) => {
           const lim = Math.max(1, Math.floor(Number(maxLen) || 6));
-          const line = bresenhamLineTiles(creature.gx, creature.gy, gridX, gridY);
-          if (line.length <= 1) return [{ gx: gridX, gy: gridY }];
+          const line = bresenhamLineTiles(creature.gx, creature.gy, playerState.gridX, playerState.gridY);
+          if (line.length <= 1) return [{ gx: playerState.gridX, gy: playerState.gridY }];
           const out = [];
           for (let i = 1; i < line.length && out.length < lim; i += 1) {
             const p = line[i];
@@ -4324,7 +4319,7 @@ function startGame(configPlayer) {
             // Ranged attacks cannot cross walls.
             if (isWallTile(p.gx, p.gy)) break;
             out.push(p);
-            if (p.gx === gridX && p.gy === gridY) break;
+            if (p.gx === playerState.gridX && p.gy === playerState.gridY) break;
           }
           return out;
         };
@@ -4332,8 +4327,8 @@ function startGame(configPlayer) {
           const d = Math.max(1, Math.floor(Number(depth) || 3));
           const cx = creature.gx;
           const cy = creature.gy;
-          const px = gridX - cx;
-          const py = gridY - cy;
+          const px = playerState.gridX - cx;
+          const py = playerState.gridY - cy;
           if (px === 0 && py === 0) return [];
           let sx = 0;
           let sy = 0;
@@ -4401,8 +4396,8 @@ function startGame(configPlayer) {
           if (!pattern || pattern.kind === 'none') return [];
           switch (pattern.kind) {
             case 'player_cell': {
-              if (!hasRangedLineOfSight(creature.gx, creature.gy, gridX, gridY)) return [];
-              return [{ gx: gridX, gy: gridY }];
+              if (!hasRangedLineOfSight(creature.gx, creature.gy, playerState.gridX, playerState.gridY)) return [];
+              return [{ gx: playerState.gridX, gy: playerState.gridY }];
             }
             case 'line_to_player':
               return lineToPlayerFromCreature(creature, pattern.maxLen ?? 8);
@@ -4411,17 +4406,17 @@ function startGame(configPlayer) {
             case 'nova_creature':
               return tilesNovaAroundCreature(creature, pattern.radius ?? 1, true);
             case 'nova_at_player':
-              return tilesNovaAtPoint(gridX, gridY, pattern.radius ?? 1);
+              return tilesNovaAtPoint(playerState.gridX, playerState.gridY, pattern.radius ?? 1);
             case 'plus_on_player':
-              return plusTilesAt(gridX, gridY);
+              return plusTilesAt(playerState.gridX, playerState.gridY);
             case 'ring_at_player':
-              return ringTilesAt(gridX, gridY, pattern.radius ?? 2);
+              return ringTilesAt(playerState.gridX, playerState.gridY, pattern.radius ?? 2);
             default:
-              if (!hasRangedLineOfSight(creature.gx, creature.gy, gridX, gridY)) return [];
-              return [{ gx: gridX, gy: gridY }];
+              if (!hasRangedLineOfSight(creature.gx, creature.gy, playerState.gridX, playerState.gridY)) return [];
+              return [{ gx: playerState.gridX, gy: playerState.gridY }];
           }
         };
-        const playerInAbilityTiles = (tiles) => (tiles || []).some((t) => t.gx === gridX && t.gy === gridY);
+        const playerInAbilityTiles = (tiles) => (tiles || []).some((t) => t.gx === playerState.gridX && t.gy === playerState.gridY);
         const abilityStyle = (ability) => {
           const n = String((ability && ability.name) || '').toLowerCase();
           const el = String((ability && ability.element) || '').toLowerCase();
@@ -4449,7 +4444,7 @@ function startGame(configPlayer) {
         const showCreatureAbilityEffect = (creature, ability, affectedTiles = null) => {
           const style = abilityStyle(ability);
           void affectedTiles;
-          const dist = Math.max(Math.abs(creature.gx - gridX), Math.abs(creature.gy - gridY));
+          const dist = Math.max(Math.abs(creature.gx - playerState.gridX), Math.abs(creature.gy - playerState.gridY));
           const ranged = dist > 1 && !String((ability && ability.name) || '').toLowerCase().includes('melee');
           // Fireball variants: area explosion at the target, no projectile.
           if (isFireballAbility(ability)) {
@@ -4518,7 +4513,7 @@ function startGame(configPlayer) {
         const tryUseCreatureAbility = (creature) => {
           const abilities = Array.isArray(creature && creature.abilities) ? creature.abilities : [];
           if (abilities.length === 0) return false;
-          const dist = Math.max(Math.abs(creature.gx - gridX), Math.abs(creature.gy - gridY));
+          const dist = Math.max(Math.abs(creature.gx - playerState.gridX), Math.abs(creature.gy - playerState.gridY));
           // Each ability advertises its own reach via its pattern. That takes
           // precedence over the creature-level `ranged` flag, so melee bosses
           // (dragons, demons…) still fire their Fire Wave / Fireball / etc.
@@ -4558,7 +4553,7 @@ function startGame(configPlayer) {
             try { pattern = inferCreatureAbilityPattern(ab); } catch { return false; }
             const range = abilityCastRange(ab, pattern);
             if (dist > range) return false;
-            if (!hasRangedLineOfSight(creature.gx, creature.gy, gridX, gridY)) return false;
+            if (!hasRangedLineOfSight(creature.gx, creature.gy, playerState.gridX, playerState.gridY)) return false;
             try {
               const tiles = resolveCreatureAbilityTiles(creature, pattern);
               return playerInAbilityTiles(tiles);
@@ -4598,7 +4593,7 @@ function startGame(configPlayer) {
             return false;
           }
           // Hard gate: offensive ranged abilities need clear line of sight.
-          if (!hasRangedLineOfSight(creature.gx, creature.gy, gridX, gridY)) {
+          if (!hasRangedLineOfSight(creature.gx, creature.gy, playerState.gridX, playerState.gridY)) {
             return false;
           }
           showCreatureAbilityEffect(creature, ability, abilityTiles);
@@ -4643,23 +4638,23 @@ function startGame(configPlayer) {
           // Poisoned: applies the poison DoT status. No direct HP damage on
           // cast — damage comes from the subsequent ticks.
           if (isPoisoned) {
-            if (!godModeEnabled) triggerPoisonApply(creature.title);
+            if (!playerState.godMode) triggerPoisonApply(creature.title);
             return true;
           }
           // Electrified: same pattern as poison but energy-themed. No direct
           // cast damage; damage is applied via ticks over ~one minute.
           if (elNorm === 'electrified') {
-            if (!godModeEnabled) triggerElectrifiedApply(creature.title);
+            if (!playerState.godMode) triggerElectrifiedApply(creature.title);
             return true;
           }
           // Mana drain: siphons MP from the player instead of HP. Shielding
           // doesn't apply — it guards against physical/magical HP damage —
           // but god mode still grants full immunity.
           if (isManaDrain) {
-            const maxMp = Math.max(0, Number(playerMaxMana || 0));
-            const available = Math.max(0, Math.min(maxMp, Number(playerMana || 0)));
-            const mpDrain = godModeEnabled ? 0 : Math.min(available, Math.max(1, dmg));
-            if (!godModeEnabled) playerMana = Math.max(0, playerMana - mpDrain);
+            const maxMp = Math.max(0, Number(playerState.maxMana || 0));
+            const available = Math.max(0, Math.min(maxMp, Number(playerState.mana || 0)));
+            const mpDrain = playerState.godMode ? 0 : Math.min(available, Math.max(1, dmg));
+            if (!playerState.godMode) playerState.mana = Math.max(0, playerState.mana - mpDrain);
             attackersPressureInTurn += 1;
             showPlayerManaDrainEffect(mpDrain, creature.sprite);
             addCombatLog(
@@ -4670,8 +4665,8 @@ function startGame(configPlayer) {
             updateHud();
             return true;
           }
-          const reduced = godModeEnabled ? 0 : applyShieldingReduction(dmg);
-          if (!godModeEnabled) playerHp = Math.max(0, playerHp - reduced);
+          const reduced = playerState.godMode ? 0 : applyShieldingReduction(dmg);
+          if (!playerState.godMode) playerState.hp = Math.max(0, playerState.hp - reduced);
           attackersPressureInTurn += 1;
           if (reduced < dmg && getEquippedShield()) gainShieldingSkillUse(1);
           if (isLifeDrain) {
@@ -4758,12 +4753,12 @@ function startGame(configPlayer) {
           return null;
         };
         const allyTurn = (ally, now) => {
-          if (gameOver || playerDead) return;
+          if (gameOver || playerState.dead) return;
           if (!ally.alive) return;
           if (now < ally.nextActionAt) return;
           const followPlayerStep = () => {
-            const stepToPlayer = findNextStepToTarget(ally.gx, ally.gy, gridX, gridY);
-            if (stepToPlayer && !(stepToPlayer.x === gridX && stepToPlayer.y === gridY)) {
+            const stepToPlayer = findNextStepToTarget(ally.gx, ally.gy, playerState.gridX, playerState.gridY);
+            if (stepToPlayer && !(stepToPlayer.x === playerState.gridX && stepToPlayer.y === playerState.gridY)) {
               orientCreatureSprite(ally, stepToPlayer.x - ally.gx, stepToPlayer.y - ally.gy);
               ally.gx = stepToPlayer.x;
               ally.gy = stepToPlayer.y;
@@ -4782,7 +4777,7 @@ function startGame(configPlayer) {
           // If the ally drifted too far from the player (common right after a
           // floor change when it spawns adjacent to the start tile and the
           // player walks away), prioritize regrouping over chasing enemies.
-          const distToPlayer = Math.max(Math.abs(ally.gx - gridX), Math.abs(ally.gy - gridY));
+          const distToPlayer = Math.max(Math.abs(ally.gx - playerState.gridX), Math.abs(ally.gy - playerState.gridY));
           if (distToPlayer > 6) {
             followPlayerStep();
             return;
@@ -4806,7 +4801,7 @@ function startGame(configPlayer) {
                 playCreatureDeathEffect(target);
                 updateCreatureBar(target);
                 grantPlayerXp(effectiveXpFromCreature(target));
-                runKills += 1;
+                playerState.runKills += 1;
                 addCombatLog(`${target.title} dies from ${ally.title}'s attack.`);
                 killSummonsOf(target);
               } else {
@@ -4835,7 +4830,7 @@ function startGame(configPlayer) {
         };
         const findNextStepToPlayer = (fromX, fromY) => {
           const startKey = tileKey(fromX, fromY);
-          if (isCreatureMeleeAdjacent(fromX, fromY, gridX, gridY)) return null;
+          if (isCreatureMeleeAdjacent(fromX, fromY, playerState.gridX, playerState.gridY)) return null;
 
           const goalKeys = new Set();
           const neigh = [
@@ -4843,8 +4838,8 @@ function startGame(configPlayer) {
             [1, 1], [1, -1], [-1, 1], [-1, -1],
           ];
           for (const [dx, dy] of neigh) {
-            const px = gridX + dx;
-            const py = gridY + dy;
+            const px = playerState.gridX + dx;
+            const py = playerState.gridY + dy;
             if (!isWalkable(px, py)) continue;
             const blocker = creatureAt(px, py);
             if (blocker && (px !== fromX || py !== fromY)) continue;
@@ -4895,7 +4890,7 @@ function startGame(configPlayer) {
         const tryMoveCreature = (creature) => {
           const next = findNextStepToPlayer(creature.gx, creature.gy);
           if (!next) return false;
-          if (next.x === gridX && next.y === gridY) return false;
+          if (next.x === playerState.gridX && next.y === playerState.gridY) return false;
           orientCreatureSprite(creature, next.x - creature.gx, next.y - creature.gy);
           creature.gx = next.x;
           creature.gy = next.y;
@@ -4936,7 +4931,7 @@ function startGame(configPlayer) {
         };
         // Ranged creature movement: flee if too close, approach if too far, idle at range.
         const tryMoveRangedCreature = (creature) => {
-          const dist = Math.max(Math.abs(creature.gx - gridX), Math.abs(creature.gy - gridY));
+          const dist = Math.max(Math.abs(creature.gx - playerState.gridX), Math.abs(creature.gy - playerState.gridY));
           const targetRange = creature.range;
 
           if (dist === targetRange) return false; // already at ideal range — don't move
@@ -4955,7 +4950,7 @@ function startGame(configPlayer) {
               const ny = creature.gy + d.dy;
               if (!isWalkable(nx, ny)) continue;
               if (isOccupiedByActor(nx, ny)) continue;
-              const nd = Math.max(Math.abs(nx - gridX), Math.abs(ny - gridY));
+              const nd = Math.max(Math.abs(nx - playerState.gridX), Math.abs(ny - playerState.gridY));
               if (nd > bestDist) { bestDist = nd; best = { nx, ny, d }; }
             }
             if (!best) return false;
@@ -4989,13 +4984,13 @@ function startGame(configPlayer) {
             { dx: 0, dy: -1 },
           ];
           let best = null;
-          let bestDist = Math.abs(creature.gx - gridX) + Math.abs(creature.gy - gridY);
+          let bestDist = Math.abs(creature.gx - playerState.gridX) + Math.abs(creature.gy - playerState.gridY);
           for (const d of options) {
             const nx = creature.gx + d.dx;
             const ny = creature.gy + d.dy;
             if (!isWalkable(nx, ny)) continue;
             if (isOccupiedByActor(nx, ny)) continue;
-            const dist = Math.abs(nx - gridX) + Math.abs(ny - gridY);
+            const dist = Math.abs(nx - playerState.gridX) + Math.abs(ny - playerState.gridY);
             if (dist > bestDist) {
               bestDist = dist;
               best = { nx, ny, d };
@@ -5049,7 +5044,7 @@ function startGame(configPlayer) {
               continue;
             }
 
-            const distToPlayer = Math.max(Math.abs(creature.gx - gridX), Math.abs(creature.gy - gridY));
+            const distToPlayer = Math.max(Math.abs(creature.gx - playerState.gridX), Math.abs(creature.gy - playerState.gridY));
 
             // --- Ability tick (independent cooldown) ---
             if (now >= creature.nextAbilityAt) {
@@ -5067,14 +5062,14 @@ function startGame(configPlayer) {
               acted = moved || acted;
             } else {
               // Melee: always approach
-              if (!isCreatureMeleeAdjacent(creature.gx, creature.gy, gridX, gridY)) {
+              if (!isCreatureMeleeAdjacent(creature.gx, creature.gy, playerState.gridX, playerState.gridY)) {
                 acted = tryMoveCreature(creature) || acted;
               }
             }
 
             // --- Melee attack (all creatures, only when adjacent and no other action this tick) ---
-            if (!acted && isCreatureMeleeAdjacent(creature.gx, creature.gy, gridX, gridY)) {
-              orientCreatureSprite(creature, gridX - creature.gx, gridY - creature.gy);
+            if (!acted && isCreatureMeleeAdjacent(creature.gx, creature.gy, playerState.gridX, playerState.gridY)) {
+              orientCreatureSprite(creature, playerState.gridX - creature.gx, playerState.gridY - creature.gy);
               if (didAttackMiss()) {
                 showMissSmoke(player.x, player.y);
                 addCombatLog(`${creature.title} misses the hit.`);
@@ -5086,8 +5081,8 @@ function startGame(configPlayer) {
                 const rawDamage = isCrit ? applyCriticalDamage(baseDamage) : baseDamage;
                 const pressuredDamage = applyMultiAttackerPressure(rawDamage);
                 const dmg = clampIncomingCreatureDamage(pressuredDamage, creature.maxDamage);
-                const reduced = godModeEnabled ? 0 : applyShieldingReduction(dmg);
-                if (!godModeEnabled) playerHp = Math.max(0, playerHp - reduced);
+                const reduced = playerState.godMode ? 0 : applyShieldingReduction(dmg);
+                if (!playerState.godMode) playerState.hp = Math.max(0, playerState.hp - reduced);
                 attackersPressureInTurn += 1;
                 if (reduced < dmg && getEquippedShield()) gainShieldingSkillUse(1);
                 showPlayerHitEffect(reduced);
@@ -5099,9 +5094,9 @@ function startGame(configPlayer) {
                 }
                 acted = true;
               }
-              if (!godModeEnabled && playerHp <= 0) {
+              if (!playerState.godMode && playerState.hp <= 0) {
                 gameOver = true;
-                playerDead = true;
+                playerState.dead = true;
                 if (window.tdGame && typeof window.tdGame.deleteCurrentSave === 'function') {
                   window.tdGame.deleteCurrentSave();
                 }
@@ -5123,8 +5118,8 @@ function startGame(configPlayer) {
                     classKey: configPlayer.classKey,
                     sex: configPlayer.sex || 'male',
                     floor: currentLevel,
-                    kills: runKills,
-                    playerLevel,
+                    kills: playerState.runKills,
+                    level: playerState.level,
                     gold: window.debugInventory ? window.debugInventory.getGold() : 0,
                     killedBy: killedByTitle,
                   });
@@ -5179,19 +5174,19 @@ function startGame(configPlayer) {
         const resumeSnap = configPlayer && configPlayer.resumeSnapshot;
         if (resumeSnap) {
           // Progression stats.
-          playerLevel          = Math.max(1, Number(resumeSnap.playerLevel) || 1);
-          playerXp             = Math.max(0, Number(resumeSnap.playerXp) || 0);
-          playerMaxHp          = Math.max(1, Number(resumeSnap.playerMaxHp) || playerMaxHp);
-          playerMaxMana        = Math.max(0, Number(resumeSnap.playerMaxMana) || playerMaxMana);
-          playerMagicLevel     = Math.max(0, Number(resumeSnap.playerMagicLevel) || 0);
-          playerFistLevel      = Math.max(10, Number(resumeSnap.playerFistLevel) || 10);
-          playerShieldingLevel = Math.max(10, Number(resumeSnap.playerShieldingLevel) || 10);
-          restoreWeaponSkills(weaponSkillLevelByType, resumeSnap);
-          playerHp     = Phaser.Math.Clamp(Number(resumeSnap.playerHp)   || playerMaxHp, 1, playerMaxHp);
-          playerMana   = Phaser.Math.Clamp(Number(resumeSnap.playerMana) || playerMaxMana, 0, playerMaxMana);
-          hungerSecondsLeft = Math.max(0, Number(resumeSnap.hungerSecondsLeft) || MAX_FOOD_SECONDS);
-          runKills     = Math.max(0, Number(resumeSnap.runKills) || 0);
-          if (typeof onPlayerLevelStatsUpdate === 'function') onPlayerLevelStatsUpdate(playerLevel);
+          playerState.level          = Math.max(1, Number(resumeSnap.playerLevel) || 1);
+          playerState.xp             = Math.max(0, Number(resumeSnap.playerXp) || 0);
+          playerState.maxHp          = Math.max(1, Number(resumeSnap.playerMaxHp) || playerState.maxHp);
+          playerState.maxMana        = Math.max(0, Number(resumeSnap.playerMaxMana) || playerState.maxMana);
+          playerState.magicLevel     = Math.max(0, Number(resumeSnap.playerMagicLevel) || 0);
+          playerState.fistLevel      = Math.max(10, Number(resumeSnap.playerFistLevel) || 10);
+          playerState.shieldingLevel = Math.max(10, Number(resumeSnap.playerShieldingLevel) || 10);
+          restoreWeaponSkills(playerState.weaponSkillLevelByType, resumeSnap);
+          playerState.hp     = Phaser.Math.Clamp(Number(resumeSnap.playerHp)   || playerState.maxHp, 1, playerState.maxHp);
+          playerState.mana   = Phaser.Math.Clamp(Number(resumeSnap.playerMana) || playerState.maxMana, 0, playerState.maxMana);
+          playerState.hungerSecondsLeft = Math.max(0, Number(resumeSnap.hungerSecondsLeft) || MAX_FOOD_SECONDS);
+          playerState.runKills     = Math.max(0, Number(resumeSnap.runKills) || 0);
+          if (typeof onPlayerLevelStatsUpdate === 'function') onPlayerLevelStatsUpdate(playerState.level);
           updatePlayerTimingsByLevel();
 
           // Jump to the saved floor (regenerates the dungeon for that level).
@@ -5199,12 +5194,12 @@ function startGame(configPlayer) {
           while (currentLevel < savedFloor) descendLevel(true);
 
           // Learned spells (IDs + hotkey slots).
-          restoreLearnedSpells(learnedSpellIds, learnedSpellOrder, resumeSnap);
+          restoreLearnedSpells(playerState.learnedSpellIds, playerState.learnedSpellOrder, resumeSnap);
           try { renderLearnedSpells(); } catch { /* best effort */ }
 
           // DoT statuses — retime their tick schedule to the current clock.
           if (resumeSnap.burnState) {
-            burnState = {
+            playerState.burnState = {
               startedAt: this.time.now,
               nextTickAt: this.time.now + BURN_TICK_INTERVAL_MS,
               tickIndex: Math.max(0, Number(resumeSnap.burnState.tickIndex) || 0),
@@ -5212,7 +5207,7 @@ function startGame(configPlayer) {
             setBurnIndicator(true);
           }
           if (resumeSnap.poisonState) {
-            poisonState = {
+            playerState.poisonState = {
               startedAt: this.time.now,
               nextTickAt: this.time.now + POISON_TICK_INTERVAL_MS,
               tickIndex: Math.max(0, Number(resumeSnap.poisonState.tickIndex) || 0),
@@ -5220,7 +5215,7 @@ function startGame(configPlayer) {
             setPoisonIndicator(true);
           }
           if (resumeSnap.electrifiedState) {
-            electrifiedState = {
+            playerState.electrifiedState = {
               startedAt: this.time.now,
               nextTickAt: this.time.now + ELECTRIFIED_TICK_INTERVAL_MS,
               tickIndex: Math.max(0, Number(resumeSnap.electrifiedState.tickIndex) || 0),
@@ -5228,7 +5223,7 @@ function startGame(configPlayer) {
             setElectrifiedIndicator(true);
           }
 
-          addCombatLog(`Resumed save: Lv ${playerLevel} on floor ${currentLevel}.`, LOG_COLORS.SPELL);
+          addCombatLog(`Resumed save: Lv ${playerState.level} on floor ${currentLevel}.`, LOG_COLORS.SPELL);
         }
 
         updatePlayerBar();
@@ -5252,7 +5247,7 @@ function startGame(configPlayer) {
           delay: 90,
           loop: true,
           callback: () => {
-            if (gameOver || playerDead) return;
+            if (gameOver || playerState.dead) return;
             if (isTypingInInput()) return;
             const now = this.time.now;
             const w = getEquippedHandWeapon();
@@ -5261,7 +5256,7 @@ function startGame(configPlayer) {
             if (!isDistanceWeapon(w)) return;
             if (requiresAmmoForWeapon(w) && !hasAmmoForWeapon(w)) return;
             if (isMagicRangedWeapon(w) && !hasEnoughManaForMagicWeapon(w)) return;
-            if (now < nextMagicWeaponShotAt) return;
+            if (now < playerState.nextMagicWeaponShotAt) return;
             const t = findNearestRangedTarget(effectiveWeaponRange(w));
             if (!t) return;
             performPlayerAttack(t, w, true, now);
@@ -5290,29 +5285,29 @@ function startGame(configPlayer) {
             tickBurn(nowMs);
             tickPoison(nowMs);
             tickElectrified(nowMs);
-            if (playerDead || gameOver) return;
-            if (hungerSecondsLeft <= 0) {
-              if (!isHungry) setHungryState(true, 0);
+            if (playerState.dead || gameOver) return;
+            if (playerState.hungerSecondsLeft <= 0) {
+              if (!playerState.isHungry) setHungryState(true, 0);
               return;
             }
-            hungerSecondsLeft = Math.max(0, hungerSecondsLeft - 1);
-            if (playerHp < playerMaxHp) playerHp += 1;
-            if (playerMana < playerMaxMana) playerMana += 1;
+            playerState.hungerSecondsLeft = Math.max(0, playerState.hungerSecondsLeft - 1);
+            if (playerState.hp < playerState.maxHp) playerState.hp += 1;
+            if (playerState.mana < playerState.maxMana) playerState.mana += 1;
             updatePlayerBar();
             updateHud();
-            setHungryState(false, hungerSecondsLeft);
-            if (hungerSecondsLeft <= 0) setHungryState(true, 0);
+            setHungryState(false, playerState.hungerSecondsLeft);
+            if (playerState.hungerSecondsLeft <= 0) setHungryState(true, 0);
           },
         });
 
         this.events.on('update', () => {
           updateAllHealthBars();
           floorAtmosphere.updateDarkness(this.time.now, player.x, player.y);
-          if (moving || gameOver) return;
+          if (playerState.moving || gameOver) return;
           if (isTypingInInput()) return;
           const now = this.time.now;
           const canMageCastWithMagicWeapon = () => {
-            if (playerClassKey !== 'druid' && playerClassKey !== 'sorcerer') return false;
+            if (playerState.classKey !== 'druid' && playerState.classKey !== 'sorcerer') return false;
             const equippedHand = getEquippedHandWeapon();
             return Boolean(equippedHand && isMagicRangedWeapon(equippedHand));
           };
@@ -5337,7 +5332,7 @@ function startGame(configPlayer) {
             const casted = castLearnedSpell(spellSlotToCast, now);
             if (casted) {
               if (!canMageCastWithMagicWeapon()) {
-                nextPlayerActionAt = now + Math.max(140, Math.floor(playerActionDelayMs * 0.55));
+                playerState.nextActionAt = now + Math.max(140, Math.floor(playerState.actionDelayMs * 0.55));
               }
               return;
             }
@@ -5350,13 +5345,13 @@ function startGame(configPlayer) {
             else if (Phaser.Input.Keyboard.JustDown(consumableKeys.G)) consumableType = 'mana';
             else if (Phaser.Input.Keyboard.JustDown(consumableKeys.H)) consumableType = 'health';
           }
-          if (consumableType && !gameOver && !playerDead) {
+          if (consumableType && !gameOver && !playerState.dead) {
             consumeConsumable(consumableType);
           }
           // Keep consumable bar in sync (cheap — uses key cache)
           renderConsumableBar();
 
-          if (now < nextPlayerActionAt) return;
+          if (now < playerState.nextActionAt) return;
 
           let dx = 0;
           let dy = 0;
@@ -5380,7 +5375,7 @@ function startGame(configPlayer) {
 
           if (frame !== null) {
             player.setTexture(frameTextureName(configPlayer.sex, frame));
-            playerFacingFrame = frame;
+            playerState.facingFrame = frame;
           }
 
           const handWeapon = getEquippedHandWeapon();
@@ -5397,8 +5392,8 @@ function startGame(configPlayer) {
             return;
           }
 
-          const targetGX = gridX + dx;
-          const targetGY = gridY + dy;
+          const targetGX = playerState.gridX + dx;
+          const targetGY = playerState.gridY + dy;
           if (!isWalkable(targetGX, targetGY)) {
             return;
           }
@@ -5417,22 +5412,22 @@ function startGame(configPlayer) {
             return;
           }
 
-          moving = true;
-          gridX = targetGX;
-          gridY = targetGY;
+          playerState.moving = true;
+          playerState.gridX = targetGX;
+          playerState.gridY = targetGY;
           this.tweens.add({
             targets: player,
-            x: centerX(gridX),
-            y: centerY(gridY),
-            duration: playerMoveDurationMs,
+            x: centerX(playerState.gridX),
+            y: centerY(playerState.gridY),
+            duration: playerState.moveDurationMs,
             ease: 'Linear',
             onComplete: () => {
               // Asegura alineacion exacta al centro de la casilla.
-              player.x = centerX(gridX);
-              player.y = centerY(gridY);
+              player.x = centerX(playerState.gridX);
+              player.y = centerY(playerState.gridY);
               player.setOrigin(0.5, 0.5);
               pickupGroundLootAtPlayer();
-              moving = false;
+              playerState.moving = false;
               if (playerOnFireField()) triggerFireStep();
               if (playerOnPoisonField()) triggerPoisonStep();
               if (hasStairsAtPlayer() && aliveCreatures().length === 0) {
@@ -5441,7 +5436,7 @@ function startGame(configPlayer) {
               updateHud();
             },
           });
-          nextPlayerActionAt = now + Math.max(playerActionDelayMs, playerMoveDurationMs);
+          playerState.nextActionAt = now + Math.max(playerState.actionDelayMs, playerState.moveDurationMs);
         });
       },
     },
