@@ -18,7 +18,6 @@
 //   getCatalog:             () => itemsShopCatalog,
 //   playerClassKey:         'knight' | 'paladin' | 'sorcerer' | 'druid',
 //   getAliveCreaturesCount: () => number (used to gate buys + button),
-//   bindItemShopTooltip:    (cardEl, item) => void (engine-side tooltip),
 //   onHudRefresh:           () => void  (engine repaints HUD after buy),
 // }
 //
@@ -30,6 +29,7 @@
 import { imageUrl } from '../../dataService.js';
 import { lastLootRejectReason } from '../../state/playerSession.js';
 import { addCombatLog } from './CombatLog.js';
+import { bindItemShopTooltip } from './ItemsShop.js';
 
 // Whitelist for Light Sources — the catalog contains many state-derived
 // entries (Lit / Burnt Down / stub variants) that shouldn't be purchasable
@@ -201,7 +201,7 @@ function renderMarketCards(items) {
     priceEl.className = 'card-price';
     priceEl.textContent = `${price} gp`;
     card.appendChild(priceEl);
-    deps.bindItemShopTooltip(card, item);
+    bindItemShopTooltip(card, item);
     card.addEventListener('click', () => {
       marketState.selectedItemId = item.id;
       renderMarketGrid();
