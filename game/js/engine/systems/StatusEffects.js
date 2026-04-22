@@ -215,7 +215,7 @@ export function setupStatusEffects(deps) {
           sex: configPlayer.sex || 'male',
           floor: getCurrentLevel(),
           kills: playerState.runKills,
-          level: playerState.level,
+          playerLevel: playerState.level,
           gold: window.debugInventory ? window.debugInventory.getGold() : 0,
           killedBy: killedByTitle || 'Fire',
         });

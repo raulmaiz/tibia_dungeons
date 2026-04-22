@@ -2417,7 +2417,7 @@ function startGame(configPlayer) {
                     sex: configPlayer.sex || 'male',
                     floor: currentLevel,
                     kills: playerState.runKills,
-                    level: playerState.level,
+                    playerLevel: playerState.level,
                     gold: window.debugInventory ? window.debugInventory.getGold() : 0,
                     killedBy: killedByTitle,
                   });

@@ -198,7 +198,7 @@ export function setupSpellCasting(deps) {
       by: 'player',
     });
     // Cast flash animation on the spell slot
-    const castSlotEl = document.querySelector(`.spell-slot[data-spell-id="${articleId}"] .spell-slot-img-wrap`);
+    const castSlotEl = /** @type {HTMLElement | null} */ (document.querySelector(`.spell-slot[data-spell-id="${articleId}"] .spell-slot-img-wrap`));
     if (castSlotEl) {
       castSlotEl.classList.remove('spell-slot-casting');
       void castSlotEl.offsetWidth; // reflow to restart animation
@@ -207,7 +207,7 @@ export function setupSpellCasting(deps) {
     }
     // Cooldown overlay animation
     if (cdSec > 0) {
-      const cdOverlay = document.querySelector(`.spell-cd-overlay[data-cd-for="${articleId}"]`);
+      const cdOverlay = /** @type {HTMLElement | null} */ (document.querySelector(`.spell-cd-overlay[data-cd-for="${articleId}"]`));
       const cdText = document.querySelector(`.spell-cd-text[data-cd-text-for="${articleId}"]`);
       if (cdOverlay) {
         cdOverlay.classList.remove('cd-active');
