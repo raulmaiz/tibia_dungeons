@@ -26,6 +26,7 @@ export {
   initSpellFx,
   setSpellBloom,
   spellElementKey,
+  abilityElementKey,
   elementKeyFromColor,
   spawnSpellBurst,
   spawnSpellBeam,

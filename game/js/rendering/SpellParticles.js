@@ -42,6 +42,20 @@ export function spellElementKey(spell) {
   return 'energy';
 }
 
+/** Creature ability → preset key, from its `element` field + name keywords. */
+export function abilityElementKey(ability) {
+  const el = String((ability && ability.element) || '').toLowerCase();
+  const n = String((ability && ability.name) || '').toLowerCase();
+  if (el.includes('fire')   || n.includes('fire')   || n.includes('flame') || n.includes('burn'))   return 'fire';
+  if (el.includes('ice')    || n.includes('ice')    || n.includes('frost') || n.includes('freez'))  return 'ice';
+  if (el.includes('energy') || n.includes('energy') || n.includes('lightn')|| n.includes('electr')) return 'energy';
+  if (el.includes('earth')  || el.includes('poison')|| n.includes('earth') || n.includes('poison') || n.includes('terra') || n.includes('stalag')) return 'earth';
+  if (el.includes('death')  || el.includes('lifedrain') || n.includes('death') || n.includes('curse')) return 'death';
+  if (el.includes('holy')   || n.includes('holy')   || n.includes('divine')) return 'holy';
+  if (el.includes('healing')|| n.includes('heal'))                           return 'healing';
+  return 'physical';
+}
+
 // Reverse map for the AoE path, which only has the spellFxProfile colour.
 const ELEMENT_BY_PROFILE_COLOR = {
   0xfb7185: 'fire', 0x93c5fd: 'ice', 0xa78bfa: 'energy', 0x86efac: 'earth',
@@ -202,8 +216,11 @@ export function spawnSpellArea(scene, worldPts, element = 'physical', tileSize =
   const ordered = Boolean(opts.ordered);
   const stepMs = Number(opts.stepMs) || 22;
   // Density boost per shape: novas get the +25% "tralla"; cones (waves) cover
-  // far fewer tiles so they need a bigger multiplier to read as rich.
-  const boost = opts.kind === 'cone' ? 2.8 : opts.kind === 'nova' ? 1.25 : 1.3;
+  // far fewer tiles so they need a bigger multiplier to read as rich. An extra
+  // `density` multiplier (default 1) lets callers thin it out — monster casts
+  // are far more frequent than the player's, so they run at reduced density.
+  const density = Number.isFinite(opts.density) ? opts.density : 1;
+  const boost = (opts.kind === 'cone' ? 2.8 : opts.kind === 'nova' ? 1.25 : 1.3) * density;
 
   // Centroid + footprint radius.
   let cx = 0; let cy = 0;
@@ -225,7 +242,7 @@ export function spawnSpellArea(scene, worldPts, element = 'physical', tileSize =
     // Impact kick — intensity scales with the area size, capped + brief so
     // rapid casting never turns into a nauseating constant shake.
     const cam = scene.cameras && scene.cameras.main;
-    if (cam && cam.shake) cam.shake(150, Math.min(0.006, maxR * 0.000022));
+    if (opts.shake !== false && cam && cam.shake) cam.shake(150, Math.min(0.006, maxR * 0.000022));
 
     // Central flash — the bright "pop" at cast.
     const flash = scene.add.image(cx, cy, SPARK_KEY).setOrigin(0.5);

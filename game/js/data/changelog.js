@@ -5,6 +5,15 @@
  */
 export const CHANGELOG = [
   {
+    version: '1.3.6',
+    date: '2026-06-03',
+    entries: [
+      'Monsters: enemy abilities now use the same spell visuals as the player — fire/ice/energy/earth/death/holy coloured bursts, beams for line attacks, and cohesive area blasts for waves & fireballs',
+      'Monsters: self-healing now shows a green healing burst',
+      'SW: cache bumped to v15',
+    ],
+  },
+  {
     version: '1.3.5',
     date: '2026-06-03',
     entries: [

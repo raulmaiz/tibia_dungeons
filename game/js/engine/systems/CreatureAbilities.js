@@ -11,6 +11,10 @@ import {
   radialSparkBurst,
   spellProjectileLine,
   spellAuraBurst,
+  spawnSpellArea,
+  spawnSpellBurst,
+  spawnSpellBeam,
+  abilityElementKey,
 } from '../../rendering/Renderer.js';
 import { castCreatureSpellVfx, castFireballExplosion, isElementalAbility, isFireballAbility } from '../creatureSpellVfx.js';
 import { inferCreatureAbilityPattern } from '../../entities/Creature/abilityPatterns.js';
@@ -39,6 +43,7 @@ import { getEquippedShield } from './Weapons.js';
 export function setupCreatureAbilities(deps) {
   const {
     scene, player, playerState, tileSize,
+    centerX, centerY,
     floorAtmosphere,
     isWalkableTile, isWallTile,
     hasRangedLineOfSight,
@@ -110,38 +115,43 @@ export function setupCreatureAbilities(deps) {
     (tiles || []).some((t) => t.gx === playerState.gridX && t.gy === playerState.gridY);
 
   // ── Effect dispatcher ─────────────────────────────────────────────
+  // Mirrors the player's spell VFX (rendering/SpellParticles.js) for monster
+  // abilities, routed by element (fire/ice/energy/earth/death/holy/physical)
+  // and shape. Shape is read from the ability's resolved tile footprint +
+  // pattern: a wave/fireball/nova that paints ≥3 tiles detonates as ONE
+  // cohesive area blast; a line is a beam; anything else is a single burst.
+  // Monster casts are frequent, so they run at reduced density and never shake.
+  const MONSTER_FX = { density: 0.55, shake: false };
   function showCreatureAbilityEffect(creature, ability, affectedTiles = null) {
-    const style = abilityStyle(ability);
-    void affectedTiles;
+    const element = abilityElementKey(ability);
+    let pattern;
+    try { pattern = inferCreatureAbilityPattern(ability); } catch { pattern = { kind: 'player_cell' }; }
+    const kind = pattern && pattern.kind;
+    const tiles = Array.isArray(affectedTiles) ? affectedTiles : null;
     const dist = Math.max(Math.abs(creature.gx - playerState.gridX), Math.abs(creature.gy - playerState.gridY));
     const ranged = dist > 1 && !String((ability && ability.name) || '').toLowerCase().includes('melee');
-    if (isFireballAbility(ability)) {
-      const sizeTiles = fireballSizeTilesForEffect(ability);
-      castFireballExplosion(scene, floorAtmosphere, player.x, player.y, sizeTiles);
+
+    // Straight-line spell (beam): glowing beam from the creature + impact burst.
+    if (kind === 'line_to_player') {
+      spawnSpellBeam(scene, creature.sprite.x, creature.sprite.y, player.x, player.y, element);
+      spawnSpellBurst(scene, player.x, player.y, element, 16);
       return;
     }
-    if (ranged && isElementalAbility(ability)) {
-      castCreatureSpellVfx(
-        scene, floorAtmosphere,
-        creature.sprite.x, creature.sprite.y,
-        player.x, player.y,
-        ability,
-      );
+    // Area spell (fire wave / fireball / nova / cone): one cohesive blast over
+    // the exact tiles the ability hits — no flat per-tile glyphs.
+    if (tiles && tiles.length >= 3) {
+      const pts = tiles.map((t) => ({ x: centerX(t.gx), y: centerY(t.gy) }));
+      const shape = kind === 'cone_to_player' ? 'cone' : 'nova';
+      spawnSpellArea(scene, pts, element, tileSize, { kind: shape, ordered: false, ...MONSTER_FX });
       return;
     }
+    // Single-target / fallback: a burst on the player's tile. Ranged hits get a
+    // small bolt first so the attack reads as travelling.
     if (ranged) {
-      spellProjectileLine(
-        scene,
-        creature.sprite.x, creature.sprite.y,
-        player.x, player.y,
-        style.color, style.glyph,
-        () => {
-          spellAuraBurst(scene, player.x, player.y, tileSize, style.color, style.glyph, 0.85);
-        }
-      );
+      spawnSpellBeam(scene, creature.sprite.x, creature.sprite.y, player.x, player.y, element);
+      spawnSpellBurst(scene, player.x, player.y, element, 16);
     } else {
-      radialSparkBurst(scene, player.x, player.y, style.color, 14);
-      spellAuraBurst(scene, player.x, player.y, tileSize, style.color, style.glyph, 0.95);
+      spawnSpellBurst(scene, player.x, player.y, element, 14);
     }
   }
 
@@ -223,6 +233,7 @@ export function setupCreatureAbilities(deps) {
       const heal = Math.max(1, Math.min(missing, rolled));
       creature.hp = Math.min(creature.maxHp, creature.hp + heal);
       showCreatureHealEffect(creature, heal);
+      spawnSpellBurst(scene, creature.sprite.x, creature.sprite.y, 'healing', 16);
       updateCreatureBar(creature);
       addCombatLog(`${creature.title} uses ${ability.name} (+${heal} HP).`, LOG_COLORS.SPELL);
       return true;

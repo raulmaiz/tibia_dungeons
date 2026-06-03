@@ -2492,6 +2492,8 @@ function startGame(configPlayer) {
           player,
           playerState,
           tileSize,
+          centerX,
+          centerY,
           floorAtmosphere,
           isWalkableTile,
           isWallTile,

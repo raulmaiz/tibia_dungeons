@@ -1,4 +1,4 @@
-const CACHE = 'tibia-dungeons-v14';
+const CACHE = 'tibia-dungeons-v15';
 
 // Cache-first: sirve desde cache, si no existe descarga y guarda
 async function cacheFirst(request) {
