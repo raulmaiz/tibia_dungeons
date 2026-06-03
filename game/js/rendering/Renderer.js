@@ -20,3 +20,14 @@ export {
   missEffect,
   critBanner,
 } from '../vfx.js';
+
+// Phaser-native particle / bloom spell VFX (the 2D port of the 3D look).
+export {
+  initSpellFx,
+  setSpellBloom,
+  spellElementKey,
+  elementKeyFromColor,
+  spawnSpellBurst,
+  spawnSpellBeam,
+  spawnSpellArea,
+} from './SpellParticles.js';

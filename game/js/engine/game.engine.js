@@ -43,6 +43,8 @@ import {
   rangedProjectileLine,
   missEffect,
   critBanner,
+  initSpellFx,
+  setSpellBloom,
 } from '../rendering/Renderer.js';
 import {
   frameTextureName,
@@ -1096,6 +1098,7 @@ function startGame(configPlayer) {
         window.debugPerf = {
           cull(on = true) { perfFlags.cullCreatures = Boolean(on); return perfFlags.cullCreatures; },
           env(on = true) { return floorAtmosphere.setAtmosphereEnabled(on); },
+          bloom(on = true) { return setSpellBloom(_diagScene, on); },
           darkness(on = true) { return floorAtmosphere.setDarknessEnabled(on); },
           particles(on = true) { return floorAtmosphere.setParticlesEnabled(on); },
           decor(on = true) { return floorAtmosphere.setDecorEnabled(on); },
@@ -2199,6 +2202,10 @@ function startGame(configPlayer) {
           _showSpellAuraEffect(this, tileSize, x, y, spell, scale);
         const showSpellProjectileEffect = (spell, target) =>
           _showSpellProjectileEffect(this, { player, tileSize }, spell, target);
+        // Spell particle bursts + projectile beams + soft global bloom (the
+        // 2D port of the abandoned 3D spell look). Builds the spark texture
+        // and turns on bloom up-front so debugPerf.bloom can toggle it.
+        initSpellFx(this, { bloom: true });
         // Thin wrappers: read playerState.{gridX,gridY,facingFrame} once per call.
         const _playerPos = () => ({ gridX: playerState.gridX, gridY: playerState.gridY, facingFrame: playerState.facingFrame });
         const frontSweepTiles = () => _frontSweepTiles(_playerPos());

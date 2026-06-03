@@ -121,7 +121,7 @@ export function setupSpellCasting(deps) {
     const prof = spellFxProfile(spell);
     const color = pattern.color != null ? pattern.color : prof.color;
     const po = pattern.fx && typeof pattern.fx === 'object' ? pattern.fx : {};
-    const fxOpts = { ...po, glyph: po.glyph != null ? po.glyph : prof.glyph };
+    const fxOpts = { ...po, glyph: po.glyph != null ? po.glyph : prof.glyph, kind: pattern.kind };
     showSpellTileEffect(tiles, color, fxOpts);
     const impacted = [];
     const spellElem = inferSpellDamageElementKey(spell);
@@ -509,7 +509,16 @@ export function setupSpellCasting(deps) {
       const prevPlayerHp = playerState.hp;
       playerState.hp = Math.min(playerState.maxHp, playerState.hp + heal);
       const playerGained = playerState.hp - prevPlayerHp;
-      showSpellAuraEffect(player.x, player.y, spell, 1.1);
+      // Cohesive healing field around the caster — same rich area effect as the
+      // attack novas/waves, in healing green, instead of a lone aura glyph.
+      const HEAL_R = 2;
+      const healTiles = [];
+      for (let dy = -HEAL_R; dy <= HEAL_R; dy += 1) {
+        for (let dx = -HEAL_R; dx <= HEAL_R; dx += 1) {
+          healTiles.push({ gx: playerState.gridX + dx, gy: playerState.gridY + dy });
+        }
+      }
+      showSpellTileEffect(healTiles, spellFxProfile(spell).color, { kind: 'nova', element: 'healing' });
       if (playerGained > 0) showDrinkEffect(scene, floatingFxCtx, `+${playerGained} HP`, '#60a5fa');
       const allies = aliveAllies();
       let allyHealLog = '';

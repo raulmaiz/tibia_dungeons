@@ -9,6 +9,11 @@ import {
   tileSpellBurst,
   spellAuraBurst,
   spellProjectileLine,
+  spawnSpellBurst,
+  spawnSpellBeam,
+  spawnSpellArea,
+  spellElementKey,
+  elementKeyFromColor,
 } from '../../rendering/Renderer.js';
 
 /** @typedef {import('../../types.js').Spell} Spell */
@@ -58,7 +63,7 @@ export function spellFxProfile(spell) {
  * @param {SpellTileFxCtx} ctx
  * @param {Array<{ gx: number, gy: number }> | null} tiles
  * @param {number} [color]
- * @param {{ duration?: number, delayStep?: number, order?: 'beam' | null, glyph?: string, glyphColor?: string }} [opts]
+ * @param {{ duration?: number, delayStep?: number, order?: 'beam' | null, glyph?: string, glyphColor?: string, element?: string, kind?: string }} [opts]
  */
 export function showSpellTileEffect(scene, ctx, tiles, color = 0xf59e0b, opts = {}) {
   const { tileSize, centerX, centerY, caster, isWalkable } = ctx;
@@ -74,14 +79,34 @@ export function showSpellTileEffect(scene, ctx, tiles, color = 0xf59e0b, opts = 
       - (Math.abs(b.gx - caster.gridX) + Math.abs(b.gy - caster.gridY))
     ));
   }
+  const areaElement = opts.element || elementKeyFromColor(color);
+  // Any multi-tile spell (cone / nova / wave / beam) renders as ONE cohesive
+  // effect — area spells get a ground field + shockwave ring, beams get a
+  // glowing line — both topped with an anti-grid particle cloud, and NO flat
+  // per-tile diamonds (those are the "tile-based" tell). 1-2 tile spells keep
+  // the per-tile glyph below. `order==='beam'` already sorted `list` by
+  // distance from the caster, so the cloud ripples outward like the old wave.
+  if (list.length >= 3) {
+    const pts = list.map((t) => ({ x: centerX(t.gx), y: centerY(t.gy) }));
+    spawnSpellArea(scene, pts, areaElement, tileSize, {
+      beam: opts.kind === 'beam',
+      kind: opts.kind,
+      ordered: order === 'beam' || (opts.delayStep || 0) > 0,
+      stepMs: opts.delayStep || 22,
+    });
+    return;
+  }
   list.forEach((t, i) => {
     const delay = i * delayStep;
+    const element = opts.element || elementKeyFromColor(color);
     const spawnFx = () => {
       tileSpellBurst(scene, centerX(t.gx), centerY(t.gy), tileSize, color, {
         duration,
         glyph: glyphChar,
         glyphColor,
       });
+      // Additive particle burst on top of the flat glyph for the "magic" look.
+      spawnSpellBurst(scene, centerX(t.gx), centerY(t.gy), element, 14);
     };
     if (delay > 0) scene.time.delayedCall(delay, spawnFx);
     else spawnFx();
@@ -101,6 +126,8 @@ export function showSpellTileEffect(scene, ctx, tiles, color = 0xf59e0b, opts = 
 export function showSpellAuraEffect(scene, tileSize, x, y, spell, scale = 1) {
   const fx = spellFxProfile(spell);
   spellAuraBurst(scene, x, y, tileSize, fx.color, fx.glyph, scale);
+  // Particle burst, scaled with the aura — the centrepiece of the 3D look.
+  spawnSpellBurst(scene, x, y, spellElementKey(spell), Math.round(22 * scale));
 }
 
 /**
@@ -150,6 +177,8 @@ export function showSpellProjectileEffect(scene, ctx, spell, target) {
   if (!spell || !target || !target.sprite) return;
   const { player, tileSize } = ctx;
   const fx = spellFxProfile(spell);
+  // Glowing additive beam (meshline replacement) on top of the glyph line.
+  spawnSpellBeam(scene, player.x, player.y, target.sprite.x, target.sprite.y, spellElementKey(spell));
   spellProjectileLine(scene, player.x, player.y, target.sprite.x, target.sprite.y, fx.color, fx.glyph, () => {
     showSpellAuraEffect(scene, tileSize, target.sprite.x, target.sprite.y, spell, 0.9);
   });

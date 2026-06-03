@@ -5,6 +5,16 @@
  */
 export const CHANGELOG = [
   {
+    version: '1.3.5',
+    date: '2026-06-03',
+    entries: [
+      'Spells: brand-new spell visuals — element-coloured additive particle bursts, glowing projectile beams, and a soft bloom glow',
+      'Spells: area spells (waves, novas, calderas) now detonate as one cohesive blast with a ground flare + impact shake, instead of a grid of tiles',
+      'Spells: Mass Healing now bursts as a green healing field around you',
+      'SW: cache bumped to v14',
+    ],
+  },
+  {
     version: '1.3.4',
     date: '2026-06-03',
     entries: [

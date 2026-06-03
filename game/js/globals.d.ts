@@ -104,6 +104,7 @@ interface Window {
   debugPerf?: {
     cull(on?: boolean): boolean;
     env(on?: boolean): boolean;
+    bloom(on?: boolean): boolean;
     darkness(on?: boolean): boolean;
     particles(on?: boolean): boolean;
     decor(on?: boolean): boolean;
