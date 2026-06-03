@@ -25,8 +25,11 @@ const PORT       = Number(process.env.PORT || 5173);
 
 const MAX_RUNS              = 100;
 const MAX_SAVES_PER_USER    = 20;
-const MAX_SNAPSHOT_BYTES    = 200_000;
-const MAX_SNAPSHOT_DEPTH    = 8;
+// Kept in sync with api/saves/index.js — the per-floor-state snapshot carries
+// map + creatures + ground loot for every visited floor, so the size/depth
+// caps are larger than the old flat-snapshot era.
+const MAX_SNAPSHOT_BYTES    = 1_500_000;
+const MAX_SNAPSHOT_DEPTH    = 16;
 const MAX_FLOOR             = 100;
 const MAX_LEVEL             = 200;
 const MAX_GOLD              = 10_000_000;
