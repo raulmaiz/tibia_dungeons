@@ -1,0 +1,5 @@
+- [Tibia Dungeons — project](tibia-dungeons-project.md) — what it is, current state, where the docs live (start here)
+- [Tibia Dungeons — how the user works](tibia-dungeons-user.md) — I'm the primary dev; diagnose with evidence, iterate visually, deploy on "despliega" (Spanish)
+- [Tibia Dungeons — Vercel deploy](tibia-dungeons-vercel-deploy.md) — live domain is the `tibia_dungeons-main` project; push needs a manual PAT
+- [Tibia Dungeons — perf](tibia-dungeons-perf.md) — dense-floor lag is render-bound (bake static Graphics); window.debugPerf; see docs/perf-playbook.md
+- [Tibia Dungeons — spell VFX](tibia-dungeons-spell-vfx.md) — particle/beam/area/bloom system in rendering/SpellParticles.js; see docs/spell-vfx.md
