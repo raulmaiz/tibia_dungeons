@@ -25,8 +25,11 @@ import { authenticate, requireCsrf } from '../_lib/auth.js';
  */
 
 const MAX_SAVES_PER_USER   = 20;
-const MAX_SNAPSHOT_BYTES   = 200_000;
-const MAX_SNAPSHOT_DEPTH   = 8;
+// Snapshots now carry full per-floor state (map + creatures + ground loot for
+// every visited floor), so the size + nesting caps are larger than the old
+// flat-snapshot era. Still bounded to keep Redis and the depth guard safe.
+const MAX_SNAPSHOT_BYTES   = 1_500_000;
+const MAX_SNAPSHOT_DEPTH   = 16;
 const MAX_FLOOR            = 100;
 const MAX_LEVEL            = 200;
 const MAX_GOLD             = 10_000_000;

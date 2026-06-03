@@ -173,3 +173,42 @@ export function clearGroundLoot() {
   }
   groundLootByTile.clear();
 }
+
+/**
+ * Serializable snapshot of every ground-loot pile on the current floor.
+ * Drops the Phaser marker refs and keeps only the item data + tile coords so
+ * a floor can be cached / saved and rebuilt later (floor-state persistence).
+ * @returns {Array<{ gx: number, gy: number, items: Item[] }>}
+ */
+export function serializeGroundLoot() {
+  const out = [];
+  for (const entry of groundLootByTile.values()) {
+    if (!entry || !Array.isArray(entry.items) || entry.items.length === 0) continue;
+    out.push({
+      gx: entry.gx,
+      gy: entry.gy,
+      items: entry.items.map((it) => ({ ...it })),
+    });
+  }
+  return out;
+}
+
+/**
+ * Rebuild ground-loot piles from a serialized snapshot. Wipes whatever is on
+ * the floor first, then re-drops each saved item (which re-creates the markers
+ * and re-stacks identical stackables). Safe to call with `null`/empty.
+ * @param {Array<{ gx: number, gy: number, items: Item[] }> | null | undefined} entries
+ */
+export function restoreGroundLoot(entries) {
+  clearGroundLoot();
+  if (!Array.isArray(entries)) return;
+  for (const entry of entries) {
+    if (!entry || !Array.isArray(entry.items)) continue;
+    const gx = Number(entry.gx);
+    const gy = Number(entry.gy);
+    if (!Number.isFinite(gx) || !Number.isFinite(gy)) continue;
+    for (const item of entry.items) {
+      if (item) dropItemOnGround(gx, gy, item);
+    }
+  }
+}

@@ -5,6 +5,15 @@
  */
 export const CHANGELOG = [
   {
+    version: '1.3.2',
+    date: '2026-06-03',
+    entries: [
+      'Perf: deep floors with many monsters no longer lag — creatures now share a single pathfinding pass per turn instead of each running its own search',
+      'Saves: resuming a run now restores the exact floors you left — layout, remaining monsters and dropped loot — instead of regenerating them',
+      'SW: cache bumped to v11',
+    ],
+  },
+  {
     version: '1.3.1',
     date: '2026-06-03',
     entries: [

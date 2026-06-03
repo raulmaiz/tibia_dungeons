@@ -36,6 +36,7 @@
  * @property {{ startedAt: number, nextTickAt: number, tickIndex: number } | null} burnState
  * @property {{ startedAt: number, nextTickAt: number, tickIndex: number } | null} poisonState
  * @property {{ startedAt: number, nextTickAt: number, tickIndex: number } | null} electrifiedState
+ * @property {object[]} [floors] - serialized per-floor state cache
  */
 
 /**
@@ -110,6 +111,10 @@ export function captureSaveSnapshot(ctx) {
     burnState:        ctx.burnState ? { ...ctx.burnState } : null,
     poisonState:      ctx.poisonState ? { ...ctx.poisonState } : null,
     electrifiedState: ctx.electrifiedState ? { ...ctx.electrifiedState } : null,
+    // Per-floor state for every visited floor (map, remaining creatures,
+    // ground loot, player tile). Lets resume restore the exact dungeon the
+    // player saved on instead of regenerating it. Empty for legacy clients.
+    floors:           Array.isArray(ctx.floors) ? ctx.floors : [],
   };
 }
 

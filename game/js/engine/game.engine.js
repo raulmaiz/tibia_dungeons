@@ -185,6 +185,8 @@ import {
   dropItemOnGround,
   pickupGroundLootAtPlayer,
   clearGroundLoot,
+  serializeGroundLoot,
+  restoreGroundLoot,
 } from './systems/GroundLoot.js';
 import { createPlayer } from '../entities/Player/Player.js';
 import {
@@ -640,6 +642,21 @@ function startGame(configPlayer) {
         let currentLevel = 1;
         let currentLevelGroup = null;
         let currentFloorCreatureLabel = '';
+        // Floor-state persistence: every floor we leave is cached here (map,
+        // remaining creatures, ground loot, player tile) so returning to it —
+        // by stairs, rope, or resuming a save — restores the exact state
+        // instead of regenerating a fresh dungeon with respawned monsters.
+        // Keyed by floor number. Serialized into the save snapshot.
+        /** @type {Map<number, object>} */
+        const floorStateCache = new Map();
+        // Guards the cache against snapshotting the empty placeholder floor
+        // before the first real dungeon has been generated.
+        let hasActiveFloor = false;
+        // The floor number actually on screen. Tracked separately from
+        // `currentLevel` because some callers (rope-up, god-mode teleport)
+        // reassign `currentLevel` *before* calling descendLevel — so the floor
+        // being left must be keyed by what's really loaded, not the target.
+        let loadedFloorLevel = 0;
         const { pickGroupForLevel } = setupCreatureSpawn({
           getTypeProgressionGroups: () => typeProgressionGroups,
         });
@@ -830,6 +847,10 @@ function startGame(configPlayer) {
         };
         const enemyCreatureAt = (gx, gy) => aliveCreatures().find((c) => c.gx === gx && c.gy === gy) || null;
         const MAX_CONVINCED = 2;
+        // Allies hunt enemies floor-wide. ALLY_HUNT_LEASH caps how far an ally
+        // may stray from the player before abandoning the hunt to regroup;
+        // Infinity = keep hunting until the whole floor is clean of monsters.
+        const ALLY_HUNT_LEASH = Infinity;
         // Saved ally templates for floor transitions
         let savedAllyTemplates = [];
         // Look up a creature template by title across every tier — used by
@@ -992,7 +1013,8 @@ function startGame(configPlayer) {
             return true;
           }
           currentLevel = Math.max(1, currentLevel - 1);
-          descendLevel(false);
+          // Re-emerge on the very tile we descended through on the floor above.
+          descendLevel(false, { arriveAtStairs: true });
           addCombatLog(`You climbed to floor ${currentLevel} using ${sourceName}.`);
           updateHud();
           return true;
@@ -1046,26 +1068,10 @@ function startGame(configPlayer) {
           );
         };
         const spawnCreaturesForLevel = (level) => {
-          // Save convinced allies before clearing
-          savedAllyTemplates = [];
-          for (const c of creatures) {
-            if (c.alive && c.isConvinced) {
-              savedAllyTemplates.push({
-                id: c.id, title: c.title, hp: c.hp, maxHp: c.maxHp,
-                maxDamage: c.maxDamage, runsAt: c.runsAt, experience: c.experience,
-                speed: c.speed, ranged: c.ranged, range: c.range,
-                convinceCost: c.convinceCost,
-                abilities: c.abilities, elementMods: c.elementMods,
-              });
-            }
-            c.sprite.destroy();
-            if (c.hpBar) {
-              c.hpBar.bg.destroy();
-              c.hpBar.fill.destroy();
-            }
-            if (c.nameTag) c.nameTag.destroy();
-          }
-          creatures.length = 0;
+          // Snapshot convinced allies (they follow the player), then wipe the
+          // floor's live creatures before repopulating it.
+          savedAllyTemplates = snapshotConvincedAllies();
+          destroyAllCreatures();
 
           // --- Sistema de counts exactos por floor fijo ---
           // Busca la plantilla de una criatura por ID en todas las fuentes conocidas.
@@ -1344,34 +1350,72 @@ function startGame(configPlayer) {
             `Floor ${level}: ${first.type_primary} (base dmg ${first.maxDamage}).`
           );
           // Respawn saved convinced allies near the player start tile (capped).
-          // BFS outward from START_TILE through walkable tiles so the ally lands
-          // on the nearest *reachable* free tile instead of being silently
-          // dropped when the 8 immediate neighbours are all taken by enemies.
-          const findAllyRespawnTile = () => {
-            const seen = new Set([`${START_TILE.gx},${START_TILE.gy}`]);
-            const queue = [{ x: START_TILE.gx, y: START_TILE.gy, d: 0 }];
-            const steps = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]];
-            const maxDist = 15;
-            while (queue.length > 0) {
-              const cur = queue.shift();
-              if (cur.d > 0 && isWalkable(cur.x, cur.y) && !creatureAt(cur.x, cur.y)) {
-                return { gx: cur.x, gy: cur.y };
-              }
-              if (cur.d >= maxDist) continue;
-              for (const [dx, dy] of steps) {
-                const nx = cur.x + dx;
-                const ny = cur.y + dy;
-                const k = `${nx},${ny}`;
-                if (seen.has(k)) continue;
-                seen.add(k);
-                if (!isWalkable(nx, ny)) continue;
-                queue.push({ x: nx, y: ny, d: cur.d + 1 });
-              }
+          respawnAllyTemplates(savedAllyTemplates);
+          savedAllyTemplates = [];
+        };
+        // ── Floor-state persistence helpers ─────────────────────────────────
+        // Shared by the live spawn path, the cache restore path, and save/load.
+        //
+        // Snapshot the player's convinced allies into plain templates so they
+        // can be re-created on whatever floor the player ends up on.
+        const snapshotConvincedAllies = () => {
+          const out = [];
+          for (const c of creatures) {
+            if (c.alive && c.isConvinced) {
+              out.push({
+                id: c.id, title: c.title, hp: c.hp, maxHp: c.maxHp,
+                maxDamage: c.maxDamage, runsAt: c.runsAt, experience: c.experience,
+                speed: c.speed, ranged: c.ranged, range: c.range,
+                convinceCost: c.convinceCost,
+                abilities: c.abilities, elementMods: c.elementMods,
+              });
             }
-            return null;
-          };
-          for (let i = 0; i < Math.min(savedAllyTemplates.length, MAX_CONVINCED); i++) {
-            const tpl = savedAllyTemplates[i];
+          }
+          return out;
+        };
+        // Destroy every live creature's sprite/bars/name tag and empty the list.
+        const destroyAllCreatures = () => {
+          for (const c of creatures) {
+            if (c.sprite) c.sprite.destroy();
+            if (c.hpBar) {
+              c.hpBar.bg.destroy();
+              c.hpBar.fill.destroy();
+            }
+            if (c.nameTag) c.nameTag.destroy();
+          }
+          creatures.length = 0;
+        };
+        // BFS outward from START_TILE through walkable tiles to the nearest
+        // free, reachable tile (so an ally never lands on a wall or an
+        // occupied tile). Returns null if nothing is reachable.
+        const findAllyRespawnTile = () => {
+          const seen = new Set([`${START_TILE.gx},${START_TILE.gy}`]);
+          const queue = [{ x: START_TILE.gx, y: START_TILE.gy, d: 0 }];
+          const steps = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]];
+          const maxDist = 15;
+          while (queue.length > 0) {
+            const cur = queue.shift();
+            if (cur.d > 0 && isWalkable(cur.x, cur.y) && !creatureAt(cur.x, cur.y)) {
+              return { gx: cur.x, gy: cur.y };
+            }
+            if (cur.d >= maxDist) continue;
+            for (const [dx, dy] of steps) {
+              const nx = cur.x + dx;
+              const ny = cur.y + dy;
+              const k = `${nx},${ny}`;
+              if (seen.has(k)) continue;
+              seen.add(k);
+              if (!isWalkable(nx, ny)) continue;
+              queue.push({ x: nx, y: ny, d: cur.d + 1 });
+            }
+          }
+          return null;
+        };
+        // Re-create up to MAX_CONVINCED allies from templates near the start.
+        const respawnAllyTemplates = (templates) => {
+          if (!Array.isArray(templates)) return;
+          for (let i = 0; i < Math.min(templates.length, MAX_CONVINCED); i++) {
+            const tpl = templates[i];
             const requestedKey = `creature_${tpl.id}`;
             const fallbackKey = 'creature_1116';
             const textureKey = this.textures.exists(requestedKey)
@@ -1402,15 +1446,185 @@ function startGame(configPlayer) {
             creatures.push(ally);
             updateCreatureBar(ally);
           }
-          savedAllyTemplates = [];
         };
-        const descendLevel = (toNext = true) => {
+        // Flood-fill the walkable ('.') tiles reachable from START_TILE on the
+        // active map. Used to place spawns and to rebuild a restored floor.
+        const computeReachableFloors = () => {
+          const reachable = [];
+          if (!Array.isArray(currentMap) || !currentMap[START_TILE.gy]) return reachable;
+          const visited = Array.from({ length: dungeonH }, () => Array.from({ length: dungeonW }, () => false));
+          const q = [{ gx: START_TILE.gx, gy: START_TILE.gy }];
+          visited[START_TILE.gy][START_TILE.gx] = true;
+          while (q.length > 0) {
+            const cur = q.shift();
+            if (currentMap[cur.gy] && currentMap[cur.gy][cur.gx] === '.') reachable.push(cur);
+            const dirs = [{ dx: 1, dy: 0 }, { dx: -1, dy: 0 }, { dx: 0, dy: 1 }, { dx: 0, dy: -1 }];
+            for (const d of dirs) {
+              const nx = cur.gx + d.dx;
+              const ny = cur.gy + d.dy;
+              if (nx < 0 || ny < 0 || nx >= dungeonW || ny >= dungeonH) continue;
+              if (visited[ny][nx]) continue;
+              if (!currentMap[ny] || currentMap[ny][nx] !== '.') continue;
+              visited[ny][nx] = true;
+              q.push({ gx: nx, gy: ny });
+            }
+          }
+          return reachable;
+        };
+        // Serialize a live creature down to the fields needed to rebuild it.
+        const serializeCreatureForCache = (c) => ({
+          id: c.id, gx: c.gx, gy: c.gy,
+          hp: c.hp, maxHp: c.maxHp, maxDamage: c.maxDamage,
+          runsAt: c.runsAt, title: c.title, experience: c.experience,
+          speed: c.speed, ranged: c.ranged, range: c.range,
+          convinceCost: c.convinceCost, isConvinced: c.isConvinced,
+          abilities: Array.isArray(c.abilities) ? c.abilities : [],
+          elementMods: c.elementMods || {},
+        });
+        // Rebuild a live creature (sprite + bars) from a cached snapshot.
+        const buildCreatureFromCache = (cs) => {
+          const requestedKey = creatureKey({ id: cs.id });
+          const fallbackKey = creatureKey({ id: 1116 });
+          const textureKey = this.textures.exists(requestedKey)
+            ? requestedKey
+            : (this.textures.exists(fallbackKey) ? fallbackKey : null);
+          if (!textureKey) return null;
+          const isAlly = Boolean(cs.isConvinced);
+          const sprite = createCreatureSprite(this, textureKey, cs.gx, cs.gy);
+          const c = {
+            id: Number(cs.id), sprite, gx: cs.gx, gy: cs.gy,
+            hp: Math.max(1, Number(cs.hp || 1)), maxHp: Math.max(1, Number(cs.maxHp || 1)),
+            maxDamage: Math.max(1, Number(cs.maxDamage || 1)),
+            runsAt: Math.max(0, Number(cs.runsAt || 0)),
+            title: cs.title, experience: Number(cs.experience || 0),
+            speed: Math.max(1, Number(cs.speed || 100)),
+            ranged: cs.ranged === true, range: Math.max(1, Number(cs.range || 1)),
+            alive: true, nextWanderAt: 0, nextActionAt: 0, nextAbilityAt: 0,
+            aggroLocked: false,
+            abilities: Array.isArray(cs.abilities) ? cs.abilities : [],
+            elementMods: cs.elementMods || {},
+            hpBar: makeHealthBar(isAlly ? 0x22c55e : 0xef4444),
+            nameTag: makeNameLabel(cs.title, isAlly ? '#4ade80' : '#f3f4f6'),
+            convinceCost: Math.max(0, Number(cs.convinceCost || 0)),
+            isConvinced: isAlly,
+          };
+          c.hpBar.bg.setDepth(16);
+          c.hpBar.fill.setDepth(17);
+          c.nameTag.setDepth(18);
+          if (isAlly) c.sprite.setTint(0x88ffaa);
+          updateCreatureBar(c);
+          return c;
+        };
+        // Capture the live current floor into a serializable snapshot. Allies
+        // are excluded by default (they travel with the player); a save passes
+        // includeAllies so the floor the player is standing on keeps them.
+        const captureFloorStateSnapshot = ({ includeAllies = false, level = currentLevel } = {}) => ({
+          level: Number(level),
+          map: currentMap,
+          stairs: { gx: currentStairsTile.gx, gy: currentStairsTile.gy },
+          w: Number(dungeonW), h: Number(dungeonH),
+          label: currentFloorCreatureLabel,
+          groupType: currentLevelGroup ? currentLevelGroup.type_primary : null,
+          targetCount: Number(creaturesTargetCount) || 0,
+          playerTile: { gx: playerState.gridX, gy: playerState.gridY },
+          creatures: creatures
+            .filter((c) => c.alive && (includeAllies || !c.isConvinced))
+            .map(serializeCreatureForCache),
+          groundLoot: serializeGroundLoot(),
+        });
+        // Rebuild the whole floor from a cached/saved snapshot: map, visuals,
+        // its own creatures + ground loot, and place the player. Allies that
+        // were following the player are carried across.
+        const restoreFloorFromSnapshot = (fs, opts = {}) => {
+          if (!fs) return;
           setCombatIndicator(false);
+          const followingAllies = snapshotConvincedAllies();
           clearGroundLoot();
           clearAllFireFields();
+          destroyAllCreatures();
+
+          currentMap = Array.isArray(fs.map) ? fs.map : [];
+          currentStairsTile = {
+            gx: Number(fs.stairs && fs.stairs.gx) || START_TILE.gx,
+            gy: Number(fs.stairs && fs.stairs.gy) || START_TILE.gy,
+          };
+          currentRooms = [];
+          dungeonW = Math.min(Number(fs.w) || MAP_W, MAX_DUNGEON_W);
+          dungeonH = Math.min(Number(fs.h) || MAP_H, MAX_DUNGEON_H);
+          currentFloorCreatureLabel = fs.label || 'Creature';
+          currentLevelGroup = { type_primary: fs.groupType || '', creatures: [] };
+          creaturesTargetCount = Number(fs.targetCount) || 0;
+
+          this.cameras.main.setBounds(0, 0, dungeonW * tileSize, dungeonH * tileSize);
+          currentFloors = computeReachableFloors();
+          floorAtmosphere.setThemeForLevel(currentLevel);
+          refreshMapVisuals();
+          applyCurrentLightStateToAtmosphere();
+          floorAtmosphere.showPit(false);
+          redrawMinimapBase();
+          redrawMinimapDynamic();
+          floorAtmosphere.showRopeAnchor(currentLevel > 1);
+
+          for (const cs of (Array.isArray(fs.creatures) ? fs.creatures : [])) {
+            const c = buildCreatureFromCache(cs);
+            if (c) creatures.push(c);
+          }
+          // Allies that walked here with the player (none on a fresh resume,
+          // since the creature list is empty at that point).
+          respawnAllyTemplates(followingAllies);
+          restoreGroundLoot(fs.groundLoot);
+
+          const tile = (opts.playerTile && Number.isFinite(Number(opts.playerTile.gx)))
+            ? opts.playerTile
+            : { gx: START_TILE.gx, gy: START_TILE.gy };
+          playerState.gridX = Number(tile.gx);
+          playerState.gridY = Number(tile.gy);
+          player.x = centerX(playerState.gridX);
+          player.y = centerY(playerState.gridY);
+          updatePlayerBar();
+          hasActiveFloor = true;
+          loadedFloorLevel = Number(currentLevel);
+        };
+        // Snapshot every visited floor (the live one included) for the save.
+        const serializeFloorCacheForSave = () => {
+          const out = [];
+          const liveSnap = hasActiveFloor ? captureFloorStateSnapshot({ includeAllies: true }) : null;
+          for (const [lvl, fs] of floorStateCache.entries()) {
+            if (liveSnap && Number(lvl) === Number(currentLevel)) continue;
+            out.push(fs);
+          }
+          if (liveSnap) out.push(liveSnap);
+          return out;
+        };
+        const descendLevel = (toNext = true, opts = {}) => {
+          // Cache the floor we're leaving so returning to it (stairs, rope, or
+          // a resumed save) restores the exact layout + remaining monsters
+          // instead of regenerating a fresh, repopulated dungeon.
+          if (hasActiveFloor) {
+            floorStateCache.set(
+              Number(loadedFloorLevel),
+              captureFloorStateSnapshot({ includeAllies: false, level: loadedFloorLevel }),
+            );
+          }
+          setCombatIndicator(false);
           const prevLevel = currentLevel;
           if (toNext) currentLevel += 1;
           if (toNext) bus.emit(EVENTS.FLOOR_DESCENDED, { from: prevLevel, to: currentLevel });
+
+          // Already visited? Rehydrate it from the cache and bail out. When the
+          // player climbs *up*, they re-emerge on the same tile they descended
+          // through (the floor's stairs), not at the entry.
+          const cached = floorStateCache.get(Number(currentLevel));
+          if (cached) {
+            const arriveTile = (opts.arriveAtStairs && cached.stairs && Number.isFinite(Number(cached.stairs.gx)))
+              ? { gx: Number(cached.stairs.gx), gy: Number(cached.stairs.gy) }
+              : { gx: START_TILE.gx, gy: START_TILE.gy };
+            restoreFloorFromSnapshot(cached, { playerTile: arriveTile });
+            return;
+          }
+
+          clearGroundLoot();
+          clearAllFireFields();
           currentLevelGroup = pickGroupForLevel(currentLevel);
           // Calcular tamaño del mapa según las criaturas de este floor
           const floorCountCfg = FLOOR_CREATURE_COUNTS[Number(currentLevel)];
@@ -1434,30 +1648,7 @@ function startGame(configPlayer) {
           currentRooms = generated.rooms || [];
           this.cameras.main.setBounds(0, 0, dungeonW * tileSize, dungeonH * tileSize);
           // Solo usamos casillas conectadas al inicio para evitar monstruos bloqueados.
-          const reachable = [];
-          const visited = Array.from({ length: dungeonH }, () => Array.from({ length: dungeonW }, () => false));
-          const q = [{ gx: START_TILE.gx, gy: START_TILE.gy }];
-          visited[START_TILE.gy][START_TILE.gx] = true;
-          while (q.length > 0) {
-            const cur = q.shift();
-            if (currentMap[cur.gy][cur.gx] === '.') reachable.push(cur);
-            const dirs = [
-              { dx: 1, dy: 0 },
-              { dx: -1, dy: 0 },
-              { dx: 0, dy: 1 },
-              { dx: 0, dy: -1 },
-            ];
-            for (const d of dirs) {
-              const nx = cur.gx + d.dx;
-              const ny = cur.gy + d.dy;
-              if (nx < 0 || ny < 0 || nx >= dungeonW || ny >= dungeonH) continue;
-              if (visited[ny][nx]) continue;
-              if (currentMap[ny][nx] !== '.') continue;
-              visited[ny][nx] = true;
-              q.push({ gx: nx, gy: ny });
-            }
-          }
-          currentFloors = reachable;
+          currentFloors = computeReachableFloors();
           floorAtmosphere.setThemeForLevel(currentLevel);
           refreshMapVisuals();
           // refreshMapVisuals recreates the darkness render texture. The
@@ -1471,11 +1662,16 @@ function startGame(configPlayer) {
           const canRopeUp = currentLevel > 1;
           floorAtmosphere.showRopeAnchor(canRopeUp);
           spawnCreaturesForLevel(currentLevel);
-          playerState.gridX = START_TILE.gx;
-          playerState.gridY = START_TILE.gy;
+          const arrive = (opts.arriveAtStairs && currentStairsTile && Number.isFinite(Number(currentStairsTile.gx)))
+            ? currentStairsTile
+            : START_TILE;
+          playerState.gridX = arrive.gx;
+          playerState.gridY = arrive.gy;
           player.x = centerX(playerState.gridX);
           player.y = centerY(playerState.gridY);
           updatePlayerBar();
+          hasActiveFloor = true;
+          loadedFloorLevel = Number(currentLevel);
         };
         const isAdminUser = () => {
           try {
@@ -1656,6 +1852,10 @@ function startGame(configPlayer) {
           burnState:         playerState.burnState,
           poisonState:       playerState.poisonState,
           electrifiedState:  playerState.electrifiedState,
+          // Full per-floor state (every visited floor, current one included)
+          // so resuming lands the player exactly where they saved, with the
+          // same layout and no respawned monsters.
+          floors:            serializeFloorCacheForSave(),
         });
         if (saveGameBtnEl) {
           saveGameBtnEl.addEventListener('click', () => {
@@ -1760,7 +1960,11 @@ function startGame(configPlayer) {
           if (sbCharName) sbCharName.textContent = `${configPlayer.name} (${capitalise(playerState.classKey)})`;
           if (sbLevel) sbLevel.textContent = String(playerState.level);
           if (sbFloor) sbFloor.textContent = String(currentLevel);
-          if (sbCreatures) sbCreatures.textContent = `${typeName}  ${aliveCreatures().length}/${creaturesTargetCount}`;
+          // Enemy summons (isSummon) are spawned on top of the floor's quota,
+          // so they must not inflate the X/target counter — count only the
+          // floor's own spawned monsters.
+          const aliveQuotaCreatures = aliveCreatures().filter((c) => !c.isSummon).length;
+          if (sbCreatures) sbCreatures.textContent = `${typeName}  ${aliveQuotaCreatures}/${creaturesTargetCount}`;
           const hpPct = playerState.maxHp > 0 ? Phaser.Math.Clamp(playerState.hp / playerState.maxHp, 0, 1) : 0;
           const mpPct = playerState.maxMana > 0 ? Phaser.Math.Clamp(playerState.mana / playerState.maxMana, 0, 1) : 0;
           if (sbHpFill) sbHpFill.style.width = `${(hpPct * 100).toFixed(1)}%`;
@@ -2164,6 +2368,7 @@ function startGame(configPlayer) {
         });
         const {
           tileKey,
+          rebuildPlayerField,
           findNearestEnemy,
           findNextStepToTarget,
           findNextStepToPlayer,
@@ -2249,11 +2454,11 @@ function startGame(configPlayer) {
             followPlayerStep();
             return;
           }
-          // If the ally drifted too far from the player (common right after a
-          // floor change when it spawns adjacent to the start tile and the
-          // player walks away), prioritize regrouping over chasing enemies.
+          // Allies hunt floor-wide: they pursue enemies anywhere on the floor
+          // and only regroup if they stray beyond ALLY_HUNT_LEASH (Infinity by
+          // default, so they keep going until the floor is clean).
           const distToPlayer = Math.max(Math.abs(ally.gx - playerState.gridX), Math.abs(ally.gy - playerState.gridY));
-          if (distToPlayer > 6) {
+          if (distToPlayer > ALLY_HUNT_LEASH) {
             followPlayerStep();
             return;
           }
@@ -2299,8 +2504,42 @@ function startGame(configPlayer) {
             ally.nextActionAt = now + actionDelayFromSpeed(ally.speed);
             return;
           }
-          // Path to the nearest enemy is blocked — fall back to following the
-          // player so the ally doesn't freeze in place.
+          // Path to the nearest enemy is beyond BFS range or temporarily
+          // blocked. Instead of trailing the player (which freezes the ally
+          // when the player stands still while a far-off monster remains), take
+          // a greedy step that shrinks the distance to the enemy so the ally
+          // keeps pushing across the floor until it's clean.
+          const greedyStepToward = (tx, ty) => {
+            const cardinals = [
+              { x: ally.gx + 1, y: ally.gy },
+              { x: ally.gx - 1, y: ally.gy },
+              { x: ally.gx, y: ally.gy + 1 },
+              { x: ally.gx, y: ally.gy - 1 },
+            ];
+            let bestTile = null;
+            let bestDist = Math.abs(ally.gx - tx) + Math.abs(ally.gy - ty);
+            for (const t of cardinals) {
+              if (!isWalkable(t.x, t.y)) continue;
+              if (isOccupiedByActor(t.x, t.y)) continue;
+              const d = Math.abs(t.x - tx) + Math.abs(t.y - ty);
+              if (d < bestDist) { bestDist = d; bestTile = t; }
+            }
+            return bestTile;
+          };
+          const greedy = greedyStepToward(target.gx, target.gy);
+          if (greedy) {
+            orientCreatureSprite(ally, greedy.x - ally.gx, greedy.y - ally.gy);
+            ally.gx = greedy.x;
+            ally.gy = greedy.y;
+            _invalidateCreatureTileMap();
+            ally.sprite.x = centerX(ally.gx);
+            ally.sprite.y = centerY(ally.gy);
+            updateCreatureBar(ally);
+            ally.nextActionAt = now + actionDelayFromSpeed(ally.speed);
+            return;
+          }
+          // Truly boxed in — fall back to following the player so the ally
+          // doesn't freeze in place.
           followPlayerStep();
         };
         // Ability cooldown ranges (ms): normal and fury mode
@@ -2312,6 +2551,7 @@ function startGame(configPlayer) {
         const creatureTurn = () => {
           if (gameOver) return;
           _invalidateCreatureTileMap();
+          rebuildPlayerField(); // one shared BFS per turn — creatures descend it in O(1)
           const now = this.time.now;
           resetAttackersPressure();
           for (const creature of aliveCreatures()) {
@@ -2486,9 +2726,32 @@ function startGame(configPlayer) {
           if (typeof onPlayerLevelStatsUpdate === 'function') onPlayerLevelStatsUpdate(playerState.level);
           updatePlayerTimingsByLevel();
 
-          // Jump to the saved floor (regenerates the dungeon for that level).
+          // Jump to the saved floor. New saves carry the full per-floor state,
+          // so rebuild the cache and restore the exact floor (layout, remaining
+          // monsters, ground loot) at the exact tile the player saved on.
+          // Legacy saves (no `floors`) fall back to regenerating each floor.
           const savedFloor = Math.max(1, Number(resumeSnap.currentLevel) || 1);
-          while (currentLevel < savedFloor) descendLevel(true);
+          const savedFloors = Array.isArray(resumeSnap.floors) ? resumeSnap.floors : [];
+          if (savedFloors.length > 0) {
+            floorStateCache.clear();
+            for (const fs of savedFloors) {
+              if (fs && Number.isFinite(Number(fs.level))) floorStateCache.set(Number(fs.level), fs);
+            }
+            currentLevel = savedFloor;
+            const currentFs = floorStateCache.get(savedFloor);
+            if (currentFs) {
+              restoreFloorFromSnapshot(currentFs, {
+                playerTile: {
+                  gx: Number(resumeSnap.gridX),
+                  gy: Number(resumeSnap.gridY),
+                },
+              });
+            } else {
+              descendLevel(false); // saved floor missing from cache — regenerate it
+            }
+          } else {
+            while (currentLevel < savedFloor) descendLevel(true);
+          }
 
           // Learned spells (IDs + hotkey slots).
           restoreLearnedSpells(playerState.learnedSpellIds, playerState.learnedSpellOrder, resumeSnap);

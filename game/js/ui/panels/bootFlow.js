@@ -97,7 +97,20 @@ export function setupBootFlow(deps) {
         if (!item) continue;
         const articleId = Number(item.article_id || item.id || 0);
         if (!articleId) continue;
-        try { await equipItemInSlot(slotKey, articleId); } catch { /* skip bad slot */ }
+        try {
+          const equipped = await equipItemInSlot(slotKey, articleId);
+          // equipItemInSlot re-hydrates a *fresh* catalog item, which drops
+          // per-instance state like stack `count`. Restore it so stackable
+          // equipment (notably ammunition) keeps the saved quantity — without
+          // this the ammo slot reads count 0 and the weapon is "out of ammo".
+          if (equipped) {
+            const restoredSlot = panelState.equippedSlots[slotKey];
+            if (restoredSlot) {
+              const savedCount = Math.max(1, Number(item.count || 1));
+              if (savedCount > 1) restoredSlot.count = savedCount;
+            }
+          }
+        } catch { /* skip bad slot */ }
       }
       const bag = Array.isArray(snap.bagLootItems) ? snap.bagLootItems : [];
       for (const item of bag) {

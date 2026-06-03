@@ -137,6 +137,27 @@
  * @property {{ startedAt: number, nextTickAt: number, tickIndex: number } | null} burnState
  * @property {{ startedAt: number, nextTickAt: number, tickIndex: number } | null} poisonState
  * @property {{ startedAt: number, nextTickAt: number, tickIndex: number } | null} electrifiedState
+ * @property {FloorStateSnapshot[]} [floors] - per-floor state for every visited floor
+ */
+
+/**
+ * Serializable state of a single dungeon floor. Cached as the player moves
+ * between floors and persisted in the save so a resume rebuilds the exact
+ * floor (layout, remaining creatures, ground loot, player tile) instead of
+ * regenerating it. Owned by game.engine.js.
+ *
+ * @typedef {object} FloorStateSnapshot
+ * @property {number} level
+ * @property {string[]} map               - rows of the dungeon ('#' wall, '.' floor)
+ * @property {{ gx: number, gy: number }} stairs
+ * @property {number} w
+ * @property {number} h
+ * @property {string} label
+ * @property {string | null} groupType
+ * @property {number} targetCount
+ * @property {{ gx: number, gy: number }} playerTile
+ * @property {object[]} creatures
+ * @property {Array<{ gx: number, gy: number, items: Item[] }>} groundLoot
  */
 
 /**

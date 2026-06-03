@@ -41,6 +41,48 @@ export function setupCreatureMovement(deps) {
 
   const tileKey = (x, y) => `${x},${y}`;
 
+  // ── Player flow field (shared pathfinding) ──────────────────────────
+  // A horde of creatures all chase the same target (the player). Running a
+  // separate BFS per creature every turn is O(creatures × floor) and is the
+  // dominant per-turn cost on dense floors. Instead we run ONE BFS outward
+  // from the player over the static terrain (`_fieldDist`: tileKey → step
+  // distance to the player) and let each creature descend the gradient in
+  // O(1): step to the cardinal neighbour with the lowest distance. Rebuilt
+  // once per turn via rebuildPlayerField() — terrain only, so creature
+  // occupancy is applied at step-selection time, not baked into the field.
+  let _fieldDist = null;
+  const MAX_FIELD_NODES = 6000;
+
+  function buildPlayerField() {
+    const px = playerState.gridX;
+    const py = playerState.gridY;
+    const dist = new Map();
+    dist.set(tileKey(px, py), 0);
+    const queue = [{ x: px, y: py }];
+    let head = 0;
+    const dirs = [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }];
+    while (head < queue.length && dist.size < MAX_FIELD_NODES) {
+      const cur = queue[head++];
+      const d = dist.get(tileKey(cur.x, cur.y));
+      for (const dd of dirs) {
+        const nx = cur.x + dd.x;
+        const ny = cur.y + dd.y;
+        const k = tileKey(nx, ny);
+        if (dist.has(k)) continue;
+        if (!isWalkable(nx, ny)) continue;
+        dist.set(k, d + 1);
+        queue.push({ x: nx, y: ny });
+      }
+    }
+    return dist;
+  }
+
+  /** Recompute the player flow field. Call once at the start of each turn. */
+  function rebuildPlayerField() {
+    _fieldDist = buildPlayerField();
+    return _fieldDist;
+  }
+
   /** Nearest alive enemy to (fromX, fromY) by Manhattan distance. */
   function findNearestEnemy(fromX, fromY) {
     let best = null;
@@ -104,9 +146,37 @@ export function setupCreatureMovement(deps) {
     return null;
   }
 
-  /** Same as findNextStepToTarget but hard-coded to the player's tile. */
+  /**
+   * Next step toward the player via the shared flow field — O(1) per creature.
+   * Steps to the cardinal neighbour with the lowest distance-to-player that is
+   * walkable and not occupied this tick. Falls back to the per-creature BFS
+   * when the creature is off the field (isolated pocket) or every closer tile
+   * is blocked by the crowd, so behaviour matches the old BFS in those cases.
+   */
   function findNextStepToPlayer(fromX, fromY) {
-    return findNextStepToTarget(fromX, fromY, playerState.gridX, playerState.gridY);
+    const px = playerState.gridX;
+    const py = playerState.gridY;
+    if (isCreatureMeleeAdjacent(fromX, fromY, px, py)) return null;
+    const field = _fieldDist || rebuildPlayerField();
+    const fromD = field.get(tileKey(fromX, fromY));
+    if (fromD === undefined) return findNextStepToTarget(fromX, fromY, px, py);
+    const dirs = [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }];
+    let best = null;
+    let bestD = fromD; // candidate must be strictly closer than the current tile
+    for (const d of dirs) {
+      const nx = fromX + d.x;
+      const ny = fromY + d.y;
+      if (nx === px && ny === py) continue; // never step onto the player's tile
+      const nd = field.get(tileKey(nx, ny));
+      if (nd === undefined || nd >= bestD) continue;
+      if (isOccupiedByActor(nx, ny)) continue;
+      bestD = nd;
+      best = { x: nx, y: ny };
+    }
+    if (best) return best;
+    // Every strictly-closer tile is walled or occupied — let the full BFS try
+    // to route around the obstruction (rare; only blocked creatures pay this).
+    return findNextStepToTarget(fromX, fromY, px, py);
   }
 
   /**
@@ -242,6 +312,7 @@ export function setupCreatureMovement(deps) {
 
   return {
     tileKey,
+    rebuildPlayerField,
     findNearestEnemy,
     findNextStepToTarget,
     findNextStepToPlayer,
