@@ -5,6 +5,14 @@
  */
 export const CHANGELOG = [
   {
+    version: '1.3.1',
+    date: '2026-06-03',
+    entries: [
+      'Perf: fixed an atmosphere-particle leak on smoky floors that left immortal tweens running and built up lag over a session',
+      'SW: cache bumped to v10',
+    ],
+  },
+  {
     version: '1.3.0',
     date: '2026-04-21',
     entries: [

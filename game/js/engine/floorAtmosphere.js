@@ -1858,6 +1858,7 @@ export function createFloorAtmosphere(scene, opts) {
   // ── Ambient particles ───────────────────────────────────────────────
   function rebuildParticles(dungeonW, dungeonH) {
     for (const s of particleSprites) {
+      s.killed = true;            // halt any recursive jitter chain (erratic mode)
       if (s.tween) s.tween.stop();
       s.obj.destroy();
     }
@@ -1910,10 +1911,16 @@ export function createFloorAtmosphere(scene, opts) {
         });
       } else if (mode === 'erratic') {
         sprite.alpha = alpha;
+        // Erratic particles re-tween themselves on every onComplete. Track the
+        // live tween + a kill flag on the record so rebuildParticles() can stop
+        // the chain — otherwise the recursion outlives the destroyed sprite and
+        // leaks an immortal tween per particle every time the floor is rebuilt.
+        const rec = { obj: sprite, tween: null, killed: false };
         const jitter = () => {
+          if (rec.killed) return;
           const nx = sprite.x + (Math.random() - 0.5) * 50;
           const ny = sprite.y + (Math.random() - 0.5) * 50;
-          scene.tweens.add({
+          rec.tween = scene.tweens.add({
             targets: sprite, x: nx, y: ny,
             duration: 350 + Math.random() * 450,
             ease: 'Sine.inOut',
@@ -1921,7 +1928,8 @@ export function createFloorAtmosphere(scene, opts) {
           });
         };
         jitter();
-        tween = null;
+        particleSprites.push(rec);
+        continue;
       } else {
         // drift (default)
         const driftX = (Math.random() - 0.5) * speed;
