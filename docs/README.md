@@ -7,8 +7,14 @@ The entry point is always [`/CLAUDE.md`](../CLAUDE.md). Start there. The files b
 ## Onboarding
 
 - [`architecture.md`](architecture.md) — layer map, plug-in seams for the upcoming visual work, what each module owns and why.
+- [`dev-log.md`](dev-log.md) — technical decisions + notable changes over time (the *why* behind the code; read this for context).
 - [`glossary.md`](glossary.md) — Tibia jargon and project-specific terms.
 - [`gameplay-notes.md`](gameplay-notes.md) — empirical observations from playtests (combat formulas, balance quirks, bot signals).
+
+## Systems
+
+- [`spell-vfx.md`](spell-vfx.md) — the spell visual-effects system (particles, beams, cohesive area blasts, bloom) for player + monster abilities.
+- [`perf-playbook.md`](perf-playbook.md) — how to diagnose + fix frame-rate problems, the `window.debugPerf` console, and the known render costs.
 
 ## How-to recipes
 

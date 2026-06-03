@@ -20,6 +20,8 @@ Where to look when something is wrong. The runtime has no central logger — mos
 - `tdAuth` — auth state from [`game/js/ui/auth.js`](../game/js/ui/auth.js). Useful to check `tdAuth.isLoggedIn()`.
 - `debugInventory` — `{ addGold, addLoot }`. Hand-craft inventory state without playing the game.
 - `_resetInventoryForNewRun` — wipe the bag/equipment without restarting.
+- `debugGod` — admin-only (gated on `tdAuth.isAdmin()`): `enable()` / `disable()` / `toggle()` god mode, `goToFloor(n)` / `nextFloor()` / `prevFloor()` to teleport. Essential for reproducing a deep-floor bug fast. The prod admin account exists in Redis; locally, seed an admin user (see `CLAUDE.md` deploy notes).
+- `debugPerf` — frame-rate diagnostics (WebGL): `stats()` (`{ fps, objects, tweens, … }`), `profile()` (avg AI-turn ms), and live render toggles `cull/nametags/healthbars/env/darkness/particles/decor/bloom(false)`. Flip a system off and watch `fps` to find a cost. Full method: [`perf-playbook.md`](perf-playbook.md).
 
 ### In-game combat log
 
@@ -38,7 +40,7 @@ API failures show here. Common ones:
 
 ### Service worker
 
-After moving files: `Application` tab → `Service Workers` → check the cache version. If still `tibia-dungeons-v6` (or older), bump `CACHE` in [`game/sw.js`](../game/sw.js), unregister the SW, hard-refresh.
+After moving files: `Application` tab → `Service Workers` → check the cache version against `CACHE` in [`game/sw.js`](../game/sw.js). If the browser is serving an older `tibia-dungeons-vNN`, bump `CACHE`, unregister the SW, hard-refresh. (Every release bumps it.)
 
 ## Common runtime errors and what they mean
 

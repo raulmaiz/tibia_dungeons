@@ -59,7 +59,8 @@ Layer-by-layer detail with reasoning: [`docs/architecture.md`](docs/architecture
 
 - **Magic numbers go to `game/js/config/`.** Never inline a tile size, color, or timing.
 - **Sprites for entities** (player, creature, fire/poison field, ground tile) are built via `rendering/SpriteFactory.js`. Never `this.add.sprite(...)` directly in the engine — it bypasses the future Lights2D/normal-map pipeline.
-- **VFX calls** (shake, flash, beams, projectiles) import from `rendering/Renderer.js`, never from `vfx.js`. The shim exists for future post-FX wrapping.
+- **VFX calls** (shake, flash, beams, projectiles, **spell particles/bloom**) import from `rendering/Renderer.js`, never from `vfx.js` or `rendering/SpellParticles.js` directly. The spell "magic" look (bursts, beams, cohesive area blasts, bloom) lives in [`rendering/SpellParticles.js`](game/js/rendering/SpellParticles.js) — see [`docs/spell-vfx.md`](docs/spell-vfx.md).
+- **Never leave a large static `Graphics` live.** Phaser re-tessellates a Graphics' full command list every frame — a map-wide one tanks FPS. Bake it to a `RenderTexture` once (see `bakeStaticDecor` in `floorAtmosphere.js`). [`docs/perf-playbook.md`](docs/perf-playbook.md).
 - **Coordinates** go through `world/Projection.js`. Inline `gx * tileSize + tileSize/2` is forbidden — it will silently break the iso migration.
 - **Module-shared state** uses `state/playerSession.js` setter pattern. Never reassign an imported `let` binding (ESM throws). Always call the matching `set<Name>()`.
 - **Gameplay events** emit through `core/EventBus.js` (`bus.emit(EVENTS.ENTITY_DIED, {...})`). Future systems (particles, audio) hook in via `bus.on()` without touching combat code.
@@ -79,8 +80,11 @@ Layer-by-layer detail with reasoning: [`docs/architecture.md`](docs/architecture
 | Add a creature / monster | [`docs/how-to-add-creature.md`](docs/how-to-add-creature.md) |
 | Add a spell | [`docs/how-to-add-spell.md`](docs/how-to-add-spell.md) |
 | Add a floor / theme | [`docs/how-to-add-floor.md`](docs/how-to-add-floor.md) |
+| Touch / tune spell visuals (particles, beams, bloom, area FX) | [`docs/spell-vfx.md`](docs/spell-vfx.md) |
+| Fix lag / frame-rate (method + `window.debugPerf`) | [`docs/perf-playbook.md`](docs/perf-playbook.md) |
 | Debug a runtime issue | [`docs/how-to-debug.md`](docs/how-to-debug.md) |
 | Understand the layer structure / why | [`docs/architecture.md`](docs/architecture.md) |
+| Know why the codebase looks the way it does (decisions, history) | [`docs/dev-log.md`](docs/dev-log.md) |
 | Decode Tibia jargon (vocation, cap, fist, …) | [`docs/glossary.md`](docs/glossary.md) |
 | Reference real playtest observations | [`docs/gameplay-notes.md`](docs/gameplay-notes.md) |
 
@@ -93,3 +97,11 @@ npm run push                                      # bump patch + commit + push
 npm run release                                   # bump minor + commit + push
 NODE_TLS_REJECT_UNAUTHORIZED=0 vercel --prod --yes  # deploy (TLS flag is the WSL workaround)
 ```
+
+**Deploy reality (read before shipping):**
+- The manual release loop we actually use: bump `VERSION` in `game/js/data/version.js`, add a `changelog.js` entry, bump `CACHE` in `game/sw.js`, `node scripts/build.js`, commit, push, `vercel --prod --yes`. Then verify live: `curl -sL https://www.tibia-dungeons.com/sw.js | grep CACHE`.
+- **Two Vercel projects exist.** The live player domain **`www.tibia-dungeons.com` is the `tibia_dungeons-main` project** (a successful `vercel --prod` prints `Aliased: https://www.tibia-dungeons.com`). The other project (`tibia_dungeons` → `tibiadungeons.vercel.app`) is a stale duplicate — ignore it.
+- **`git push` needs a manually-supplied GitHub PAT** — there is no `gh` login or credential helper, and `origin` is HTTPS. Push via `git push "https://<token>@github.com/raulmaiz/tibia_dungeons.git" main` and mask the token in any output. Don't store it.
+- Upstash Redis creds (prod saves/HoF) aren't in `vercel env ls`; `vercel env pull --environment=production` retrieves them. The prod admin user already exists (`user:admin`, role=admin) for `window.debugGod`.
+
+Full session history + rationale: [`docs/dev-log.md`](docs/dev-log.md).
