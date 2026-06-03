@@ -79,8 +79,18 @@ export const CREATURE_ABILITY_PATTERN_BY_NAME = {
   'biting cold': { kind: 'cone_to_player', depth: 3 },
 };
 
+const _abilityPatternCache = new Map();
+
 export function inferCreatureAbilityPattern(ability) {
   const name = String((ability && ability.name) || '').toLowerCase().trim();
+  const cached = _abilityPatternCache.get(name);
+  if (cached !== undefined) return { ...cached };
+  const pattern = computeCreatureAbilityPattern(name);
+  _abilityPatternCache.set(name, pattern);
+  return { ...pattern };
+}
+
+function computeCreatureAbilityPattern(name) {
   if (CREATURE_ABILITY_PATTERN_BY_NAME[name]) return { ...CREATURE_ABILITY_PATTERN_BY_NAME[name] };
   if (name === 'none' || name.includes('probably other') || name.includes('and more') || name.includes('invisib')) return { kind: 'none' };
   if (name.includes('bomb') || name.includes('great fireball')) return { kind: 'nova_at_player', radius: 1 };

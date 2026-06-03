@@ -5,6 +5,17 @@
  */
 export const CHANGELOG = [
   {
+    version: '1.3.3',
+    date: '2026-06-03',
+    entries: [
+      'Perf: big FPS fix on dense floors — wall decoration is now baked into a cached texture once per floor instead of being redrawn every frame (some floors ran at ~9 fps, now smooth)',
+      'Perf: the darkness overlay only repaints the visible area instead of the whole map',
+      'Perf: off-screen creatures and their health bars / name tags are no longer drawn',
+      'Perf: creatures no longer re-evaluate blocked abilities every tick',
+      'SW: cache bumped to v12',
+    ],
+  },
+  {
     version: '1.3.2',
     date: '2026-06-03',
     entries: [

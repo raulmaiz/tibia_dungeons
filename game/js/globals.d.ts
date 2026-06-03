@@ -101,4 +101,15 @@ interface Window {
     nextFloor(): number | boolean;
     prevFloor(): number | boolean;
   };
+  debugPerf?: {
+    cull(on?: boolean): boolean;
+    env(on?: boolean): boolean;
+    darkness(on?: boolean): boolean;
+    particles(on?: boolean): boolean;
+    decor(on?: boolean): boolean;
+    nametags(on?: boolean): boolean;
+    healthbars(on?: boolean): boolean;
+    stats(): { fps: number; objects: number; tweens: number; alive: number; onScreen: number; summons: number; flags: object };
+    profile(): { avgTurnMs: number; maxTurnMs: number; samples: number };
+  };
 }

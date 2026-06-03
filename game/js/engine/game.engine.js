@@ -856,14 +856,22 @@ function startGame(configPlayer) {
         // Look up a creature template by title across every tier — used by
         // summon abilities to resolve "name" → spawnable creature. Returns
         // null if the title isn't in any tier (e.g. flavour-only summons).
+        // typeProgressionGroups is static for the run, so memoise title→template
+        // lookups. Summon abilities resolve their target by title every cast
+        // attempt; without the cache this re-scans the whole roster (lowercasing
+        // every title) on each evaluation — costly when a summoner re-tries.
+        const _templateByTitleCache = new Map();
         const findCreatureTemplateByTitle = (title) => {
           const needle = String(title || '').trim().toLowerCase();
           if (!needle) return null;
+          if (_templateByTitleCache.has(needle)) return _templateByTitleCache.get(needle);
+          let found = null;
           for (const g of typeProgressionGroups) {
             const c = (g.creatures || []).find((x) => String(x.title || '').trim().toLowerCase() === needle);
-            if (c) return c;
+            if (c) { found = c; break; }
           }
-          return null;
+          _templateByTitleCache.set(needle, found);
+          return found;
         };
         const findWalkableAdjacentTile = (gx, gy) => {
           const dirs = [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]];
@@ -1038,23 +1046,90 @@ function startGame(configPlayer) {
           creature.hpBar.fill.setVisible(creature.alive);
           if (creature.nameTag) creature.nameTag.setVisible(creature.alive);
         };
+        // Runtime perf switches, toggleable from the console via window.debugPerf.
+        // All default ON (current behaviour); flipping one OFF helps isolate the
+        // dominant render cost on dense floors.
+        const perfFlags = { cullCreatures: true, nametags: true, healthbars: true };
+        // Rolling profiler for the creature AI turn (filled by the turn timer).
+        let _profTurnMs = 0;
+        let _profTurnCount = 0;
+        let _profTurnMax = 0;
+        const _diagScene = this; // captured for debugPerf scene metrics
         const updateAllHealthBars = () => {
           updatePlayerBar();
-          // Per-move mutations already call updateCreatureBar themselves, so
-          // this per-frame pass only needs to sync creatures near the player
-          // (the ones the user can actually see). Off-screen monsters keep
-          // their last bar state until they next move/take damage.
-          const CULL_RANGE_TILES = 18;
+          // Per-frame pass over every creature. Cull the *rendering* of
+          // off-screen creatures (sprite + health bar + name tag) so a dense,
+          // large floor doesn't pay to draw 50+ unbatched Text/Shape objects
+          // each frame — only what's actually inside the camera view is drawn.
+          // On-screen creatures get their bar/label repositioned + recoloured.
+          const view = this.cameras.main.worldView;
+          const pad = tileSize * 1.5; // keep edge creatures drawn while partly visible
+          const minX = view.x - pad;
+          const maxX = view.x + view.width + pad;
+          const minY = view.y - pad;
+          const maxY = view.y + view.height + pad;
           for (let i = 0; i < creatures.length; i += 1) {
             const c = creatures[i];
             if (!c.alive) continue;
-            const dx = c.gx - playerState.gridX;
-            const dy = c.gy - playerState.gridY;
-            const absdx = dx < 0 ? -dx : dx;
-            const absdy = dy < 0 ? -dy : dy;
-            if ((absdx > absdy ? absdx : absdy) > CULL_RANGE_TILES) continue;
+            const sx = c.sprite.x;
+            const sy = c.sprite.y;
+            const onScreen = !perfFlags.cullCreatures
+              || (sx >= minX && sx <= maxX && sy >= minY && sy <= maxY);
+            if (c.sprite.visible !== onScreen) c.sprite.setVisible(onScreen);
+            if (!onScreen) {
+              if (c.hpBar && c.hpBar.bg.visible) {
+                c.hpBar.bg.setVisible(false);
+                c.hpBar.fill.setVisible(false);
+              }
+              if (c.nameTag && c.nameTag.visible) c.nameTag.setVisible(false);
+              continue;
+            }
             updateCreatureBar(c);
+            // Debug overrides (updateCreatureBar re-shows bars/labels for alive creatures).
+            if (!perfFlags.healthbars && c.hpBar) {
+              c.hpBar.bg.setVisible(false);
+              c.hpBar.fill.setVisible(false);
+            }
+            if (!perfFlags.nametags && c.nameTag) c.nameTag.setVisible(false);
           }
+        };
+        window.debugPerf = {
+          cull(on = true) { perfFlags.cullCreatures = Boolean(on); return perfFlags.cullCreatures; },
+          env(on = true) { return floorAtmosphere.setAtmosphereEnabled(on); },
+          darkness(on = true) { return floorAtmosphere.setDarknessEnabled(on); },
+          particles(on = true) { return floorAtmosphere.setParticlesEnabled(on); },
+          decor(on = true) { return floorAtmosphere.setDecorEnabled(on); },
+          nametags(on = true) { perfFlags.nametags = Boolean(on); return perfFlags.nametags; },
+          healthbars(on = true) { perfFlags.healthbars = Boolean(on); return perfFlags.healthbars; },
+          stats() {
+            const alive = creatures.filter((c) => c.alive);
+            const onScreen = alive.filter((c) => c.sprite && c.sprite.visible).length;
+            const summons = alive.filter((c) => c.isSummon).length;
+            const tm = _diagScene.tweens;
+            const tweens = (tm.getTweens ? tm.getTweens() : tm.getAllTweens()).length;
+            const objects = _diagScene.children.list.length;
+            const fps = Math.round(_diagScene.game.loop.actualFps);
+            const out = {
+              fps, objects, tweens,
+              alive: alive.length, onScreen, summons,
+              flags: { ...perfFlags },
+            };
+            console.log('[debugPerf]', out);
+            return out;
+          },
+          // Average / worst ms spent in the creature AI turn since the last call.
+          // High avg here (vs a fluid floor) = the lag is CPU/AI, not rendering.
+          profile() {
+            const avg = _profTurnCount ? _profTurnMs / _profTurnCount : 0;
+            const out = {
+              avgTurnMs: Math.round(avg * 1000) / 1000,
+              maxTurnMs: Math.round(_profTurnMax * 1000) / 1000,
+              samples: _profTurnCount,
+            };
+            console.log('[debugPerf.profile]', out);
+            _profTurnMs = 0; _profTurnCount = 0; _profTurnMax = 0;
+            return out;
+          },
         };
         const hasStairsAtPlayer = () => playerState.gridX === currentStairsTile.gx && playerState.gridY === currentStairsTile.gy;
         const hasRopeUpAtPlayer = () => playerState.gridX === START_TILE.gx && playerState.gridY === START_TILE.gy;
@@ -2547,6 +2622,11 @@ function startGame(configPlayer) {
         const ABILITY_CD_MAX = 4200;
         const ABILITY_CD_FURY_MIN = 700;
         const ABILITY_CD_FURY_MAX = 1400;
+        // When an ability attempt fails (out of range / no LOS / summon at cap),
+        // back off before re-evaluating. Without this nextAbilityAt never
+        // advances on failure, so blocked casters re-run the (costly) ability
+        // evaluation every single 90ms turn — the dense-floor lag culprit.
+        const ABILITY_RETRY_MS = 300;
 
         const creatureTurn = () => {
           if (gameOver) return;
@@ -2572,9 +2652,9 @@ function startGame(configPlayer) {
               // creatures will only fire spells whose pattern actually reaches the player.
               if (now >= creature.nextAbilityAt) {
                 const usedAbility = tryUseCreatureAbility(creature);
-                if (usedAbility) {
-                  creature.nextAbilityAt = now + Phaser.Math.Between(ABILITY_CD_FURY_MIN, ABILITY_CD_FURY_MAX);
-                }
+                creature.nextAbilityAt = now + (usedAbility
+                  ? Phaser.Math.Between(ABILITY_CD_FURY_MIN, ABILITY_CD_FURY_MAX)
+                  : ABILITY_RETRY_MS);
                 acted = usedAbility || acted;
               }
               creature.nextActionAt = now + (acted ? actionDelayFromSpeed(creature.speed) : 120);
@@ -2586,10 +2666,10 @@ function startGame(configPlayer) {
             // --- Ability tick (independent cooldown) ---
             if (now >= creature.nextAbilityAt) {
               const usedAbility = tryUseCreatureAbility(creature);
-              if (usedAbility) {
-                creature.nextAbilityAt = now + Phaser.Math.Between(ABILITY_CD_MIN, ABILITY_CD_MAX);
-                acted = true;
-              }
+              creature.nextAbilityAt = now + (usedAbility
+                ? Phaser.Math.Between(ABILITY_CD_MIN, ABILITY_CD_MAX)
+                : ABILITY_RETRY_MS);
+              if (usedAbility) acted = true;
             }
 
             // --- Movement ---
@@ -2801,7 +2881,14 @@ function startGame(configPlayer) {
         this.time.addEvent({
           delay: 90,
           loop: true,
-          callback: creatureTurn,
+          callback: () => {
+            const t0 = performance.now();
+            creatureTurn();
+            const dt = performance.now() - t0;
+            _profTurnMs += dt;
+            _profTurnCount += 1;
+            if (dt > _profTurnMax) _profTurnMax = dt;
+          },
         });
         this.time.addEvent({
           delay: 90,

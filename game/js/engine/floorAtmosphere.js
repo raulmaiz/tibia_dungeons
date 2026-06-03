@@ -67,6 +67,10 @@ export function createFloorAtmosphere(scene, opts) {
   const DARKNESS_ALPHA    = 0.97;
   let darknessRT    = null;
   let lightBrushG   = null;
+  let staticDecorRT = null; // baked decor + wall accents (static per floor)
+  let _darknessEnabled  = true; // debug toggles to isolate per-frame cost
+  let _particlesEnabled = true;
+  let _decorEnabled     = true;
   let activeLightSpells = []; // { id, initialRadius, startTime, duration }
   // Equipment light (torch, wand, lamp...). Radius fades linearly to 0 over
   // `duration` ms if duration > 0; otherwise stays constant at `initialRadius`.
@@ -2101,7 +2105,7 @@ export function createFloorAtmosphere(scene, opts) {
   }
 
   function updateDarkness(nowMs, px, py) {
-    if (!darknessRT) return;
+    if (!darknessRT || !_darknessEnabled) return;
     // Drop expired spells / transient lights / area lights.
     activeLightSpells = activeLightSpells.filter((l) => (nowMs - l.startTime) < l.duration);
     transientLights = transientLights.filter((l) => (nowMs - l.startTime) < l.duration);
@@ -2152,7 +2156,14 @@ export function createFloorAtmosphere(scene, opts) {
     }
 
     darknessRT.clear();
-    darknessRT.fill(0x000000, DARKNESS_ALPHA);
+    // Only refill the camera's visible world-rect (plus a margin), not the
+    // entire map-sized texture. The off-screen darkness was pure wasted fill
+    // rate and was the dominant per-frame cost on large floors (e.g. floor 12
+    // dropped to ~9 fps). darknessRT stays world-space, so light coords below
+    // are unchanged — we just stop painting black where nobody can see it.
+    const vw = cam.worldView;
+    const m = tileSize * 2;
+    darknessRT.fill(0x000000, DARKNESS_ALPHA, vw.x - m, vw.y - m, vw.width + m * 2, vw.height + m * 2);
     paintLightAt(px, py, coreR, coreR * 1.5);
 
     // World-space area lights (fire fields etc.) — steady radius with a
@@ -2182,6 +2193,27 @@ export function createFloorAtmosphere(scene, opts) {
 
   function clearLightSpells() { activeLightSpells = []; }
 
+  // Bake the static wall-accent + decoration Graphics into a single cached
+  // texture. A Phaser Graphics re-tessellates its full command list every
+  // frame; on a 60×40 floor with a dense wall pattern that is tens of
+  // thousands of triangles per frame and was the dominant render cost. Drawn
+  // once per floor here, it composites as one quad afterwards.
+  function bakeStaticDecor(dungeonW, dungeonH) {
+    const w = dungeonW * tileSize;
+    const h = dungeonH * tileSize;
+    if (staticDecorRT) staticDecorRT.destroy();
+    staticDecorRT = scene.add.renderTexture(0, 0, w, h).setOrigin(0, 0).setDepth(2);
+    staticDecorRT.setVisible(_decorEnabled);
+    // decorLayer is depth 1 (under), wallAccentLayer depth 2 (over).
+    decorLayer.setVisible(true);
+    wallAccentLayer.setVisible(true);
+    staticDecorRT.draw(decorLayer);
+    staticDecorRT.draw(wallAccentLayer);
+    // Hide the live Graphics — the baked texture replaces them.
+    decorLayer.setVisible(false);
+    wallAccentLayer.setVisible(false);
+  }
+
   function rebuildAll(currentMap, dungeonW, dungeonH, pitTile, spawnTile) {
     applyTilePalette(currentMap, dungeonW, dungeonH);
     rebuildWallAccents(currentMap, dungeonW, dungeonH);
@@ -2190,10 +2222,41 @@ export function createFloorAtmosphere(scene, opts) {
     if (pitTile) renderPit(pitTile.gx, pitTile.gy);
     if (spawnTile) renderRopeAnchor(spawnTile.gx, spawnTile.gy);
     setWorldSize(dungeonW, dungeonH);
+    bakeStaticDecor(dungeonW, dungeonH);
+  }
+
+  // Debug toggles to isolate per-frame render cost on dense floors.
+  function setDarknessEnabled(on) {
+    _darknessEnabled = Boolean(on);
+    if (darknessRT) darknessRT.setVisible(_darknessEnabled);
+    if (vignetteRT) vignetteRT.setVisible(_darknessEnabled);
+    return _darknessEnabled;
+  }
+  function setParticlesEnabled(on) {
+    _particlesEnabled = Boolean(on);
+    if (particleLayer) particleLayer.setVisible(_particlesEnabled);
+    return _particlesEnabled;
+  }
+  function setDecorEnabled(on) {
+    _decorEnabled = Boolean(on);
+    // decorLayer / wallAccentLayer are baked into staticDecorRT and stay hidden.
+    if (staticDecorRT) staticDecorRT.setVisible(_decorEnabled);
+    if (ambientTint) ambientTint.setVisible(_decorEnabled);
+    return _decorEnabled;
+  }
+  function setAtmosphereEnabled(on) {
+    setDarknessEnabled(on);
+    setParticlesEnabled(on);
+    setDecorEnabled(on);
+    return Boolean(on);
   }
 
   return {
     setThemeForLevel,
+    setAtmosphereEnabled,
+    setDarknessEnabled,
+    setParticlesEnabled,
+    setDecorEnabled,
     rebuildAll,
     renderPit,
     showPit,
