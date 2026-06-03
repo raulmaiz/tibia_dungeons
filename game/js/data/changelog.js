@@ -5,6 +5,15 @@
  */
 export const CHANGELOG = [
   {
+    version: '1.3.4',
+    date: '2026-06-03',
+    entries: [
+      'Fix: resuming a cleared floor now shows the descent pit again (it was only revealed by a direct killing blow, so it stayed hidden after a save+resume)',
+      'Fix: clearing the last enemy with a spell or damage-over-time now also reveals the descent pit',
+      'SW: cache bumped to v13',
+    ],
+  },
+  {
     version: '1.3.3',
     date: '2026-06-03',
     entries: [

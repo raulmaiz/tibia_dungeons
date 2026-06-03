@@ -1644,6 +1644,10 @@ function startGame(configPlayer) {
             const c = buildCreatureFromCache(cs);
             if (c) creatures.push(c);
           }
+          // The descent pit is normally revealed by the killing blow in
+          // PlayerAttack. On resume nothing dies, so reveal it here when the
+          // restored floor is already clear (you can only save once it is).
+          floorAtmosphere.showPit(aliveCreatures().length === 0);
           // Allies that walked here with the player (none on a fresh resume,
           // since the creature list is empty at that point).
           respawnAllyTemplates(followingAllies);
@@ -2922,6 +2926,10 @@ function startGame(configPlayer) {
             // banner if it happens to be open.
             updateOpenMarketButton();
             updateSaveGameButton();
+            // Keep the descent pit in sync with the clear state no matter how
+            // the last enemy died (spell / damage-over-time / resume) —
+            // PlayerAttack only reveals it on a direct killing blow.
+            floorAtmosphere.showPit(aliveCreatures().length === 0);
             updateMarketBanner();
             // Combat indicator: show when any creature has aggro on the player
             setCombatIndicator(aliveCreatures().some(c => hasAggro(c)));
