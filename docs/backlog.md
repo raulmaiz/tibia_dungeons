@@ -73,6 +73,15 @@
 
 ## F2 — Mazmorras 3D
 
+> ✅ F2 completada (noche 2026-07-01, commits `8fc0fd2`→`7f2d444`). Notas:
+> spawns capados a 30 rigs por rendimiento hasta T-052b/T-060; plantas 21+
+> ciclan las tablas 1–20 (la progresión pooled del legacy para 21+ queda
+> pendiente como tarea nueva T-025); drop tables van en T-041.
+
+### T-025 — Progresión de plantas 21+ (pooled random groups del legacy) ⬜
+- **Descripción**: portar `pickGroupForLevel` + pools por experiencia del engine legacy para plantas >20, sustituyendo el ciclado actual.
+- **Dependencias**: T-024.
+
 ### T-020 — Adaptador generator → escena 3D (ADR-002)
 - **Descripción**: el generador legado emite `TileMap` (grid de tipos). Nuevo módulo `domain/dungeon/meshPlan.ts` que lo transforma en un plan de instancias (suelo, pared, puerta, escalera, prop) consumible por el render. Sin tocar el algoritmo de generación.
 - **Criterios**: test: toda tile walkable tiene suelo; toda frontera walkable/no-walkable tiene pared; hay exactamente 1 escalera alcanzable desde el spawn (BFS en test).
