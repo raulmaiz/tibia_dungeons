@@ -35,8 +35,13 @@ function loadTemplate(): Promise<LoadedTemplate> {
 }
 
 function buildRig(template: LoadedTemplate, tint: number | null): CharacterRig {
-  const root = SkeletonUtils.clone(template.scene);
-  root.scale.setScalar(0.55); // soldier is ~1.8u tall; fit ~1-tile world scale
+  const model = SkeletonUtils.clone(template.scene);
+  model.scale.setScalar(0.55); // soldier is ~1.8u tall; fit ~1-tile world scale
+  // Soldier.glb faces -Z; bake a 180° turn so `root.rotation.y = heading`
+  // (movement systems assume +Z-facing models, the glTF standard).
+  model.rotation.y = Math.PI;
+  const root = new THREE.Group();
+  root.add(model);
 
   if (tint != null) {
     root.traverse((obj) => {
@@ -49,7 +54,7 @@ function buildRig(template: LoadedTemplate, tint: number | null): CharacterRig {
     });
   }
 
-  const mixer = new THREE.AnimationMixer(root);
+  const mixer = new THREE.AnimationMixer(model);
   const byName = new Map(template.clips.map((c) => [c.name.toLowerCase(), c]));
   const actions: Record<CharacterAnim, THREE.AnimationAction | null> = {
     idle: byName.has('idle') ? mixer.clipAction(byName.get('idle')!) : null,
