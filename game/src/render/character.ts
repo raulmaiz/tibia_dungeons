@@ -86,7 +86,7 @@ export async function loadPlayerRig(): Promise<CharacterRig> {
   return buildRig(await loadTemplate(), null);
 }
 
-/** Enemy rig — red tint distinguishes hostiles until real models land (T-052b). */
-export async function loadEnemyRig(): Promise<CharacterRig> {
-  return buildRig(await loadTemplate(), 0xff5544);
+/** Enemy rig — tinted per creature family until real models land (T-052b). */
+export async function loadEnemyRig(tint = 0xff5544): Promise<CharacterRig> {
+  return buildRig(await loadTemplate(), tint);
 }

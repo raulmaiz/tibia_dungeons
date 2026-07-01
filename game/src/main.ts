@@ -36,7 +36,7 @@ async function boot(): Promise<void> {
   let attackTargetId: string | null = null;
   let descending = false;
 
-  hud.setFloor(floorLevel);
+  hud.setFloor(floorLevel, floor.label);
 
   // ── Move marker ──────────────────────────────────────────────────────────
   const marker = new THREE.Mesh(
@@ -114,7 +114,7 @@ async function boot(): Promise<void> {
     const prevHp = player.stats.hp;
     player = makePlayer(floor.spawn.gx, floor.spawn.gy, player.stats.maxHp);
     player.stats.hp = Math.min(prevHp, player.stats.maxHp);
-    hud.setFloor(floorLevel);
+    hud.setFloor(floorLevel, floor.label);
     bus.emit('floor:descended', { from, to: floorLevel });
     snapCameraToPlayer();
     marker.visible = false;

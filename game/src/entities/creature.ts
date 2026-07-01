@@ -72,19 +72,26 @@ export function makePlayer(gx: number, gy: number, maxHp: number): Combatant {
   );
 }
 
-/** Prototype enemy roughly tuned like an early-floor Tibia rat pack member. */
-export function makePrototypeEnemy(id: string, gx: number, gy: number): Combatant {
+export interface CreatureSpawnSpec {
+  title: string;
+  hitpoints: number;
+  maxDamage: number;
+  moveDurationMs: number;
+}
+
+/** Creature built from a catalog/spawn-config template (T-024). */
+export function makeCreature(id: string, gx: number, gy: number, spec: CreatureSpawnSpec): Combatant {
   return new Combatant(
     id,
-    'Cave Brute',
+    spec.title,
     gx,
     gy,
     {
-      maxHp: 60,
-      hp: 60,
-      maxDamage: 10,
-      actionDelayMs: 900,
+      maxHp: spec.hitpoints,
+      hp: spec.hitpoints,
+      maxDamage: spec.maxDamage,
+      actionDelayMs: 900, // creature ability cadence parity is T-050
     },
-    260, // slower than the player
+    spec.moveDurationMs,
   );
 }

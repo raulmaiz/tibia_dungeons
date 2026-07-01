@@ -28,8 +28,9 @@ export class Hud {
     });
   }
 
-  setFloor(floorLevel: number): void {
-    this.hudRoot.querySelector<HTMLElement>('#floor-indicator')!.textContent = `Floor ${floorLevel}`;
+  setFloor(floorLevel: number, label?: string): void {
+    const text = label ? `Floor ${floorLevel} — ${label}` : `Floor ${floorLevel}`;
+    this.hudRoot.querySelector<HTMLElement>('#floor-indicator')!.textContent = text;
   }
 
   updatePlayerBars(player: Combatant): void {
