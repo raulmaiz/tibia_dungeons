@@ -95,11 +95,13 @@ export function generateLevelMap({
       rh = rnd(5, Math.min(8, Math.floor(H * 0.25)));
     } else {
       // Sala pequeña
-      rw = rnd(4, Math.min(7, Math.floor(W * 0.18)));
-      rh = rnd(3, Math.min(5, Math.floor(H * 0.18)));
+      rw = rnd(5, Math.min(8, Math.floor(W * 0.18)));
+      rh = rnd(5, Math.min(7, Math.floor(H * 0.18)));
     }
-    rw = Math.max(4, rw);
-    rh = Math.max(3, rh);
+    // Mínimo 5×5: con cámara 3D las salas de 3-4 tiles quedaban claustrofóbicas
+    // y ocultaban al personaje tras los muros.
+    rw = Math.max(5, rw);
+    rh = Math.max(5, rh);
     const rx = rnd(1, Math.max(2, W - rw - 2));
     const ry = rnd(1, Math.max(2, H - rh - 2));
     const next: Room = { x: rx, y: ry, w: rw, h: rh };
@@ -119,21 +121,31 @@ export function generateLevelMap({
     gy: Math.floor(r.y + r.h / 2),
   });
 
-  // Pasillo horizontal de 1 tile de alto
+  // Pasillos de 3 tiles de ancho: en 3D un pasillo de 1 tile ocultaba al
+  // personaje entre muros con la cámara a 57°.
+  const CORRIDOR_HALF = 1;
+
+  // Pasillo horizontal
   const carveH = (x1: number, x2: number, y: number) => {
     const from = Math.min(x1, x2);
     const to = Math.max(x1, x2);
     for (let x = from; x <= to; x += 1) {
-      if (x > 0 && x < W - 1 && y > 0 && y < H - 1) map[y]![x] = '.';
+      for (let dy = -CORRIDOR_HALF; dy <= CORRIDOR_HALF; dy += 1) {
+        const yy = y + dy;
+        if (x > 0 && x < W - 1 && yy > 0 && yy < H - 1) map[yy]![x] = '.';
+      }
     }
   };
 
-  // Pasillo vertical de 1 tile de ancho
+  // Pasillo vertical
   const carveV = (y1: number, y2: number, x: number) => {
     const from = Math.min(y1, y2);
     const to = Math.max(y1, y2);
     for (let y = from; y <= to; y += 1) {
-      if (y > 0 && y < H - 1 && x > 0 && x < W - 1) map[y]![x] = '.';
+      for (let dx = -CORRIDOR_HALF; dx <= CORRIDOR_HALF; dx += 1) {
+        const xx = x + dx;
+        if (y > 0 && y < H - 1 && xx > 0 && xx < W - 1) map[y]![xx] = '.';
+      }
     }
   };
 

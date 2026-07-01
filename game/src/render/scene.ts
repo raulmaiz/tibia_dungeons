@@ -118,7 +118,9 @@ export function buildTerrain(scene: THREE.Scene, tm: TileMap): TerrainHandles {
   const stairs = cells.filter((c) => c.type === 'stairs');
 
   const floorGeo = new THREE.BoxGeometry(1, 0.1, 1);
-  const wallGeo = new THREE.BoxGeometry(1, 1.6, 1);
+  // Low walls (waist-high): the fixed-pitch camera must never fully hide
+  // the character. Proper occlusion fading for tall themed walls is T-021.
+  const wallGeo = new THREE.BoxGeometry(1, 0.9, 1);
 
   const addInstances = (
     geo: THREE.BufferGeometry,
@@ -143,7 +145,7 @@ export function buildTerrain(scene: THREE.Scene, tm: TileMap): TerrainHandles {
 
   addInstances(floorGeo, floorMat, floors, -0.05, true, false);
   addInstances(floorGeo, stairsMat, stairs, -0.03, true, false);
-  addInstances(wallGeo, wallMat, walls, 0.8, true, true);
+  addInstances(wallGeo, wallMat, walls, 0.45, true, true);
 
   // Invisible plane for ground picking (covers the whole map).
   const pickGeo = new THREE.PlaneGeometry(tm.w, tm.h);

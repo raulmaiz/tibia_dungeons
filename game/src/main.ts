@@ -42,12 +42,19 @@ async function boot(): Promise<void> {
     MAP_H: MAX_DUNGEON_H,
     START_TILE,
   });
-  const tm: TileMap = tileMapFromGenerated(level, START_TILE);
+  // Spawn at the center of the first room — the corner START_TILE corridor
+  // hid the character between walls at the camera's fixed pitch.
+  const spawnRoom = level.rooms[0]!;
+  const spawn = {
+    gx: Math.floor(spawnRoom.x + spawnRoom.w / 2),
+    gy: Math.floor(spawnRoom.y + spawnRoom.h / 2),
+  };
+  const tm: TileMap = tileMapFromGenerated(level, spawn);
   const terrain = buildTerrain(scene, tm);
 
   // ── Player ───────────────────────────────────────────────────────────────
   const stats = progressionStatsForLevel(1, 'knight');
-  let player = makePlayer(START_TILE.gx, START_TILE.gy, stats.maxHp);
+  let player = makePlayer(spawn.gx, spawn.gy, stats.maxHp);
   const playerRig = await loadPlayerRig();
   scene.add(playerRig.root);
 
@@ -106,9 +113,9 @@ async function boot(): Promise<void> {
   });
   bus.on('player:dead', () => {
     hud.showDeath(() => {
-      // Simple respawn: restore HP at the start tile.
-      player = makePlayer(START_TILE.gx, START_TILE.gy, stats.maxHp);
-      const { x, z } = tileToWorld(START_TILE.gx, START_TILE.gy);
+      // Simple respawn: restore HP at the spawn tile.
+      player = makePlayer(spawn.gx, spawn.gy, stats.maxHp);
+      const { x, z } = tileToWorld(spawn.gx, spawn.gy);
       cam.snapTo(new THREE.Vector3(x, 0, z));
     });
   });

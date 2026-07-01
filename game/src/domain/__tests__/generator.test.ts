@@ -65,6 +65,15 @@ describe('generateLevelMap', () => {
     expect(reached).toBe(true);
   });
 
+  it.each(seeds)('seed %i: every room is at least 5x5 tiles', (seed) => {
+    const { w, h } = computeDungeonSize(15);
+    const level = generateLevelMap({ MAP_W: w, MAP_H: h, START_TILE: START, random: seededRng(seed) });
+    for (const room of level.rooms) {
+      expect(room.w).toBeGreaterThanOrEqual(5);
+      expect(room.h).toBeGreaterThanOrEqual(5);
+    }
+  });
+
   it('is reproducible for the same seed', () => {
     const { w, h } = computeDungeonSize(15);
     const a = generateLevelMap({ MAP_W: w, MAP_H: h, START_TILE: START, random: seededRng(7) });
