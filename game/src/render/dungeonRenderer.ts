@@ -104,8 +104,11 @@ export function buildDungeon(scene: THREE.Scene, tm: TileMap, plan: MeshPlan, th
       case 'wall':
         geo = wallGeo;
         mat = new THREE.MeshStandardMaterial({
-          color: tinted(theme.wall, theme.wallVariantTints[variant] ?? 0xffffff),
-          roughness: 0.9,
+          // Darker + slightly emissive-free vs the floor so walls read as
+          // volumes, not raised platforms (playtest 2026-07-01).
+          color: tinted(theme.wall, theme.wallVariantTints[variant] ?? 0xffffff)
+            .multiplyScalar(0.55),
+          roughness: 0.82,
         });
         y = 0.45;
         castShadow = true;

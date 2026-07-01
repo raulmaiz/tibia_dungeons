@@ -10,8 +10,11 @@ export function createRenderer(canvas: HTMLCanvasElement): THREE.WebGLRenderer {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap; // PCFSoft was removed in r185
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  // Slight exposure lift — the themed dungeons read too dark without it.
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.35;
   return renderer;
 }
 
@@ -24,11 +27,11 @@ export function createScene(): { scene: THREE.Scene; lights: SceneLights } {
   const scene = new THREE.Scene();
 
   // Light 1: hemisphere ambient (cheap, no shadows).
-  const hemi = new THREE.HemisphereLight(0x8a7f9e, 0x2a2233, 0.9);
+  const hemi = new THREE.HemisphereLight(0x8a7f9e, 0x2a2233, 1.5);
   scene.add(hemi);
 
   // Light 2: key directional with shadows — the only shadow caster.
-  const sun = new THREE.DirectionalLight(0xffe6c0, 1.6);
+  const sun = new THREE.DirectionalLight(0xffe6c0, 2.2);
   sun.position.set(12, 18, 8);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);

@@ -43,7 +43,7 @@ function tintForFamily(typePrimary: string): number {
 /** Walkable spawn tiles: far from the player, spread apart. */
 function pickSpawnTiles(tm: TileMap, count: number): { gx: number; gy: number }[] {
   const picks: { gx: number; gy: number }[] = [];
-  const minPlayerDist = 7;
+  const minPlayerDist = 5; // close enough that the first pack is visible from spawn
   const minMutualDist = 3;
   const candidates: { gx: number; gy: number }[] = [];
   for (let gy = 1; gy < tm.h - 1; gy += 1) {
@@ -115,7 +115,7 @@ export async function loadFloor(
           moveDurationMs: moveDurationFromSpeed(entry.template.speed),
         },
       );
-      const rig = await loadEnemyRig(tintForFamily(entry.template.typePrimary));
+      const rig = await loadEnemyRig(tintForFamily(entry.template.typePrimary), entry.template.typePrimary);
       scene.add(rig.root);
       enemies.push({ combatant, rig, ai: new ChaseAI(combatant) });
     }
