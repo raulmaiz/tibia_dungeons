@@ -9,12 +9,12 @@
 | ID | Estado | Tarea |
 |----|--------|-------|
 | T-001 | ✅ | Tag `v2d-final` + rama `feat/3d-migration` |
-| T-002 | ⬜ | Migrar build a Vite |
-| T-003 | ⬜ | ESLint flat config, baseline verde sobre `game/src` |
-| T-004 | ⬜ | Vitest + tests de módulos puros portados |
-| T-005 | ⬜ | Three.js por npm + escena vacía renderizando |
-| T-006 | 🔄 | Infra agente nocturno (CLAUDE.md, backlog, night-log, settings) |
-| T-007 | ⬜ | `docs/migration-3d.md` + ADRs 001–004 |
+| T-002 | ✅ | Migrar build a Vite |
+| T-003 | ✅ | ESLint flat config, baseline verde sobre `game/src` |
+| T-004 | ✅ | Vitest + tests de módulos puros portados (36 asserts) |
+| T-005 | ✅ | Three.js por npm + escena renderizando |
+| T-006 | ✅ | Infra agente nocturno (CLAUDE.md, backlog, night-log, settings) |
+| T-007 | ✅ | `docs/migration-3d.md` + ADRs 001–004 |
 
 ### T-002 — Migrar build a Vite
 - **Descripción**: sustituir esbuild/scripts propios por Vite. Root = `game/`, `outDir=dist`. Nuevo `index.html` mínimo (canvas 3D + contenedor HUD). Actualizar scripts npm (`dev`, `build`, `preview`, `typecheck`, `lint`, `test`).
@@ -38,6 +38,9 @@
 - **Dependencias**: T-002.
 
 ## F1 — Prototipo mínimo jugable
+
+> ✅ T-010, T-011, T-012, T-013 completadas (commit `1f540cb`). T-014 parcial: falta la barra de mana
+> (se añade con los spells en T-031) — HP, floaters de daño, F3 fps y panel de muerte hechos.
 
 ### T-010 — Terreno + iluminación + cámara Diablo 4
 - **Descripción**: suelo de prueba (plano con textura procedural de grid), luz hemisférica + direccional con sombras. `Diablo4Camera`: orbital sobre el player, pitch fijo ~57° desde la vertical, zoom por rueda con límites [8, 26], yaw rotando con botón derecho mantenido, seguimiento con lerp (sin snapping).
