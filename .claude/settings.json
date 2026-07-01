@@ -1,6 +1,6 @@
 {
   "permissions": {
-    "defaultMode": "acceptEdits",
+    "defaultMode": "bypassPermissions",
     "allow": [
       "Read",
       "Edit",
@@ -40,11 +40,29 @@
       "Bash(gh pr create *)",
       "Bash(gh pr list *)",
       "Bash(gh pr view *)",
-      "Bash(curl -L -o game/public/assets/* *)",
+      "Bash(curl *)",
       "Bash(ls *)",
       "Bash(mkdir *)",
       "Bash(mv *)",
       "Bash(cp *)",
+      "Bash(sed -n *)",
+      "Bash(tar *)",
+      "Bash(unzip *)",
+      "PowerShell(npm *)",
+      "PowerShell(npx *)",
+      "PowerShell(node *)",
+      "PowerShell(git status*)",
+      "PowerShell(git log *)",
+      "PowerShell(git diff *)",
+      "PowerShell(git add *)",
+      "PowerShell(git commit *)",
+      "PowerShell(git branch *)",
+      "PowerShell(git checkout *)",
+      "PowerShell(git push)",
+      "PowerShell(git push origin feat/*)",
+      "PowerShell($env:Path *)",
+      "PowerShell(Expand-Archive *)",
+      "PowerShell(Invoke-WebRequest *)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:quaternius.com)",
@@ -65,7 +83,14 @@
       "Bash(rm -rf /*)",
       "Bash(rm -rf ~*)",
       "Bash(vercel *)",
-      "Bash(npx vercel *)"
+      "Bash(npx vercel *)",
+      "PowerShell(git push --force*)",
+      "PowerShell(git push -f*)",
+      "PowerShell(git push * --force*)",
+      "PowerShell(git tag -d v2d-final)",
+      "PowerShell(Remove-Item * -Recurse *)",
+      "PowerShell(vercel *)",
+      "PowerShell(npx vercel *)"
     ]
   }
 }
