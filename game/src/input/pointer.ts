@@ -14,7 +14,7 @@ export interface PickHandlers {
 export function attachPointerInput(
   canvas: HTMLCanvasElement,
   cam: Diablo4Camera,
-  groundPickPlane: THREE.Mesh,
+  groundPickPlane: () => THREE.Mesh,
   enemyPickTargets: () => Map<string, THREE.Object3D>,
   handlers: PickHandlers,
 ): void {
@@ -46,7 +46,7 @@ export function attachPointerInput(
         return;
       }
     }
-    const hit = raycaster.intersectObject(groundPickPlane, false)[0];
+    const hit = raycaster.intersectObject(groundPickPlane(), false)[0];
     if (hit) handlers.onGroundClick(hit.point.x, hit.point.z);
   });
 

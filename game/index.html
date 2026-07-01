@@ -141,6 +141,28 @@
         color: #99a;
         text-shadow: 0 1px 2px #000;
       }
+      #floor-indicator {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 14px;
+        letter-spacing: 2px;
+        color: #d9a441;
+        text-shadow: 0 1px 3px #000;
+      }
+      #fade {
+        position: fixed;
+        inset: 0;
+        background: #000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 420ms ease;
+        z-index: 10;
+      }
+      #fade.visible {
+        opacity: 1;
+      }
     </style>
   </head>
   <body>
@@ -153,12 +175,14 @@
         </div>
       </div>
       <div id="fps"></div>
+      <div id="floor-indicator"></div>
       <div id="controls-hint">Click: move / attack · Right-drag: rotate · Wheel: zoom · F3: FPS</div>
       <div id="death-panel">
         <h1>YOU DIED</h1>
         <button id="respawn-btn">Respawn</button>
       </div>
     </div>
+    <div id="fade"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

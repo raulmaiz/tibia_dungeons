@@ -28,6 +28,10 @@ export class Hud {
     });
   }
 
+  setFloor(floorLevel: number): void {
+    this.hudRoot.querySelector<HTMLElement>('#floor-indicator')!.textContent = `Floor ${floorLevel}`;
+  }
+
   updatePlayerBars(player: Combatant): void {
     const pct = (player.stats.hp / player.stats.maxHp) * 100;
     this.hpFill.style.width = `${pct}%`;

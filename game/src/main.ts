@@ -1,71 +1,42 @@
-// Tibia Dungeons 3D — prototype entry point (F1).
-// Terrain from a generated dungeon, animated player, click-to-move (A*),
-// Diablo-4 camera, one chasing enemy, minimal HUD.
+// Tibia Dungeons 3D — entry point.
+// F1 prototype + F2: themed instanced dungeons, stairs descend between floors.
 
 import * as THREE from 'three';
-import { MAX_DUNGEON_H, MAX_DUNGEON_W, START_TILE } from './core/config';
 import { bus } from './core/events';
 import { tileToWorld, worldToTile } from './core/grid';
-import { generateLevelMap } from './domain/dungeon/generator';
-import { isWalkable, tileMapFromGenerated, type TileMap } from './domain/dungeon/tilemap';
+import { isWalkable } from './domain/dungeon/tilemap';
 import { progressionStatsForLevel } from './domain/progression';
-import { makePlayer, makePrototypeEnemy, type Combatant } from './entities/creature';
+import { makePlayer, type Combatant } from './entities/creature';
+import { loadFloor, type FloorState } from './game/floorManager';
 import { attachPointerInput } from './input/pointer';
 import { Diablo4Camera } from './render/camera';
-import { loadEnemyRig, loadPlayerRig, type CharacterRig } from './render/character';
-import { buildTerrain, createRenderer, createScene } from './render/scene';
-import { ChaseAI } from './systems/ai';
+import { loadPlayerRig, type CharacterRig } from './render/character';
+import { createRenderer, createScene, followShadow } from './render/scene';
 import { tryCreatureAttack, tryPlayerAttack } from './systems/combat';
 import { findPath } from './systems/pathfinding';
 import { Hud } from './ui/hud';
 
-const FLOOR_LEVEL = 1;
-
-interface EnemyEntry {
-  combatant: Combatant;
-  rig: CharacterRig;
-  ai: ChaseAI;
-}
-
 async function boot(): Promise<void> {
   const canvas = document.querySelector<HTMLCanvasElement>('#app')!;
   const hud = new Hud(document.querySelector<HTMLElement>('#hud')!);
+  const fadeEl = document.querySelector<HTMLElement>('#fade')!;
 
   const renderer = createRenderer(canvas);
-  const scene = createScene();
+  const { scene, lights } = createScene();
   const cam = new Diablo4Camera(window.innerWidth / window.innerHeight);
 
-  // ── World ────────────────────────────────────────────────────────────────
-  const level = generateLevelMap({
-    totalCreatures: 15,
-    MAP_W: MAX_DUNGEON_W,
-    MAP_H: MAX_DUNGEON_H,
-    START_TILE,
-  });
-  // Spawn at the center of the first room — the corner START_TILE corridor
-  // hid the character between walls at the camera's fixed pitch.
-  const spawnRoom = level.rooms[0]!;
-  const spawn = {
-    gx: Math.floor(spawnRoom.x + spawnRoom.w / 2),
-    gy: Math.floor(spawnRoom.y + spawnRoom.h / 2),
-  };
-  const tm: TileMap = tileMapFromGenerated(level, spawn);
-  const terrain = buildTerrain(scene, tm);
-
-  // ── Player ───────────────────────────────────────────────────────────────
+  // ── Floor + player state ─────────────────────────────────────────────────
+  let floorLevel = 1;
+  let floor: FloorState = await loadFloor(scene, lights, floorLevel);
   const stats = progressionStatsForLevel(1, 'knight');
-  let player = makePlayer(spawn.gx, spawn.gy, stats.maxHp);
-  const playerRig = await loadPlayerRig();
+  let player: Combatant = makePlayer(floor.spawn.gx, floor.spawn.gy, stats.maxHp);
+  const playerRig: CharacterRig = await loadPlayerRig();
   scene.add(playerRig.root);
 
-  // ── Enemy (prototype: one brute near the first room) ─────────────────────
-  const enemySpawn = findEnemySpawn(tm);
-  const enemy = makePrototypeEnemy('enemy-1', enemySpawn.gx, enemySpawn.gy);
-  const enemyRig = await loadEnemyRig();
-  scene.add(enemyRig.root);
-  const enemies: EnemyEntry[] = [{ combatant: enemy, rig: enemyRig, ai: new ChaseAI(enemy) }];
-
   let attackTargetId: string | null = null;
+  let descending = false;
+
+  hud.setFloor(floorLevel);
 
   // ── Move marker ──────────────────────────────────────────────────────────
   const marker = new THREE.Mesh(
@@ -77,17 +48,22 @@ async function boot(): Promise<void> {
   scene.add(marker);
 
   // ── Input ────────────────────────────────────────────────────────────────
+  // The pick plane is swapped on floor change; resolve it lazily.
   attachPointerInput(
     canvas,
     cam,
-    terrain.groundPickPlane,
-    () => new Map(enemies.filter((e) => e.combatant.alive).map((e) => [e.combatant.id, e.rig.root])),
+    () => floor.dungeon.groundPickPlane,
+    () =>
+      new Map(
+        floor.enemies.filter((e) => e.combatant.alive).map((e) => [e.combatant.id, e.rig.root]),
+      ),
     {
       onGroundClick: (wx, wz) => {
+        if (descending || !player.alive) return;
         attackTargetId = null;
         const goal = worldToTile(wx, wz);
-        if (!isWalkable(tm, goal.gx, goal.gy)) return;
-        const path = findPath(tm, { gx: player.mover.gx, gy: player.mover.gy }, goal);
+        if (!isWalkable(floor.tm, goal.gx, goal.gy)) return;
+        const path = findPath(floor.tm, { gx: player.mover.gx, gy: player.mover.gy }, goal);
         if (path) {
           player.mover.setPath(path);
           const { x, z } = tileToWorld(goal.gx, goal.gy);
@@ -96,7 +72,7 @@ async function boot(): Promise<void> {
         }
       },
       onEnemyClick: (enemyId) => {
-        attackTargetId = enemyId;
+        if (!descending) attackTargetId = enemyId;
       },
     },
   );
@@ -113,17 +89,37 @@ async function boot(): Promise<void> {
   });
   bus.on('player:dead', () => {
     hud.showDeath(() => {
-      // Simple respawn: restore HP at the spawn tile.
-      player = makePlayer(spawn.gx, spawn.gy, stats.maxHp);
-      const { x, z } = tileToWorld(spawn.gx, spawn.gy);
-      cam.snapTo(new THREE.Vector3(x, 0, z));
+      player = makePlayer(floor.spawn.gx, floor.spawn.gy, stats.maxHp);
+      snapCameraToPlayer();
     });
   });
 
-  // ── Camera start ─────────────────────────────────────────────────────────
-  {
-    const { x, z } = tileToWorld(player.mover.gx, player.mover.gy);
-    cam.snapTo(new THREE.Vector3(x, 0, z));
+  function snapCameraToPlayer(): void {
+    cam.snapTo(new THREE.Vector3(player.mover.worldX, 0, player.mover.worldZ));
+  }
+  snapCameraToPlayer();
+
+  // ── Floor descent (T-022) ────────────────────────────────────────────────
+  async function descend(): Promise<void> {
+    descending = true;
+    attackTargetId = null;
+    player.mover.stop();
+    fadeEl.classList.add('visible');
+    await new Promise((r) => setTimeout(r, 450)); // fade-out
+    const from = floorLevel;
+    floorLevel += 1;
+    floor.dispose();
+    floor = await loadFloor(scene, lights, floorLevel);
+    // Legacy behavior: current HP carries across floors (no free heal).
+    const prevHp = player.stats.hp;
+    player = makePlayer(floor.spawn.gx, floor.spawn.gy, player.stats.maxHp);
+    player.stats.hp = Math.min(prevHp, player.stats.maxHp);
+    hud.setFloor(floorLevel);
+    bus.emit('floor:descended', { from, to: floorLevel });
+    snapCameraToPlayer();
+    marker.visible = false;
+    fadeEl.classList.remove('visible');
+    descending = false;
   }
 
   window.addEventListener('resize', () => {
@@ -139,41 +135,53 @@ async function boot(): Promise<void> {
     const dt = dtMs / 1000;
     lastMs = nowMs;
 
-    // Player chases its attack target when one is set.
-    const target = enemies.find((e) => e.combatant.id === attackTargetId)?.combatant ?? null;
-    if (target && target.alive && player.alive) {
-      if (player.isAdjacentTo(target)) {
-        player.mover.stop();
-        const result = tryPlayerAttack(player, target, nowMs);
-        if (result?.missed) {
-          const { x, z } = tileToWorld(target.mover.gx, target.mover.gy);
-          hud.spawnDamageNumber(new THREE.Vector3(x, 1.4, z), cam.camera, 'miss', 'miss');
-        }
-      } else if (!player.mover.isMoving) {
-        const path = findPath(
-          tm,
-          { gx: player.mover.gx, gy: player.mover.gy },
-          { gx: target.mover.gx, gy: target.mover.gy },
-        );
-        if (path) {
-          path.pop(); // stop adjacent
-          player.mover.setPath(path);
+    if (!descending) {
+      // Player chases its attack target when one is set.
+      const target = floor.enemies.find((e) => e.combatant.id === attackTargetId)?.combatant ?? null;
+      if (target && target.alive && player.alive) {
+        if (player.isAdjacentTo(target)) {
+          player.mover.stop();
+          const result = tryPlayerAttack(player, target, nowMs);
+          if (result?.missed) {
+            const { x, z } = tileToWorld(target.mover.gx, target.mover.gy);
+            hud.spawnDamageNumber(new THREE.Vector3(x, 1.4, z), cam.camera, 'miss', 'miss');
+          }
+        } else if (!player.mover.isMoving) {
+          const path = findPath(
+            floor.tm,
+            { gx: player.mover.gx, gy: player.mover.gy },
+            { gx: target.mover.gx, gy: target.mover.gy },
+          );
+          if (path) {
+            path.pop(); // stop adjacent
+            player.mover.setPath(path);
+          }
         }
       }
-    }
 
-    // Movement + AI + creature attacks.
-    player.mover.update(dtMs);
-    for (const e of enemies) {
-      if (!e.combatant.alive) continue;
-      e.ai.update(tm, player, nowMs);
-      e.combatant.mover.update(dtMs);
-      tryCreatureAttack(e.combatant, player, FLOOR_LEVEL, nowMs);
+      // Movement + AI + creature attacks.
+      player.mover.update(dtMs);
+      for (const e of floor.enemies) {
+        if (!e.combatant.alive) continue;
+        e.ai.update(floor.tm, player, nowMs);
+        e.combatant.mover.update(dtMs);
+        tryCreatureAttack(e.combatant, player, floor.floorLevel, nowMs);
+      }
+
+      // Stairs: standing on the stairs tile (and not fighting) descends.
+      if (
+        player.alive &&
+        !player.mover.isMoving &&
+        player.mover.gx === floor.tm.stairs.gx &&
+        player.mover.gy === floor.tm.stairs.gy
+      ) {
+        void descend();
+      }
     }
 
     // Sync rigs with movers.
     syncRig(playerRig, player, dt);
-    for (const e of enemies) {
+    for (const e of floor.enemies) {
       if (e.combatant.alive) {
         syncRig(e.rig, e.combatant, dt);
       } else if (e.rig.root.visible) {
@@ -182,9 +190,10 @@ async function boot(): Promise<void> {
     }
     if (!player.mover.isMoving && marker.visible) marker.visible = false;
 
-    // Camera + HUD + render.
-    const { x, z } = tileToWorld(player.mover.gx, player.mover.gy);
-    cam.update(new THREE.Vector3(player.mover.worldX, 0, player.mover.worldZ).lerp(new THREE.Vector3(x, 0, z), 0), dt);
+    // Camera + shadow + HUD + render.
+    const playerPos = new THREE.Vector3(player.mover.worldX, 0, player.mover.worldZ);
+    cam.update(playerPos, dt);
+    followShadow(lights, playerPos);
     hud.updatePlayerBars(player);
     hud.tickFps(nowMs);
     renderer.render(scene, cam.camera);
@@ -205,19 +214,6 @@ function syncRig(rig: CharacterRig, combatant: Combatant, dt: number): void {
     rig.play('idle');
   }
   rig.update(dt);
-}
-
-/** First walkable tile far enough from the player spawn to be interesting. */
-function findEnemySpawn(tm: TileMap): { gx: number; gy: number } {
-  for (let radius = 6; radius < Math.max(tm.w, tm.h); radius += 1) {
-    for (let gy = 1; gy < tm.h - 1; gy += 1) {
-      for (let gx = 1; gx < tm.w - 1; gx += 1) {
-        const dist = Math.abs(gx - tm.spawn.gx) + Math.abs(gy - tm.spawn.gy);
-        if (dist === radius && isWalkable(tm, gx, gy)) return { gx, gy };
-      }
-    }
-  }
-  return { gx: tm.spawn.gx + 1, gy: tm.spawn.gy };
 }
 
 boot().catch((err) => {
