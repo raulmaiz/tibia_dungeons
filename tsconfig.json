@@ -1,37 +1,31 @@
 {
-  "//": "Type-checking for a JS project. We do NOT compile TS. esbuild still owns the build.",
-  "//2": "Run `npx tsc --noEmit` (or `npm run typecheck`) to surface errors in CI.",
-  "//3": "VS Code picks this up automatically and shows red squiggles in .js files.",
+  "//": "Strict TS for the 3D codebase (game/src). Vite owns the build; this only type-checks.",
+  "//2": "Legacy 2D JS (game/js) is excluded — it is read-only reference archived at tag v2d-final.",
   "compilerOptions": {
-    "target": "es2022",
-    "module": "esnext",
+    "target": "ES2022",
+    "module": "ESNext",
     "moduleResolution": "bundler",
 
-    "allowJs": true,
-    "checkJs": true,
     "noEmit": true,
-
-    "strict": false,
-    "noImplicitAny": false,
-    "strictNullChecks": false,
-    "noImplicitThis": false,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
 
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
 
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": []
+    "types": ["vite/client"]
   },
   "include": [
-    "game/js/**/*.js",
-    "game/js/**/*.d.ts"
+    "game/src/**/*.ts",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "eslint.config.mjs"
   ],
-  "exclude": [
-    "node_modules",
-    "game/dist",
-    "game/offline-api.js",
-    "game/sw.js"
-  ]
+  "exclude": ["node_modules", "game/dist"]
 }
