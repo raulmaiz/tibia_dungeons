@@ -1,107 +1,85 @@
-# Tibia Dungeons — Claude Code entry point
+# Tibia Dungeons 3D — Claude Code entry point
 
-Browser-based roguelite dungeon crawler inspired by Tibia. Single-page app, Phaser 3, vanilla JS, deployed to Vercel from `game/`.
+Roguelite dungeon crawler en navegador inspirado en Tibia. **En migración total de Phaser 2D → Three.js 3D** con cámara estilo Diablo 4. La versión 2D está archivada en el tag `v2d-final` (inmutable, nunca borrar).
 
-> This file is what Claude Code reads when entering the repo. It is intentionally short. For depth, follow the links to [`docs/`](docs/).
+> Este archivo es lo que Claude Code lee al entrar al repo. Para profundidad: [`docs/`](docs/).
 
-## Run it locally (the only commands you need)
+## Objetivo y estado actual
+
+- **Objetivo**: juego 3D jugable en navegador, cámara orbital ~57° (zoom rueda, yaw con botón derecho, pitch fijo, lerp), click-to-move sobre grid A*, combate en tiempo real con throttling (mismo `CombatMath`), coste operativo 0 €.
+- **Rama de trabajo**: `feat/3d-migration`. `main` sigue siendo la 2D en producción (tibia-dungeons.com) hasta paridad funcional.
+- **Backend existente (Vercel serverless + Upstash Redis: auth, saves, leaderboard) se conserva intacto.** No tocar `api/` ni `middleware.js` salvo tarea explícita del backlog.
+- **Estado**: ver [`docs/backlog.md`](docs/backlog.md) (fuente de verdad de tareas) y la última bitácora en [`docs/night-log/`](docs/night-log/).
+- Plan completo: [`docs/migration-3d.md`](docs/migration-3d.md). Decisiones: [`docs/adr/`](docs/adr/).
+
+## Comandos clave
 
 ```bash
-node scripts/build.js --watch    # rebuild bundle on every save (run once, leave open)
-npm run dev                      # static file server on http://localhost:5173
+npm run dev        # Vite dev server (game/ es el root)
+npm run build      # Vite build → game/dist
+npm run preview    # sirve el build
+npm run lint       # ESLint sobre game/src
+npm run typecheck  # tsc --noEmit sobre game/src
+npm run test       # Vitest (unit, dominio puro)
 ```
 
-`npm run dev` does **not** bundle. The page references `game/dist/main.min.js`; without it you get 404s. Always run `node scripts/build.js` (or `--watch`) first.
+**Gate obligatorio antes de CADA commit**: `npm run lint && npm run typecheck && npm run test`. Si falla, arreglar antes de continuar (máx. 2 intentos; si no, revertir y bloquear la tarea).
 
-For the itch.io flavor preview: `OFFLINE_BUILD=1 npm run dev` (then `node scripts/build.js --offline`).
-
-## Where things live (skim the tree once)
+## Estructura
 
 ```
 game/
-├── index.html              ← HUD layout + script tags
-├── data/                   ← JSON catalogs (creatures, items, spells…) + images
-├── dist/                   ← esbuild output (gitignored, regenerable)
-└── js/
-    ├── main.js             ← entry point (2 lines: ui/auth + engine)
-    ├── loading-screen.js   ← separate bundle entry (SW register + changelog scroller)
-    ├── dataService.js      ← JSON catalog loaders + imageUrl()
-    ├── offline-api.js      ← localStorage stub for itch.io build
-    ├── vfx.js              ← low-level Phaser draw routines (DON'T import directly — use rendering/Renderer.js)
-    │
-    ├── config/             ← every magic number (game.config.js, visual.config.js)
-    ├── core/               ← EventBus.js (pub/sub)
-    ├── world/              ← Projection.js (world↔screen seam, iso migration plug point)
-    ├── rendering/          ← SpriteFactory + Renderer shim (Lights2D + post-FX seams)
-    ├── systems/            ← reusable behaviour modules
-    │   └── lighting/       ← LightItems.js (torch burn + radius)
-    ├── state/              ← playerSession.js (ESM-binding setter pattern)
-    ├── ui/                 ← auth.js, inventoryPanel.js (1.6k!), loadingScreen.js, panelLayout.js
-    ├── data/               ← static tuning tables (floorSpawnConfig, floorThemes, changelog, version)
-    ├── entities/           ← domain grouping by entity
-    │   ├── Creature/       ← abilityPatterns.js + damageModifiers.js
-    │   ├── Spell/          ← filters.js + fxOverrides.js
-    │   ├── Item/           ← placeholder (logic still in ui/inventoryPanel.js)
-    │   └── Player/         ← placeholder (state still in engine closure)
-    ├── engine/             ← game.engine.js (~7.7k, scene + combat + AI + save)
-    │                         + floorAtmosphere.js + creatureSpellVfx.js
-    ├── dungeon/            ← procedural floor generator
-    └── mechanics/          ← progression curves + loot pity tracker
-
-api/                        ← Vercel serverless functions (auth, saves, runs)
-scripts/                    ← build, dev-server, playtest, version-bump, store covers
-docs/                       ← architecture, how-tos, glossary, gameplay notes
+├── index.html          ← entry Vite (canvas 3D + overlay HUD DOM)
+├── public/assets/      ← glTF, texturas, HDRI (solo CC0/gratuito)
+├── src/
+│   ├── core/           ← EventBus, config, types
+│   ├── domain/         ← lógica pura SIN render: combat, progression, loot, dungeon
+│   ├── systems/        ← pathfinding A*, movement, ai, targeting (puros, deps inyectadas)
+│   ├── render/         ← Three.js: scene, camera (diablo4), models, instancing, vfx
+│   ├── input/          ← click-to-move, hotkeys 1–4, tab-target
+│   ├── ui/             ← overlay HTML/CSS (HUD, inventario)
+│   └── data/           ← catálogos JSON
+├── js/                 ← LEGADO 2D (Phaser). Solo se lee para portar; se borra al alcanzar paridad
+api/                    ← backend serverless (NO TOCAR)
+docs/                   ← plan, ADRs, backlog, night-log, docs legado
 ```
 
-Layer-by-layer detail with reasoning: [`docs/architecture.md`](docs/architecture.md).
+## Convenciones
 
-## Conventions that matter (and the foot-guns)
+- **Código nuevo en TypeScript** (`game/src`). Al portar módulos legado JS+JSDoc, convertir a TS.
+- **Lógica de dominio pura**: nada en `src/domain` o `src/systems` importa de `src/render`. El render escucha por `EventBus` o lee estado.
+- **Magic numbers a `src/core/config.ts`**. Nunca inline.
+- **Coordenadas**: el mundo lógico es un grid de tiles; la conversión grid↔mundo 3D vive SOLO en `src/core/grid.ts`.
+- **Commits**: Conventional Commits, atómicos, en inglés (`feat:`, `fix:`, `docs:`, `test:`, `build:`, `refactor:`, `chore:`). Un tema por commit.
+- **Assets**: solo fuentes 0 € (Kenney, Quaternius/KayKit, Mixamo, Poly Haven, AmbientCG). Registrar origen y licencia en `game/public/assets/CREDITS.md`.
+- **Dirección de arte**: low-poly estilizado coherente (Quaternius/Kenney).
+- **Rendimiento**: objetivo 60 fps en portátil medio. Instancing para tiles, máx. 2–3 luces dinámicas, frustum culling activo.
 
-- **Magic numbers go to `game/js/config/`.** Never inline a tile size, color, or timing.
-- **Sprites for entities** (player, creature, fire/poison field, ground tile) are built via `rendering/SpriteFactory.js`. Never `this.add.sprite(...)` directly in the engine — it bypasses the future Lights2D/normal-map pipeline.
-- **VFX calls** (shake, flash, beams, projectiles, **spell particles/bloom**) import from `rendering/Renderer.js`, never from `vfx.js` or `rendering/SpellParticles.js` directly. The spell "magic" look (bursts, beams, cohesive area blasts, bloom) lives in [`rendering/SpellParticles.js`](game/js/rendering/SpellParticles.js) — see [`docs/spell-vfx.md`](docs/spell-vfx.md).
-- **Never leave a large static `Graphics` live.** Phaser re-tessellates a Graphics' full command list every frame — a map-wide one tanks FPS. Bake it to a `RenderTexture` once (see `bakeStaticDecor` in `floorAtmosphere.js`). [`docs/perf-playbook.md`](docs/perf-playbook.md).
-- **Coordinates** go through `world/Projection.js`. Inline `gx * tileSize + tileSize/2` is forbidden — it will silently break the iso migration.
-- **Module-shared state** uses `state/playerSession.js` setter pattern. Never reassign an imported `let` binding (ESM throws). Always call the matching `set<Name>()`.
-- **Gameplay events** emit through `core/EventBus.js` (`bus.emit(EVENTS.ENTITY_DIED, {...})`). Future systems (particles, audio) hook in via `bus.on()` without touching combat code.
+## Permitido sin preguntar / Requiere confirmación
 
-## Foot-guns burned into past sessions
+**Permitido**: editar cualquier archivo dentro del repo (salvo lo prohibido), `npm run *`, `git add/commit/branch/checkout`, crear ramas `feat/*`, tests, docs, borrar código legado 2D de `game/js` ya portado o innecesario (está archivado en `v2d-final`).
 
-- ❌ **`npm run build` is destructive.** It runs with `--prod` which deletes `game/js/` after bundling (only Vercel CI should use it). Use `node scripts/build.js` for local validation.
-- ❌ **Service worker caches the bundle aggressively.** After moving files, bump `CACHE` in [`game/sw.js`](game/sw.js) and tell the user to hard-refresh.
-- ❌ **`game.engine.js` has a 5.7k-line `startGame()` closure.** Combat, movement, AI, save/load, scene lifecycle all live inside it. Phase 4 of the current refactor will break it apart; until then, treat closure variables (`gridX`, `playerHp`, `creatures[]`) as read-only-ish from outside.
-- ❌ **`inventoryPanel.js` is 1.6k lines** mixing character-select, equipment, loot bag, market shop, spells shop, and save/resume. Phase 3 will carve it.
-- ❌ **Two destructive prod-build flags exist:** `npm run build` (Vercel) and `npm run build:itch` (only when explicitly asked — produces the itch.io zip). Never run them speculatively.
+**Prohibido / requiere confirmación explícita del usuario**:
+- `git push --force` (a cualquier rama), borrar o mover el tag `v2d-final`, borrar `main`.
+- Tocar `api/`, `middleware.js`, `vercel.json` de producción, o hacer deploy.
+- Instalar dependencias nuevas no listadas en el backlog (si es imprescindible: justificar en un ADR y marcar la tarea como bloqueada para revisión).
+- Llamadas a servicios externos de pago o con API key.
+- `rm -rf` fuera de `node_modules` / `game/dist`.
 
-## Tasks → docs
+## Workflow del agente nocturno
 
-| Want to… | Read |
-|---|---|
-| Add a creature / monster | [`docs/how-to-add-creature.md`](docs/how-to-add-creature.md) |
-| Add a spell | [`docs/how-to-add-spell.md`](docs/how-to-add-spell.md) |
-| Add a floor / theme | [`docs/how-to-add-floor.md`](docs/how-to-add-floor.md) |
-| Touch / tune spell visuals (particles, beams, bloom, area FX) | [`docs/spell-vfx.md`](docs/spell-vfx.md) |
-| Fix lag / frame-rate (method + `window.debugPerf`) | [`docs/perf-playbook.md`](docs/perf-playbook.md) |
-| Debug a runtime issue | [`docs/how-to-debug.md`](docs/how-to-debug.md) |
-| Understand the layer structure / why | [`docs/architecture.md`](docs/architecture.md) |
-| Know why the codebase looks the way it does (decisions, history) | [`docs/dev-log.md`](docs/dev-log.md) |
-| Decode Tibia jargon (vocation, cap, fist, …) | [`docs/glossary.md`](docs/glossary.md) |
-| Reference real playtest observations | [`docs/gameplay-notes.md`](docs/gameplay-notes.md) |
+1. Crear rama `feat/night-agent/YYYY-MM-DD` desde `feat/3d-migration`.
+2. Tomar tareas de [`docs/backlog.md`](docs/backlog.md) en orden de prioridad. Una tarea = uno o más commits atómicos.
+3. Antes de cada commit: `npm run lint && npm run typecheck && npm run test`. Rojo → arreglar (máx. 2 intentos) → si sigue rojo, `git revert`/reset del cambio y marcar tarea **bloqueada** en la bitácora con el motivo.
+4. Al completar una tarea: push de la rama y abrir PR contra `feat/3d-migration` (`gh pr create`), marcar la tarea `✅` en el backlog dentro del mismo PR.
+5. **Ambigüedad no cubierta por este archivo o el backlog → NO asumir**: marcar bloqueada con la pregunta concreta y pasar a la siguiente tarea.
+6. Mantener bitácora en `docs/night-log/YYYY-MM-DD.md` (usar `TEMPLATE.md`): tareas intentadas/completadas/bloqueadas, decisiones técnicas, y al final **resumen ejecutivo con qué revisar primero por la mañana**.
+7. **Límite duro: 20 commits por sesión nocturna.** Al llegar, cerrar bitácora y parar.
 
-## Versioning & deploy
+## Legado 2D (referencia para portar)
 
-Version in `game/js/data/version.js`. Patch on commit, minor on deploy. Update [`game/js/data/changelog.js`](game/js/data/changelog.js) **before** any Vercel deploy.
+La arquitectura 2D está hiper-documentada: [`docs/architecture.md`](docs/architecture.md) (seams `Projection`/`SpriteFactory`/`Renderer`/`EventBus`), [`docs/perf-playbook.md`](docs/perf-playbook.md), [`docs/spell-vfx.md`](docs/spell-vfx.md), how-tos de creature/spell/floor, [`docs/glossary.md`](docs/glossary.md), [`docs/dev-log.md`](docs/dev-log.md). Módulos puros ya identificados para portar: `game/js/engine/systems/CombatMath.js`, `game/js/mechanics/progression.js`, `game/js/mechanics/loot.js`, `game/js/dungeon/generator.js`, `game/js/core/EventBus.js`.
 
-```bash
-npm run push                                      # bump patch + commit + push
-npm run release                                   # bump minor + commit + push
-NODE_TLS_REJECT_UNAUTHORIZED=0 vercel --prod --yes  # deploy (TLS flag is the WSL workaround)
-```
+## Versionado y deploy
 
-**Deploy reality (read before shipping):**
-- The manual release loop we actually use: bump `VERSION` in `game/js/data/version.js`, add a `changelog.js` entry, bump `CACHE` in `game/sw.js`, `node scripts/build.js`, commit, push, `vercel --prod --yes`. Then verify live: `curl -sL https://www.tibia-dungeons.com/sw.js | grep CACHE`.
-- **Two Vercel projects exist.** The live player domain **`www.tibia-dungeons.com` is the `tibia_dungeons-main` project** (a successful `vercel --prod` prints `Aliased: https://www.tibia-dungeons.com`). The other project (`tibia_dungeons` → `tibiadungeons.vercel.app`) is a stale duplicate — ignore it.
-- **`git push` needs a manually-supplied GitHub PAT** — there is no `gh` login or credential helper, and `origin` is HTTPS. Push via `git push "https://<token>@github.com/raulmaiz/tibia_dungeons.git" main` and mask the token in any output. Don't store it.
-- Upstash Redis creds (prod saves/HoF) aren't in `vercel env ls`; `vercel env pull --environment=production` retrieves them. The prod admin user already exists (`user:admin`, role=admin) for `window.debugGod`.
-
-Full session history + rationale: [`docs/dev-log.md`](docs/dev-log.md).
+Sin deploys hasta paridad funcional (F6 del plan). El dominio y los dos proyectos Vercel se documentan en el CLAUDE.md del tag `v2d-final`.

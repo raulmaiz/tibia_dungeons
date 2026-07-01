@@ -10,4 +10,7 @@ game/dist
 
 # Build / tool artifacts (regenerated on demand)
 dist
-.claude
+
+# Claude Code: version project settings, ignore local/session files
+.claude/*
+!.claude/settings.json
